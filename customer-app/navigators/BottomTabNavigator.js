@@ -153,7 +153,7 @@ export default function BottomTabNavigator() {
   return (
     <Tab.Navigator
       screenOptions={{
-        headerShown: true,
+        headerShown: false,
         tabBarShowLabel: false,
         tabBarStyle: {
           position: 'absolute',

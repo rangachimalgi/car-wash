@@ -15,9 +15,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: '#fff',
+    paddingBottom: 100,
   },
   text: {
     fontSize: 24,
     fontWeight: 'bold',
+    color: '#000',
   },
 });
