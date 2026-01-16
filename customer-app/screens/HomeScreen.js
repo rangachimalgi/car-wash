@@ -1,8 +1,9 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Dimensions, TouchableOpacity } from 'react-native';
 import CustomHeader from '../components/CustomHeader';
 
 const { width } = Dimensions.get('window');
+const cardWidth = (width - 48) / 3; // 3 cards with padding
 
 export default function HomeScreen() {
   return (
@@ -31,6 +32,40 @@ export default function HomeScreen() {
                 </View>
               </View>
             </ScrollView>
+          </View>
+        </View>
+        
+        <View style={styles.servicesSection}>
+          <Text style={styles.sectionTitle}>Recommended Services</Text>
+          <View style={styles.servicesGrid}>
+            <View style={styles.servicesRow}>
+              <View style={styles.serviceItem}>
+                <TouchableOpacity style={styles.serviceCard}></TouchableOpacity>
+                <Text style={styles.serviceName}>Premium Car Wash</Text>
+              </View>
+              <View style={styles.serviceItem}>
+                <TouchableOpacity style={styles.serviceCard}></TouchableOpacity>
+                <Text style={styles.serviceName}>Standard Car Wash</Text>
+              </View>
+              <View style={styles.serviceItem}>
+                <TouchableOpacity style={styles.serviceCard}></TouchableOpacity>
+                <Text style={styles.serviceName}>360 Cleanup Car Wash</Text>
+              </View>
+            </View>
+            <View style={styles.servicesRow}>
+              <View style={styles.serviceItem}>
+                <TouchableOpacity style={styles.serviceCard}></TouchableOpacity>
+                <Text style={styles.serviceName}>Express Car Wash</Text>
+              </View>
+              <View style={styles.serviceItem}>
+                <TouchableOpacity style={styles.serviceCard}></TouchableOpacity>
+                <Text style={styles.serviceName}>Deep Clean Car Wash</Text>
+              </View>
+              <View style={styles.serviceItem}>
+                <TouchableOpacity style={styles.serviceCard}></TouchableOpacity>
+                <Text style={styles.serviceName}>Bike Wash</Text>
+              </View>
+            </View>
           </View>
         </View>
       </ScrollView>
@@ -108,5 +143,49 @@ const styles = StyleSheet.create({
     textShadowColor: 'rgba(0, 0, 0, 0.5)',
     textShadowOffset: { width: 0, height: 2 },
     textShadowRadius: 4,
+  },
+  servicesSection: {
+    paddingHorizontal: 16,
+    paddingTop: 20,
+    paddingBottom: 20,
+  },
+  sectionTitle: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: '#38383A',
+    marginBottom: 16,
+  },
+  servicesGrid: {
+    // Grid container
+  },
+  servicesRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 20,
+  },
+  serviceItem: {
+    width: cardWidth,
+    alignItems: 'center',
+  },
+  serviceCard: {
+    width: cardWidth,
+    height: 100,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+    marginBottom: 8,
+  },
+  serviceName: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#38383A',
+    textAlign: 'center',
   },
 });
