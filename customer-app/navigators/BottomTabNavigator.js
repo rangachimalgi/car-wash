@@ -15,8 +15,8 @@ try {
   BlurView = require('expo-blur').BlurView;
 } catch (e) {
   // Fallback component that mimics blur effect
-  BlurView = ({ children, style, intensity, tint }) => (
-    <View style={[style, { backgroundColor: tint === 'dark' ? 'rgba(44, 44, 46, 0.85)' : 'rgba(255, 255, 255, 0.85)' }]}>
+    BlurView = ({ children, style, intensity, tint }) => (
+    <View style={[style, { backgroundColor: tint === 'dark' ? '#FFFFFF' : '#FFFFFF' }]}>
       {children}
     </View>
   );
@@ -75,7 +75,7 @@ function LiquidGlassTabBar({ state, descriptors, navigation }) {
 
   return (
     <View style={[styles.tabBarContainer, { bottom: 20 + insets.bottom }]}>
-      <BlurView intensity={80} tint="dark" style={styles.blurContainer}>
+      <View style={styles.blurContainer}>
         <View style={styles.tabBar}>
           {state.routes.map((route, index) => {
             const { options } = descriptors[route.key];
@@ -142,7 +142,7 @@ function LiquidGlassTabBar({ state, descriptors, navigation }) {
             );
           })}
         </View>
-      </BlurView>
+      </View>
     </View>
   );
 }
@@ -230,12 +230,13 @@ const styles = StyleSheet.create({
     left: 20,
     right: 20,
     height: 70,
+    borderRadius: 35,
     // bottom is set dynamically with insets
   },
   blurContainer: {
     borderRadius: 35,
     overflow: 'hidden',
-    backgroundColor: 'rgba(44, 44, 46, 0.7)',
+    backgroundColor: '#444449',
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
