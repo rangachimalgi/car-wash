@@ -54,20 +54,20 @@ function LiquidGlassTabBar({ state, descriptors, navigation }) {
   };
 
   useEffect(() => {
-    const currentRoute = state.routes[state.index];
-    const label = routeLabels[currentRoute.name] || currentRoute.name;
+    const route = state.routes[state.index];
+    const label = routeLabels[route.name] || route.name;
     const labelW = labelWidths[label] || 50;
 
     // Animate label appearance
     Animated.parallel([
       Animated.timing(labelOpacity, {
         toValue: 1,
-        duration: 200,
+        duration: 500,
         useNativeDriver: false,
       }),
       Animated.timing(labelWidth, {
         toValue: labelW,
-        duration: 200,
+        duration: 500,
         useNativeDriver: false,
       }),
     ]).start();
@@ -110,32 +110,40 @@ function LiquidGlassTabBar({ state, descriptors, navigation }) {
                 activeOpacity={0.7}
               >
                 <View style={styles.tabContent}>
-                  <Animated.View
-                    style={[
-                      styles.iconContainer,
-                      focused && styles.iconContainerActive,
-                    ]}
-                  >
-                    <MaterialCommunityIcons
-                      name={iconName}
-                      size={focused ? 24 : 22}
-                      color={focused ? '#FFFFFF' : '#8E8E93'}
-                    />
-                  </Animated.View>
-                  {focused && (
+                  {focused ? (
                     <Animated.View
                       style={[
-                        styles.labelContainer,
+                        styles.capsuleContainer,
                         {
                           opacity: labelOpacity,
-                          width: labelWidth,
                         },
                       ]}
                     >
-                      <Text style={styles.labelText} numberOfLines={1}>
-                        {label}
-                      </Text>
+                      <MaterialCommunityIcons
+                        name={iconName}
+                        size={24}
+                        color="#FFFFFF"
+                      />
+                      <Animated.View
+                        style={[
+                          styles.labelContainer,
+                          {
+                            opacity: labelOpacity,
+                            width: labelWidth,
+                          },
+                        ]}
+                      >
+                        <Text style={styles.labelText} numberOfLines={1}>
+                          {label}
+                        </Text>
+                      </Animated.View>
                     </Animated.View>
+                  ) : (
+                    <MaterialCommunityIcons
+                      name={iconName}
+                      size={22}
+                      color="#8E8E93"
+                    />
                   )}
                 </View>
               </TouchableOpacity>
@@ -236,7 +244,7 @@ const styles = StyleSheet.create({
   blurContainer: {
     borderRadius: 35,
     overflow: 'hidden',
-    backgroundColor: '#444449',
+    backgroundColor: '#38383A',
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
@@ -281,6 +289,16 @@ const styles = StyleSheet.create({
     position: 'relative',
     zIndex: 3, // Ensure content is above selector
   },
+  capsuleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#444446',
+    borderRadius: 25,
+    paddingLeft: 25,
+    paddingRight: 20,
+    paddingVertical: 10,
+  },
   iconContainer: {
     alignItems: 'center',
     justifyContent: 'center',
@@ -294,11 +312,12 @@ const styles = StyleSheet.create({
   labelContainer: {
     overflow: 'hidden',
     justifyContent: 'center',
+    marginLeft: 8,
   },
   labelText: {
     color: '#FFFFFF',
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: '700',
     marginLeft: 2, // Reduced margin to match calculation
     textAlign: 'left',
   },
