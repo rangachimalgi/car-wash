@@ -4,10 +4,8 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import HomeScreen from '../screens/HomeScreen';
-import BookingsScreen from '../screens/BookingsScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import WalletScreen from '../screens/WalletScreen';
-import SettingsScreen from '../screens/SettingsScreen';
 
 // Try to use BlurView if available, otherwise use fallback
 let BlurView;
@@ -24,7 +22,7 @@ try {
 
 const Tab = createBottomTabNavigator();
 const { width } = Dimensions.get('window');
-const TAB_COUNT = 5;
+const TAB_COUNT = 3;
 const TAB_BAR_PADDING = 20; // left + right padding from tabBarContainer
 const TAB_BAR_INNER_PADDING = 10; // paddingHorizontal from tabBar style
 const TAB_BAR_WIDTH = width - TAB_BAR_PADDING * 2; // Actual width of tab bar
@@ -33,9 +31,7 @@ const TAB_WIDTH = TAB_BAR_WIDTH / TAB_COUNT;
 // Map route keys to display names
 const routeLabels = {
   Home: 'Home',
-  Bookings: 'Bookings',
   Wallet: 'Wallet',
-  Settings: 'Settings',
   Profile: 'Profile',
 };
 
@@ -47,9 +43,7 @@ function LiquidGlassTabBar({ state, descriptors, navigation }) {
   // Label widths for each tab
   const labelWidths = {
     Home: 40,
-    Bookings: 65,
     Wallet: 50,
-    Settings: 60,
     Profile: 50,
   };
 
@@ -96,9 +90,7 @@ function LiquidGlassTabBar({ state, descriptors, navigation }) {
 
             const iconName = {
               Home: 'home',
-              Bookings: 'calendar',
               Wallet: 'wallet',
-              Settings: 'cog',
               Profile: 'account',
             }[route.name] || 'circle';
 
@@ -189,32 +181,12 @@ export default function BottomTabNavigator() {
         }}
       />
       <Tab.Screen 
-        name="Bookings" 
-        component={BookingsScreen}
-        options={{
-          title: 'Bookings',
-          tabBarIcon: ({ color, focused }) => (
-            <MaterialCommunityIcons name="calendar" color={color} size={24} />
-          ),
-        }}
-      />
-      <Tab.Screen 
         name="Wallet" 
         component={WalletScreen}
         options={{
           title: 'Wallet',
           tabBarIcon: ({ color, focused }) => (
             <MaterialCommunityIcons name="wallet" color={color} size={24} />
-          ),
-        }}
-      />
-      <Tab.Screen 
-        name="Settings" 
-        component={SettingsScreen}
-        options={{
-          title: 'Settings',
-          tabBarIcon: ({ color, focused }) => (
-            <MaterialCommunityIcons name="cog" color={color} size={24} />
           ),
         }}
       />
