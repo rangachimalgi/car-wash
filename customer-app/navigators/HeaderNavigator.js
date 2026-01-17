@@ -1,6 +1,8 @@
 import React from 'react';
 import { createStackNavigator } from '@react-navigation/stack';
 import BottomTabNavigator from './BottomTabNavigator';
+import CarWashScreen from '../screens/CarWashScreen';
+import BikeWashScreen from '../screens/BikeWashScreen';
 
 const Stack = createStackNavigator();
 
@@ -20,6 +22,16 @@ export default function HeaderNavigator() {
       <Stack.Screen 
         name="MainTabs" 
         component={BottomTabNavigator}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen 
+        name="CarWash" 
+        component={CarWashScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen 
+        name="BikeWash" 
+        component={BikeWashScreen}
         options={{ headerShown: false }}
       />
     </Stack.Navigator>

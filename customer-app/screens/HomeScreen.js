@@ -5,7 +5,7 @@ import CustomHeader from '../components/CustomHeader';
 const { width } = Dimensions.get('window');
 const cardWidth = (width - 48) / 3; // 3 cards with padding
 
-export default function HomeScreen() {
+export default function HomeScreen({ navigation }) {
   return (
     <View style={styles.container}>
       <CustomHeader />
@@ -32,6 +32,27 @@ export default function HomeScreen() {
                 </View>
               </View>
             </ScrollView>
+          </View>
+        </View>
+        
+        <View style={styles.mainServicesSection}>
+          <View style={styles.mainServicesRow}>
+            <View style={styles.mainServiceItem}>
+              <TouchableOpacity 
+                style={styles.mainServiceCard}
+                onPress={() => navigation.navigate('CarWash')}
+              >
+              </TouchableOpacity>
+              <Text style={styles.mainServiceName}>Car Wash</Text>
+            </View>
+            <View style={styles.mainServiceItem}>
+              <TouchableOpacity 
+                style={styles.mainServiceCard}
+                onPress={() => navigation.navigate('BikeWash')}
+              >
+              </TouchableOpacity>
+              <Text style={styles.mainServiceName}>Bike/Scooter Wash</Text>
+            </View>
           </View>
         </View>
         
@@ -143,6 +164,41 @@ const styles = StyleSheet.create({
     textShadowColor: 'rgba(0, 0, 0, 0.5)',
     textShadowOffset: { width: 0, height: 2 },
     textShadowRadius: 4,
+  },
+  mainServicesSection: {
+    paddingHorizontal: 16,
+    paddingTop: 30,
+    paddingBottom: 20,
+  },
+  mainServicesRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  mainServiceItem: {
+    flex: 1,
+    alignItems: 'center',
+    marginHorizontal: 8,
+  },
+  mainServiceCard: {
+    width: '100%',
+    height: 120,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+    marginBottom: 8,
+  },
+  mainServiceName: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#38383A',
+    textAlign: 'center',
   },
   servicesSection: {
     paddingHorizontal: 16,
