@@ -1,0 +1,169 @@
+import React from 'react';
+import { View, Text, StyleSheet } from 'react-native';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
+
+export default function ServiceCoverage({ included = [], notIncluded = [] }) {
+  const renderItem = (item, isIncluded) => (
+    <View key={item} style={styles.itemRow}>
+      <View style={[styles.iconContainer, isIncluded ? styles.includedIcon : styles.notIncludedIcon]}>
+        {isIncluded ? (
+          <MaterialCommunityIcons name="check" size={16} color="#FFFFFF" />
+        ) : (
+          <MaterialCommunityIcons name="information" size={16} color="#FFFFFF" />
+        )}
+      </View>
+      <Text style={styles.itemText}>{item}</Text>
+    </View>
+  );
+
+  return (
+    <View style={styles.container}>
+      <View style={styles.header}>
+        <Text style={styles.headerTitle}>Service Coverage</Text>
+        <Text style={styles.seeAllText}>See all</Text>
+      </View>
+      
+      <View style={styles.tableContainer}>
+        {/* What's Included Column */}
+        <View style={styles.column}>
+          <View style={[styles.columnHeader, styles.includedHeader]}>
+            <View style={[styles.headerIcon, styles.includedHeaderIcon]}>
+              <MaterialCommunityIcons name="check" size={18} color="#FFFFFF" />
+            </View>
+            <Text style={styles.columnHeaderText}>What's Included</Text>
+          </View>
+          <View style={styles.itemsContainer}>
+            {included.length > 0 ? (
+              included.map((item) => renderItem(item, true))
+            ) : (
+              <View style={styles.itemRow}>
+                <Text style={styles.emptyText}>-</Text>
+              </View>
+            )}
+          </View>
+        </View>
+
+        {/* Not Included Column */}
+        <View style={[styles.column, { borderRightWidth: 0 }]}>
+          <View style={[styles.columnHeader, styles.notIncludedHeader]}>
+            <View style={[styles.headerIcon, styles.notIncludedHeaderIcon]}>
+              <MaterialCommunityIcons name="information" size={18} color="#FFFFFF" />
+            </View>
+            <Text style={styles.columnHeaderText}>Not Included</Text>
+          </View>
+          <View style={styles.itemsContainer}>
+            {notIncluded.length > 0 ? (
+              notIncluded.map((item) => renderItem(item, false))
+            ) : (
+              <View style={styles.itemRow}>
+                <Text style={styles.emptyText}>-</Text>
+              </View>
+            )}
+          </View>
+        </View>
+      </View>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    marginTop: 24,
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
+  },
+  seeAllText: {
+    fontSize: 14,
+    color: '#FFFFFF',
+    fontWeight: '600',
+    opacity: 0.7,
+  },
+  tableContainer: {
+    flexDirection: 'row',
+    backgroundColor: '#000000',
+    borderRadius: 12,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: '#333333',
+  },
+  column: {
+    flex: 1,
+    borderRightWidth: 1,
+    borderRightColor: '#333333',
+  },
+  columnHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 14,
+    paddingHorizontal: 12,
+  },
+  includedHeader: {
+    backgroundColor: '#4CAF50',
+  },
+  notIncludedHeader: {
+    backgroundColor: '#9E9E9E',
+  },
+  headerIcon: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 8,
+  },
+  includedHeaderIcon: {
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+  },
+  notIncludedHeaderIcon: {
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+  },
+  columnHeaderText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  itemsContainer: {
+    backgroundColor: '#000000',
+  },
+  itemRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#333333',
+  },
+  iconContainer: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 10,
+  },
+  includedIcon: {
+    backgroundColor: '#4CAF50',
+  },
+  notIncludedIcon: {
+    backgroundColor: '#9E9E9E',
+  },
+  itemText: {
+    flex: 1,
+    fontSize: 14,
+    color: '#FFFFFF',
+  },
+  emptyText: {
+    fontSize: 14,
+    color: '#666666',
+    fontStyle: 'italic',
+  },
+});
