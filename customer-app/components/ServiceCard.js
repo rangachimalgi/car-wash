@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Dimensions, Image } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 
@@ -14,6 +14,8 @@ export default function ServiceCard({
   onBookService,
   onCardPress,
 }) {
+  const [imageError, setImageError] = useState(false);
+
   return (
     <TouchableOpacity 
       style={styles.serviceCard}
@@ -21,11 +23,18 @@ export default function ServiceCard({
       activeOpacity={0.9}
     >
       <View style={styles.imageContainer}>
-        <Image 
-          source={{ uri: imageUri }}
-          style={styles.serviceImage}
-          resizeMode="cover"
-        />
+        {!imageError ? (
+          <Image 
+            source={{ uri: imageUri }}
+            style={styles.serviceImage}
+            resizeMode="cover"
+            onError={() => setImageError(true)}
+          />
+        ) : (
+          <View style={[styles.serviceImage, styles.placeholderImage]}>
+            <MaterialCommunityIcons name="bike" size={48} color="#6BB6FF" />
+          </View>
+        )}
       </View>
       <View style={styles.cardContent}>
         <Text style={styles.cardTitle}>{title}</Text>
@@ -71,6 +80,11 @@ const styles = StyleSheet.create({
     width: width - 56,
     height: 150,
     borderRadius: 12,
+  },
+  placeholderImage: {
+    backgroundColor: '#38383A',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   cardContent: {
     padding: 16,
