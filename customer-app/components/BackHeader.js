@@ -13,7 +13,7 @@ export default function BackHeader({ navigation, title }) {
           style={styles.backButton}
           onPress={() => navigation.goBack()}
         >
-          <MaterialCommunityIcons name="arrow-left" size={24} color="#000000" />
+          <MaterialCommunityIcons name="arrow-left" size={24} color="#FFFFFF" />
         </TouchableOpacity>
         {title && (
           <Text style={styles.headerTitle}>{title}</Text>
@@ -25,11 +25,11 @@ export default function BackHeader({ navigation, title }) {
 
 const styles = StyleSheet.create({
   headerContainer: {
-    backgroundColor: '#fff',
+    backgroundColor: '#000000',
     paddingHorizontal: 16,
     paddingBottom: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E5EA',
+    borderBottomColor: '#333333',
   },
   headerContent: {
     flexDirection: 'row',
@@ -43,7 +43,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#000000',
+    color: '#FFFFFF',
     marginLeft: 8,
   },
 });

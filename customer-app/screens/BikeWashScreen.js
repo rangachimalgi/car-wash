@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { StatusBar } from 'expo-status-bar';
 import BackHeader from '../components/BackHeader';
 import ServiceCard from '../components/ServiceCard';
 
@@ -16,6 +17,7 @@ export default function BikeWashScreen({ navigation }) {
 
   return (
     <View style={styles.container}>
+      <StatusBar style="light" />
       <BackHeader navigation={navigation} title="Bike Wash" />
       <ScrollView 
         style={styles.scrollView}
@@ -25,11 +27,6 @@ export default function BikeWashScreen({ navigation }) {
         <View style={styles.content}>
           <Text style={styles.browseTitle}>browse woosh!</Text>
           <View style={styles.serviceSection}>
-            <TouchableOpacity 
-              style={styles.serviceHeader}
-              onPress={() => toggleExpanded('basic')}
-            >
-            </TouchableOpacity>
             {expanded.basic && (
               <ServiceCard
                 imageUri="https://images.unsplash.com/photo-1558981806-ec527fa84c39?w=800&h=400&fit=crop&auto=format"
@@ -45,11 +42,6 @@ export default function BikeWashScreen({ navigation }) {
           </View>
 
           <View style={styles.serviceSection}>
-            <TouchableOpacity 
-              style={styles.serviceHeader}
-              onPress={() => toggleExpanded('premium')}
-            >
-            </TouchableOpacity>
             {expanded.premium && (
               <ServiceCard
                 imageUri="https://images.unsplash.com/photo-1558981806-ec527fa84c39?w=800&h=400&fit=crop&auto=format"
@@ -65,11 +57,6 @@ export default function BikeWashScreen({ navigation }) {
           </View>
 
           <View style={styles.serviceSection}>
-            <TouchableOpacity 
-              style={styles.serviceHeader}
-              onPress={() => toggleExpanded('deep')}
-            >
-            </TouchableOpacity>
             {expanded.deep && (
               <ServiceCard
                 imageUri="https://images.unsplash.com/photo-1558981806-ec527fa84c39?w=800&h=400&fit=crop&auto=format"
@@ -92,7 +79,7 @@ export default function BikeWashScreen({ navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F5F5F5',
+    backgroundColor: '#000000',
   },
   scrollView: {
     flex: 1,
@@ -106,19 +93,11 @@ const styles = StyleSheet.create({
   browseTitle: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: '#000000',
+    color: '#FFFFFF',
     paddingHorizontal: 16,
     marginBottom: 20,
   },
   serviceSection: {
     marginBottom: 12,
-  },
-  serviceHeader: {
-    backgroundColor: '#F0F4F8',
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
   },
 });

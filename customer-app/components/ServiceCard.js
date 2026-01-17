@@ -65,10 +65,21 @@ export default function ServiceCard({
 
 const styles = StyleSheet.create({
   serviceCard: {
-    backgroundColor: '#38383A',
+    backgroundColor: '#1A1A1A',
     borderRadius: 16,
     marginHorizontal: 16,
     marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#333333',
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 5,
   },
   imageContainer: {
     position: 'relative',
@@ -82,7 +93,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   placeholderImage: {
-    backgroundColor: '#38383A',
+    backgroundColor: '#2A2A2A',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -98,9 +109,9 @@ const styles = StyleSheet.create({
   },
   cardDescription: {
     fontSize: 14,
-    color: '#FFFFFF',
+    color: '#CCCCCC',
     marginBottom: 16,
-    opacity: 0.8,
+    lineHeight: 20,
   },
   cardInfo: {
     flexDirection: 'row',
@@ -109,14 +120,18 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   cardPrice: {
-    fontSize: 20,
+    fontSize: 24,
     fontWeight: 'bold',
     color: '#FFFFFF',
   },
   cardDuration: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '600',
-    color: '#FFFFFF',
+    color: '#999999',
+    backgroundColor: '#2A2A2A',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
   },
   cardButtons: {
     flexDirection: 'row',

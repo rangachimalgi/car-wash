@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { StatusBar } from 'expo-status-bar';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import BackHeader from '../components/BackHeader';
 import ServiceCard from '../components/ServiceCard';
@@ -17,6 +18,7 @@ export default function CarWashScreen({ navigation }) {
 
   return (
     <View style={styles.container}>
+      <StatusBar style="light" />
       <BackHeader navigation={navigation} title="Car Wash" />
       <ScrollView 
         style={styles.scrollView}
@@ -26,11 +28,6 @@ export default function CarWashScreen({ navigation }) {
         <View style={styles.content}>
           <Text style={styles.browseTitle}>browse woosh!</Text>
           <View style={styles.serviceSection}>
-            <TouchableOpacity 
-              style={styles.serviceHeader}
-              onPress={() => toggleExpanded('basic')}
-            >
-            </TouchableOpacity>
             {expanded.basic && (
               <ServiceCard
                 imageUri="https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=800&h=400&fit=crop"
@@ -46,11 +43,6 @@ export default function CarWashScreen({ navigation }) {
           </View>
 
           <View style={styles.serviceSection}>
-            <TouchableOpacity 
-              style={styles.serviceHeader}
-              onPress={() => toggleExpanded('premium')}
-            >
-            </TouchableOpacity>
             {expanded.premium && (
               <ServiceCard
                 imageUri="https://images.unsplash.com/photo-1605559424843-9e4c228bf1c2?w=800&h=400&fit=crop"
@@ -66,11 +58,6 @@ export default function CarWashScreen({ navigation }) {
           </View>
 
           <View style={styles.serviceSection}>
-            <TouchableOpacity 
-              style={styles.serviceHeader}
-              onPress={() => toggleExpanded('deep')}
-            >
-            </TouchableOpacity>
             {expanded.deep && (
               <ServiceCard
                 imageUri="https://images.unsplash.com/photo-1502877338535-766e1452684a?w=800&h=400&fit=crop"
@@ -93,7 +80,7 @@ export default function CarWashScreen({ navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F5F5F5',
+    backgroundColor: '#000000',
   },
   scrollView: {
     flex: 1,
@@ -107,24 +94,11 @@ const styles = StyleSheet.create({
   browseTitle: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: '#000000',
+    color: '#FFFFFF',
     paddingHorizontal: 16,
     marginBottom: 20,
   },
   serviceSection: {
     marginBottom: 12,
-  },
-  serviceHeader: {
-    backgroundColor: '#F0F4F8',
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  serviceHeaderText: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#000000',
   },
 });
