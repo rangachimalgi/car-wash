@@ -38,8 +38,9 @@ export default function CarWashScreen({ navigation }) {
                 description="Professional cleaning service for your vehicle"
                 price="₹99"
                 duration="30 mins"
-                onReadMore={() => console.log('Read more - Basic')}
+                onReadMore={() => navigation.navigate('CarWashDetails', { serviceTitle: 'Basic Routine Cleaning' })}
                 onBookService={() => console.log('Book service - Basic')}
+                onCardPress={() => navigation.navigate('CarWashDetails', { serviceTitle: 'Basic Routine Cleaning' })}
               />
             )}
           </View>
@@ -57,8 +58,9 @@ export default function CarWashScreen({ navigation }) {
                 description="Premium deep cleaning and detailing service"
                 price="₹309"
                 duration="2 hours"
-                onReadMore={() => console.log('Read more - Premium')}
+                onReadMore={() => navigation.navigate('CarWashDetails', { serviceTitle: 'Premium Car Care' })}
                 onBookService={() => console.log('Book service - Premium')}
+                onCardPress={() => navigation.navigate('CarWashDetails', { serviceTitle: 'Premium Car Care' })}
               />
             )}
           </View>
@@ -76,8 +78,9 @@ export default function CarWashScreen({ navigation }) {
                 description="Complete 360-degree deep cleaning and sanitization"
                 price="₹889"
                 duration="3 hours"
-                onReadMore={() => console.log('Read more - Deep')}
+                onReadMore={() => navigation.navigate('CarWashDetails', { serviceTitle: '360 Deep Cleaning' })}
                 onBookService={() => console.log('Book service - Deep')}
+                onCardPress={() => navigation.navigate('CarWashDetails', { serviceTitle: '360 Deep Cleaning' })}
               />
             )}
           </View>

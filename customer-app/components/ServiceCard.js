@@ -12,9 +12,14 @@ export default function ServiceCard({
   duration,
   onReadMore,
   onBookService,
+  onCardPress,
 }) {
   return (
-    <View style={styles.serviceCard}>
+    <TouchableOpacity 
+      style={styles.serviceCard}
+      onPress={onCardPress}
+      activeOpacity={0.9}
+    >
       <View style={styles.imageContainer}>
         <Image 
           source={{ uri: imageUri }}
@@ -30,16 +35,22 @@ export default function ServiceCard({
           <Text style={styles.cardDuration}>{duration}</Text>
         </View>
         <View style={styles.cardButtons}>
-          <TouchableOpacity style={styles.readMoreButton} onPress={onReadMore}>
+          <TouchableOpacity 
+            style={styles.readMoreButton} 
+            onPress={onReadMore}
+          >
             <Text style={styles.readMoreText}>Read more</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.bookButton} onPress={onBookService}>
+          <TouchableOpacity 
+            style={styles.bookButton} 
+            onPress={onBookService}
+          >
             <Text style={styles.bookText}>Book service</Text>
             <MaterialCommunityIcons name="arrow-right" size={18} color="#FFFFFF" />
           </TouchableOpacity>
         </View>
       </View>
-    </View>
+    </TouchableOpacity>
   );
 }
 
