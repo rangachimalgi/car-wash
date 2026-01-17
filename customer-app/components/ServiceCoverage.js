@@ -83,9 +83,8 @@ const styles = StyleSheet.create({
   },
   seeAllText: {
     fontSize: 14,
-    color: '#FFFFFF',
+    color: '#6BB6FF',
     fontWeight: '600',
-    opacity: 0.7,
   },
   tableContainer: {
     flexDirection: 'row',

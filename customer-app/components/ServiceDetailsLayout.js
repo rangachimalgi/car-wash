@@ -36,11 +36,11 @@ export default function ServiceDetailsLayout({
         <Text style={styles.distanceText}>6 km</Text>
       </View>
       <View style={styles.ratingRow}>
-        <MaterialCommunityIcons name="star" size={20} color="#FFFFFF" />
-        <MaterialCommunityIcons name="star" size={20} color="#FFFFFF" />
-        <MaterialCommunityIcons name="star" size={20} color="#FFFFFF" />
-        <MaterialCommunityIcons name="star" size={20} color="#FFFFFF" />
-        <MaterialCommunityIcons name="star-half-full" size={20} color="#FFFFFF" />
+        <MaterialCommunityIcons name="star" size={20} color="#FFD700" />
+        <MaterialCommunityIcons name="star" size={20} color="#FFD700" />
+        <MaterialCommunityIcons name="star" size={20} color="#FFD700" />
+        <MaterialCommunityIcons name="star" size={20} color="#FFD700" />
+        <MaterialCommunityIcons name="star-half-full" size={20} color="#FFD700" />
       </View>
       <View style={styles.actionRow}>
         <TouchableOpacity style={styles.viewButton} activeOpacity={0.8}>
@@ -102,15 +102,15 @@ export default function ServiceDetailsLayout({
         <View style={styles.specsContainer}>
           <View style={styles.specItem}>
             <Text style={styles.specLabel}>Duration</Text>
-            <Text style={styles.specValue}>{data.specs.duration}</Text>
+            <Text style={styles.specValue}>{data.specs?.duration}</Text>
           </View>
           <View style={styles.specItem}>
             <Text style={styles.specLabel}>Rating</Text>
-            <Text style={styles.specValue}>{data.specs.rating}</Text>
+            <Text style={styles.specValue}>{data.specs?.rating}</Text>
           </View>
           <View style={styles.specItem}>
             <Text style={styles.specLabel}>Type</Text>
-            <Text style={styles.specValue}>{data.specs.weight}</Text>
+            <Text style={styles.specValue}>{data.specs?.weight}</Text>
           </View>
           {/* QR Code Button */}
           <TouchableOpacity style={styles.qrButton}>

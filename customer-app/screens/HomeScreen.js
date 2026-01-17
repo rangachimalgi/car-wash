@@ -1,11 +1,36 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView, Dimensions, TouchableOpacity } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, ScrollView, Dimensions, TouchableOpacity, Image } from 'react-native';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import CustomHeader from '../components/CustomHeader';
 
 const { width } = Dimensions.get('window');
 const cardWidth = (width - 48) / 3; // 3 cards with padding
 
 export default function HomeScreen({ navigation }) {
+  const [imageErrors, setImageErrors] = useState({});
+
+  const handleImageError = (key) => {
+    setImageErrors(prev => ({ ...prev, [key]: true }));
+  };
+
+  const ServiceImage = ({ uri, style, imageKey }) => {
+    if (imageErrors[imageKey]) {
+      return (
+        <View style={[style, { backgroundColor: '#E5E5E5', alignItems: 'center', justifyContent: 'center' }]}>
+          <MaterialCommunityIcons name="image-outline" size={32} color="#999999" />
+        </View>
+      );
+    }
+    return (
+      <Image 
+        source={{ uri }}
+        style={style}
+        resizeMode="cover"
+        onError={() => handleImageError(imageKey)}
+      />
+    );
+  };
+
   return (
     <View style={styles.container}>
       <CustomHeader />
@@ -41,7 +66,13 @@ export default function HomeScreen({ navigation }) {
               <TouchableOpacity 
                 style={styles.mainServiceCard}
                 onPress={() => navigation.navigate('CarWash')}
+                activeOpacity={0.9}
               >
+                <ServiceImage 
+                  uri="https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&h=300&fit=crop"
+                  style={styles.mainServiceImage}
+                  imageKey="carWash"
+                />
               </TouchableOpacity>
               <Text style={styles.mainServiceName}>Car Wash</Text>
             </View>
@@ -49,7 +80,13 @@ export default function HomeScreen({ navigation }) {
               <TouchableOpacity 
                 style={styles.mainServiceCard}
                 onPress={() => navigation.navigate('BikeWash')}
+                activeOpacity={0.9}
               >
+                <ServiceImage 
+                  uri="https://images.unsplash.com/photo-1558981806-ec527fa84c39?w=800&h=400&fit=crop&auto=format"
+                  style={styles.mainServiceImage}
+                  imageKey="bikeWash"
+                />
               </TouchableOpacity>
               <Text style={styles.mainServiceName}>Bike/Scooter Wash</Text>
             </View>
@@ -61,29 +98,65 @@ export default function HomeScreen({ navigation }) {
           <View style={styles.servicesGrid}>
             <View style={styles.servicesRow}>
               <View style={styles.serviceItem}>
-                <TouchableOpacity style={styles.serviceCard}></TouchableOpacity>
+                <TouchableOpacity style={styles.serviceCard} activeOpacity={0.9}>
+                  <ServiceImage 
+                    uri="https://images.unsplash.com/photo-1605559424843-9e4c228bf1c2?w=300&h=200&fit=crop"
+                    style={styles.serviceImage}
+                    imageKey="premiumCarWash"
+                  />
+                </TouchableOpacity>
                 <Text style={styles.serviceName}>Premium Car Wash</Text>
               </View>
               <View style={styles.serviceItem}>
-                <TouchableOpacity style={styles.serviceCard}></TouchableOpacity>
+                <TouchableOpacity style={styles.serviceCard} activeOpacity={0.9}>
+                  <ServiceImage 
+                    uri="https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=300&h=200&fit=crop"
+                    style={styles.serviceImage}
+                    imageKey="standardCarWash"
+                  />
+                </TouchableOpacity>
                 <Text style={styles.serviceName}>Standard Car Wash</Text>
               </View>
               <View style={styles.serviceItem}>
-                <TouchableOpacity style={styles.serviceCard}></TouchableOpacity>
+                <TouchableOpacity style={styles.serviceCard} activeOpacity={0.9}>
+                  <ServiceImage 
+                    uri="https://images.unsplash.com/photo-1502877338535-766e1452684a?w=300&h=200&fit=crop"
+                    style={styles.serviceImage}
+                    imageKey="cleanupCarWash"
+                  />
+                </TouchableOpacity>
                 <Text style={styles.serviceName}>360 Cleanup Car Wash</Text>
               </View>
             </View>
             <View style={styles.servicesRow}>
               <View style={styles.serviceItem}>
-                <TouchableOpacity style={styles.serviceCard}></TouchableOpacity>
+                <TouchableOpacity style={styles.serviceCard} activeOpacity={0.9}>
+                  <ServiceImage 
+                    uri="https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=300&h=200&fit=crop"
+                    style={styles.serviceImage}
+                    imageKey="expressCarWash"
+                  />
+                </TouchableOpacity>
                 <Text style={styles.serviceName}>Express Car Wash</Text>
               </View>
               <View style={styles.serviceItem}>
-                <TouchableOpacity style={styles.serviceCard}></TouchableOpacity>
+                <TouchableOpacity style={styles.serviceCard} activeOpacity={0.9}>
+                  <ServiceImage 
+                    uri="https://images.unsplash.com/photo-1502877338535-766e1452684a?w=300&h=200&fit=crop"
+                    style={styles.serviceImage}
+                    imageKey="deepCleanCarWash"
+                  />
+                </TouchableOpacity>
                 <Text style={styles.serviceName}>Deep Clean Car Wash</Text>
               </View>
               <View style={styles.serviceItem}>
-                <TouchableOpacity style={styles.serviceCard}></TouchableOpacity>
+                <TouchableOpacity style={styles.serviceCard} activeOpacity={0.9}>
+                  <ServiceImage 
+                    uri="https://images.unsplash.com/photo-1558980664-1db506751c6a?w=300&h=200&fit=crop"
+                    style={styles.serviceImage}
+                    imageKey="bikeWashService"
+                  />
+                </TouchableOpacity>
                 <Text style={styles.serviceName}>Bike Wash</Text>
               </View>
             </View>
@@ -193,6 +266,11 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 3,
     marginBottom: 8,
+    overflow: 'hidden',
+  },
+  mainServiceImage: {
+    width: '100%',
+    height: '100%',
   },
   mainServiceName: {
     fontSize: 16,
@@ -237,6 +315,11 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 3,
     marginBottom: 8,
+    overflow: 'hidden',
+  },
+  serviceImage: {
+    width: '100%',
+    height: '100%',
   },
   serviceName: {
     fontSize: 12,
