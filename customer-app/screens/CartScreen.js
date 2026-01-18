@@ -130,7 +130,15 @@ export default function CartScreen({ navigation }) {
               </View>
             </View>
 
-            <TouchableOpacity style={styles.checkoutButton}>
+            <TouchableOpacity 
+              style={styles.checkoutButton}
+              onPress={() => navigation.navigate('SlotSelection', {
+                cartItems,
+                subtotal,
+                tax,
+                total,
+              })}
+            >
               <Text style={styles.checkoutButtonText}>Select Slot</Text>
               <MaterialCommunityIcons name="arrow-right" size={20} color="#000000" />
             </TouchableOpacity>
