@@ -5,7 +5,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import HomeScreen from '../screens/HomeScreen';
 import ProfileScreen from '../screens/ProfileScreen';
-import WalletScreen from '../screens/WalletScreen';
+import BookingsScreen from '../screens/BookingsScreen';
 
 // Try to use BlurView if available, otherwise use fallback
 let BlurView;
@@ -31,7 +31,7 @@ const TAB_WIDTH = TAB_BAR_WIDTH / TAB_COUNT;
 // Map route keys to display names
 const routeLabels = {
   Home: 'Home',
-  Wallet: 'Wallet',
+  Bookings: 'Bookings',
   Profile: 'Profile',
 };
 
@@ -43,7 +43,7 @@ function LiquidGlassTabBar({ state, descriptors, navigation }) {
   // Label widths for each tab
   const labelWidths = {
     Home: 40,
-    Wallet: 50,
+    Bookings: 70,
     Profile: 50,
   };
 
@@ -90,7 +90,7 @@ function LiquidGlassTabBar({ state, descriptors, navigation }) {
 
             const iconName = {
               Home: 'home',
-              Wallet: 'wallet',
+              Bookings: 'calendar-clock',
               Profile: 'account',
             }[route.name] || 'circle';
 
@@ -181,12 +181,12 @@ export default function BottomTabNavigator() {
         }}
       />
       <Tab.Screen 
-        name="Wallet" 
-        component={WalletScreen}
+        name="Bookings" 
+        component={BookingsScreen}
         options={{
-          title: 'Wallet',
+          title: 'Bookings',
           tabBarIcon: ({ color, focused }) => (
-            <MaterialCommunityIcons name="wallet" color={color} size={24} />
+            <MaterialCommunityIcons name="calendar-clock" color={color} size={24} />
           ),
         }}
       />
