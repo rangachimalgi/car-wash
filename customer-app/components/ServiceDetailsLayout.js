@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image, Dimensions } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -6,7 +6,7 @@ import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import ServiceDetailsBottomSheet from './ServiceDetailsBottomSheet';
 import ServiceCoverage from './ServiceCoverage';
 import AddOnServicesList from './AddOnServicesList';
-import PricingPackages from './PricingPackages';
+import PricingPackages, { AddToCartButton } from './PricingPackages';
 
 const { width, height } = Dimensions.get('window');
 const IMAGE_SECTION_HEIGHT = height * 0.65;
@@ -22,6 +22,7 @@ export default function ServiceDetailsLayout({
   const insets = useSafeAreaInsets();
   const { serviceTitle, price, duration } = route?.params || {};
   const bottomSheetRef = useRef(null);
+  const [selectedPackage, setSelectedPackage] = useState('oneTime');
 
   const data = serviceData || (getServiceData ? getServiceData() : {});
   
@@ -80,7 +81,37 @@ export default function ServiceDetailsLayout({
       </View>
 
       {/* Bottom Sheet */}
-      <ServiceDetailsBottomSheet ref={bottomSheetRef}>
+      <ServiceDetailsBottomSheet 
+        ref={bottomSheetRef}
+        footer={
+          <View style={styles.addToCartFooter}>
+            <AddToCartButton
+              selectedPackage={selectedPackage}
+              oneTimePrice={oneTimePrice}
+              duration={data.specs?.duration}
+              serviceTitle={serviceTitle}
+              serviceImage={data.imageUri}
+              navigation={navigation}
+              onAddToCart={() => {
+                if (selectedPackage && selectedPackage !== 'oneTime' && navigation) {
+                  const packageTitle = `${serviceTitle} - ${selectedPackage.type} (${selectedPackage.times}x/month)`;
+                  const packagePrice = Math.round(selectedPackage.price);
+                  
+                  navigation.navigate('Cart', {
+                    addItem: {
+                      id: `pkg_${selectedPackage.id}_${Date.now()}`,
+                      title: packageTitle,
+                      image: data.imageUri || 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=300&h=200&fit=crop&auto=format',
+                      price: packagePrice,
+                      quantity: 1,
+                    }
+                  });
+                }
+              }}
+            />
+          </View>
+        }
+      >
         <BottomSheetScrollView 
           contentContainerStyle={styles.bottomSheetContent}
           showsVerticalScrollIndicator={false}
@@ -114,6 +145,7 @@ export default function ServiceDetailsLayout({
               serviceImage={data.imageUri}
               duration={data.specs?.duration}
               navigation={navigation}
+              onSelectionChange={setSelectedPackage}
             />
             
             {/* Service Coverage Table */}
@@ -226,6 +258,22 @@ const styles = StyleSheet.create({
   bottomSheetContent: {
     padding: 20,
     paddingBottom: 20,
+  },
+  addToCartFooter: {
+    backgroundColor: '#28282A',
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    paddingBottom: 20,
+    borderTopWidth: 1,
+    borderTopColor: '#333333',
+    shadowColor: '#000000',
+    shadowOffset: {
+      width: 0,
+      height: -2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
   },
   categoryText: {
     fontSize: 12,
