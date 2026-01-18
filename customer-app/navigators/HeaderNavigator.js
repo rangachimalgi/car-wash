@@ -8,12 +8,15 @@ import BikeWashDetailsScreen from '../screens/BikeWashDetailsScreen';
 import CartScreen from '../screens/CartScreen';
 import SlotSelectionScreen from '../screens/SlotSelectionScreen';
 import CheckoutScreen from '../screens/CheckoutScreen';
+import LoginScreen from '../screens/LoginScreen';
+import RegisterScreen from '../screens/RegisterScreen';
 
 const Stack = createStackNavigator();
 
 export default function HeaderNavigator() {
   return (
     <Stack.Navigator
+      initialRouteName="Login"
       screenOptions={{
         headerStyle: {
           backgroundColor: '#007AFF',
@@ -24,6 +27,16 @@ export default function HeaderNavigator() {
         },
       }}
     >
+      <Stack.Screen 
+        name="Login" 
+        component={LoginScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen 
+        name="Register" 
+        component={RegisterScreen}
+        options={{ headerShown: false }}
+      />
       <Stack.Screen 
         name="MainTabs" 
         component={BottomTabNavigator}
