@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, TextInput, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, TextInput, Dimensions, Alert } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import BackHeader from '../components/BackHeader';
@@ -17,6 +17,7 @@ export default function CheckoutScreen({ navigation, route }) {
   const [couponCode, setCouponCode] = useState('');
   const [appliedCoupon, setAppliedCoupon] = useState(null);
   const [discount, setDiscount] = useState(0);
+  const [showToast, setShowToast] = useState(false);
 
   const formatDate = (date) => {
     if (!date) return '';
@@ -54,10 +55,32 @@ export default function CheckoutScreen({ navigation, route }) {
 
   const finalTotal = total - discount;
 
+  const handlePayNow = () => {
+    // Show toast notification
+    setShowToast(true);
+    
+    // Hide toast after 2 seconds and navigate to home
+    setTimeout(() => {
+      setShowToast(false);
+      navigation.reset({
+        index: 0,
+        routes: [{ name: 'MainTabs' }],
+      });
+    }, 2000);
+  };
+
   return (
     <View style={styles.container}>
       <StatusBar style="light" />
       <BackHeader navigation={navigation} title="Checkout" />
+      
+      {/* Toast Notification */}
+      {showToast && (
+        <View style={styles.toastContainer}>
+          <MaterialCommunityIcons name="check-circle" size={24} color="#31C5FF" />
+          <Text style={styles.toastText}>Service booked</Text>
+        </View>
+      )}
       <ScrollView 
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
@@ -176,7 +199,10 @@ export default function CheckoutScreen({ navigation, route }) {
           <Text style={styles.amountLabel}>Total Amount</Text>
           <Text style={styles.amountValue}>₹{finalTotal.toFixed(2)}</Text>
         </View>
-        <TouchableOpacity style={styles.payNowButton}>
+        <TouchableOpacity 
+          style={styles.payNowButton}
+          onPress={handlePayNow}
+        >
           <Text style={styles.payNowButtonText}>Pay Now</Text>
           <MaterialCommunityIcons name="arrow-right" size={20} color="#000000" />
         </TouchableOpacity>
@@ -417,5 +443,34 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#000000',
     marginRight: 8,
+  },
+  toastContainer: {
+    position: 'absolute',
+    top: 100,
+    left: 16,
+    right: 16,
+    backgroundColor: '#1A1A1A',
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#31C5FF',
+    zIndex: 1000,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  toastText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#FFFFFF',
+    marginLeft: 12,
   },
 });
