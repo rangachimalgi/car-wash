@@ -6,6 +6,7 @@ import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import ServiceDetailsBottomSheet from './ServiceDetailsBottomSheet';
 import ServiceCoverage from './ServiceCoverage';
 import AddOnServicesList from './AddOnServicesList';
+import PricingPackages from './PricingPackages';
 
 const { width, height } = Dimensions.get('window');
 const IMAGE_SECTION_HEIGHT = height * 0.65;
@@ -23,50 +24,9 @@ export default function ServiceDetailsLayout({
   const bottomSheetRef = useRef(null);
 
   const data = serviceData || (getServiceData ? getServiceData() : {});
+  
+  const oneTimePrice = parseInt(price?.replace(/[₹,]/g, '')) || 299;
 
-  // Render bottom sheet content
-  const renderBottomSheetContent = () => (
-    <BottomSheetScrollView 
-      contentContainerStyle={styles.bottomSheetContent}
-      showsVerticalScrollIndicator={false}
-    >
-      <Text style={styles.categoryText}>{categoryText}</Text>
-      <View style={styles.titleRow}>
-        <Text style={styles.serviceTitle}>{serviceTitle}</Text>
-        <Text style={styles.distanceText}>6 km</Text>
-      </View>
-      <View style={styles.ratingRow}>
-        <MaterialCommunityIcons name="star" size={20} color="#FFD700" />
-        <MaterialCommunityIcons name="star" size={20} color="#FFD700" />
-        <MaterialCommunityIcons name="star" size={20} color="#FFD700" />
-        <MaterialCommunityIcons name="star" size={20} color="#FFD700" />
-        <MaterialCommunityIcons name="star-half-full" size={20} color="#FFD700" />
-      </View>
-      <View style={styles.actionRow}>
-        <TouchableOpacity style={styles.viewButton} activeOpacity={0.8}>
-          <Text style={styles.viewButtonText}>View available</Text>
-        </TouchableOpacity>
-        <View style={styles.priceContainer}>
-          <Text style={styles.priceText}>{price}</Text>
-          <Text style={styles.priceUnit}>service</Text>
-        </View>
-      </View>
-      
-      {/* Service Coverage Table */}
-      <ServiceCoverage 
-        included={data.included || []}
-        notIncluded={data.notIncluded || []}
-      />
-      
-      {/* Add-On Services List */}
-      {addOnServices.length > 0 && (
-        <AddOnServicesList 
-          services={addOnServices}
-          maxVisible={4}
-        />
-      )}
-    </BottomSheetScrollView>
-  );
 
   return (
     <View style={styles.container}>
@@ -121,7 +81,55 @@ export default function ServiceDetailsLayout({
 
       {/* Bottom Sheet */}
       <ServiceDetailsBottomSheet ref={bottomSheetRef}>
-        {renderBottomSheetContent()}
+        <BottomSheetScrollView 
+          contentContainerStyle={styles.bottomSheetContent}
+          showsVerticalScrollIndicator={false}
+        >
+            <Text style={styles.categoryText}>{categoryText}</Text>
+            <View style={styles.titleRow}>
+              <Text style={styles.serviceTitle}>{serviceTitle}</Text>
+              <Text style={styles.distanceText}>6 km</Text>
+            </View>
+            <View style={styles.ratingRow}>
+              <MaterialCommunityIcons name="star" size={20} color="#FFD700" />
+              <MaterialCommunityIcons name="star" size={20} color="#FFD700" />
+              <MaterialCommunityIcons name="star" size={20} color="#FFD700" />
+              <MaterialCommunityIcons name="star" size={20} color="#FFD700" />
+              <MaterialCommunityIcons name="star-half-full" size={20} color="#FFD700" />
+            </View>
+            <View style={styles.actionRow}>
+              <TouchableOpacity style={styles.viewButton} activeOpacity={0.8}>
+                <Text style={styles.viewButtonText}>View available</Text>
+              </TouchableOpacity>
+              <View style={styles.priceContainer}>
+                <Text style={styles.priceText}>{price}</Text>
+                <Text style={styles.priceUnit}>service</Text>
+              </View>
+            </View>
+            
+            {/* Pricing Packages */}
+            <PricingPackages 
+              oneTimePrice={oneTimePrice}
+              serviceTitle={serviceTitle}
+              serviceImage={data.imageUri}
+              duration={data.specs?.duration}
+              navigation={navigation}
+            />
+            
+            {/* Service Coverage Table */}
+            <ServiceCoverage 
+              included={data.included || []}
+              notIncluded={data.notIncluded || []}
+            />
+            
+            {/* Add-On Services List */}
+            {addOnServices.length > 0 && (
+              <AddOnServicesList 
+                services={addOnServices}
+                maxVisible={4}
+              />
+            )}
+        </BottomSheetScrollView>
       </ServiceDetailsBottomSheet>
     </View>
   );
@@ -217,7 +225,7 @@ const styles = StyleSheet.create({
   },
   bottomSheetContent: {
     padding: 20,
-    paddingBottom: 100,
+    paddingBottom: 20,
   },
   categoryText: {
     fontSize: 12,

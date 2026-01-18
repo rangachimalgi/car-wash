@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Dimensions } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -6,7 +6,7 @@ import BackHeader from '../components/BackHeader';
 
 const { width } = Dimensions.get('window');
 
-export default function CartScreen({ navigation }) {
+export default function CartScreen({ navigation, route }) {
   const [cartItems, setCartItems] = useState([
     {
       id: '1',
@@ -30,6 +30,26 @@ export default function CartScreen({ navigation }) {
       quantity: 1,
     },
   ]);
+
+  // Handle adding items from navigation params
+  useEffect(() => {
+    if (route?.params?.addItem) {
+      const newItem = route.params.addItem;
+      setCartItems(prevItems => {
+        // Check if item already exists, if so update quantity
+        const existingIndex = prevItems.findIndex(item => item.title === newItem.title);
+        if (existingIndex >= 0) {
+          const updated = [...prevItems];
+          updated[existingIndex].quantity += 1;
+          return updated;
+        }
+        // Add new item
+        return [...prevItems, newItem];
+      });
+      // Clear the route params to prevent re-adding on re-render
+      navigation.setParams({ addItem: undefined });
+    }
+  }, [route?.params?.addItem, navigation]);
 
   const updateQuantity = (id, change) => {
     setCartItems(items =>
