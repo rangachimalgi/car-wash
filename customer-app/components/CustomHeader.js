@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-export default function CustomHeader() {
+export default function CustomHeader({ navigation }) {
   const insets = useSafeAreaInsets();
 
   return (
@@ -27,7 +27,11 @@ export default function CustomHeader() {
           />
         </TouchableOpacity>
         <View style={styles.rightSection}>
-          <TouchableOpacity activeOpacity={0.7} style={styles.iconButton}>
+          <TouchableOpacity 
+            activeOpacity={0.7} 
+            style={styles.iconButton}
+            onPress={() => navigation?.navigate('Cart')}
+          >
             <MaterialCommunityIcons 
               name="cart" 
               size={24} 

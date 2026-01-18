@@ -5,6 +5,7 @@ import CarWashScreen from '../screens/CarWashScreen';
 import CarWashDetailsScreen from '../screens/CarWashDetailsScreen';
 import BikeWashScreen from '../screens/BikeWashScreen';
 import BikeWashDetailsScreen from '../screens/BikeWashDetailsScreen';
+import CartScreen from '../screens/CartScreen';
 
 const Stack = createStackNavigator();
 
@@ -44,6 +45,11 @@ export default function HeaderNavigator() {
       <Stack.Screen 
         name="BikeWashDetails" 
         component={BikeWashDetailsScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen 
+        name="Cart" 
+        component={CartScreen}
         options={{ headerShown: false }}
       />
     </Stack.Navigator>

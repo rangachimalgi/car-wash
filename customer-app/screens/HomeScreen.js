@@ -35,7 +35,7 @@ export default function HomeScreen({ navigation }) {
   return (
     <View style={styles.container}>
       <StatusBar style="light" />
-      <CustomHeader />
+      <CustomHeader navigation={navigation} />
       <ScrollView 
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
@@ -44,9 +44,9 @@ export default function HomeScreen({ navigation }) {
         {/* Special For You Section */}
         <View style={styles.specialForYouSection}>
           <Text style={styles.specialForYouTitle}>#WooshSpecialForYou</Text>
-          <TouchableOpacity>
+          {/* <TouchableOpacity>
             <Text style={styles.seeAllText}>See All</Text>
-          </TouchableOpacity>
+          </TouchableOpacity> */}
         </View>
 
         {/* Special Offer Banner */}
@@ -219,6 +219,51 @@ export default function HomeScreen({ navigation }) {
                 imageKey="provider2"
               />
             </TouchableOpacity>
+          </ScrollView>
+        </View>
+
+        {/* Why Choose Woosh Section */}
+        <View style={styles.whyChooseSection}>
+          <Text style={styles.whyChooseTitle}>Why Choose Woosh</Text>
+          <ScrollView 
+            horizontal 
+            showsHorizontalScrollIndicator={false}
+            style={styles.whyChooseScrollView}
+            contentContainerStyle={styles.whyChooseScrollContent}
+          >
+            <View style={[styles.whyChooseCard, styles.whyChooseCardBlue]}>
+              <ServiceImage 
+                uri="https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=300&h=200&fit=crop&auto=format"
+                style={styles.whyChooseImage}
+                imageKey="whyChoose1"
+              />
+              <View style={styles.whyChooseTextContent}>
+                <Text style={styles.whyChooseCardTitle}>Car Wash at Your Home</Text>
+                <Text style={styles.whyChooseCardDescription}>No waiting, No travel — we come to you.</Text>
+              </View>
+            </View>
+            <View style={[styles.whyChooseCard, styles.whyChooseCardGreen]}>
+              <ServiceImage 
+                uri="https://images.unsplash.com/photo-1558981806-ec527fa84c39?w=300&h=200&fit=crop&auto=format"
+                style={styles.whyChooseImage}
+                imageKey="whyChoose2"
+              />
+              <View style={styles.whyChooseTextContent}>
+                <Text style={styles.whyChooseCardTitle}>Professional Service</Text>
+                <Text style={styles.whyChooseCardDescription}>Expert team with top-quality equipment and products.</Text>
+              </View>
+            </View>
+            <View style={[styles.whyChooseCard, styles.whyChooseCardPurple]}>
+              <ServiceImage 
+                uri="https://images.unsplash.com/photo-1502877338535-766e1452684a?w=300&h=200&fit=crop&auto=format"
+                style={styles.whyChooseImage}
+                imageKey="whyChoose3"
+              />
+              <View style={styles.whyChooseTextContent}>
+                <Text style={styles.whyChooseCardTitle}>Affordable Pricing</Text>
+                <Text style={styles.whyChooseCardDescription}>Best value for money with transparent pricing.</Text>
+              </View>
+            </View>
           </ScrollView>
         </View>
       </ScrollView>
@@ -478,5 +523,62 @@ const styles = StyleSheet.create({
   providerImage: {
     width: '100%',
     height: '100%',
+  },
+  whyChooseSection: {
+    paddingHorizontal: 16,
+    paddingTop: 20,
+    paddingBottom: 20,
+  },
+  whyChooseTitle: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
+    marginBottom: 16,
+  },
+  whyChooseScrollView: {
+    marginHorizontal: -16,
+  },
+  whyChooseScrollContent: {
+    paddingHorizontal: 16,
+  },
+  whyChooseCard: {
+    width: width - 64,
+    height: 180,
+    borderRadius: 20,
+    marginRight: 16,
+    flexDirection: 'row',
+    overflow: 'hidden',
+    padding: 16,
+    alignItems: 'center',
+  },
+  whyChooseCardBlue: {
+    backgroundColor: '#E6F4FF',
+  },
+  whyChooseCardGreen: {
+    backgroundColor: '#E6FFE6',
+  },
+  whyChooseCardPurple: {
+    backgroundColor: '#F0E6FF',
+  },
+  whyChooseImage: {
+    width: 120,
+    height: 150,
+    borderRadius: 12,
+    marginRight: 16,
+  },
+  whyChooseTextContent: {
+    flex: 1,
+    justifyContent: 'center',
+  },
+  whyChooseCardTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#000000',
+    marginBottom: 8,
+  },
+  whyChooseCardDescription: {
+    fontSize: 14,
+    color: '#333333',
+    lineHeight: 20,
   },
 });
