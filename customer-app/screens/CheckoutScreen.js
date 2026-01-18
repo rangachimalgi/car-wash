@@ -8,7 +8,9 @@ const { width } = Dimensions.get('window');
 
 export default function CheckoutScreen({ navigation, route }) {
   const cartItems = route?.params?.cartItems || [];
-  const selectedDate = route?.params?.selectedDate || null;
+  // Convert ISO string back to Date object (it was serialized for navigation)
+  const selectedDateParam = route?.params?.selectedDate;
+  const selectedDate = selectedDateParam ? new Date(selectedDateParam) : null;
   const selectedTimeSlot = route?.params?.selectedTimeSlot || null;
   const subtotal = route?.params?.subtotal || 0;
   const tax = route?.params?.tax || 0;

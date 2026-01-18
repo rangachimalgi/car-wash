@@ -64,8 +64,9 @@ export default function SlotSelectionScreen({ navigation, route }) {
       return;
     }
     // Navigate to checkout/confirmation screen
+    // Convert Date to ISO string for navigation params (must be serializable)
     navigation.navigate('Checkout', {
-      selectedDate,
+      selectedDate: selectedDate.toISOString(),
       selectedTimeSlot,
       cartItems,
       subtotal,
