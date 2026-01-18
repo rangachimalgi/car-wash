@@ -68,6 +68,8 @@ export default function SlotSelectionScreen({ navigation, route }) {
       selectedDate,
       selectedTimeSlot,
       cartItems,
+      subtotal,
+      tax,
       total,
     });
   };
