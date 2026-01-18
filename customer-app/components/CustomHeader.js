@@ -9,7 +9,11 @@ export default function CustomHeader({ navigation }) {
   return (
     <View style={[styles.header, { paddingTop: insets.top }]}>
       <View style={styles.headerContent}>
-        <TouchableOpacity style={styles.leftSection} activeOpacity={0.7}>
+        <TouchableOpacity 
+          style={styles.leftSection} 
+          activeOpacity={0.7}
+          onPress={() => navigation?.navigate('Addresses')}
+        >
           <MaterialCommunityIcons 
             name="map-marker" 
             size={20} 

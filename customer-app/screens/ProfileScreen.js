@@ -149,7 +149,10 @@ export default function ProfileScreen({ navigation }) {
           <View style={styles.sectionHeader}>
             <MaterialCommunityIcons name="map-marker" size={24} color="#31C5FF" />
             <Text style={styles.sectionTitle}>Addresses</Text>
-            <TouchableOpacity style={styles.addButton}>
+            <TouchableOpacity 
+              style={styles.addButton}
+              onPress={() => navigation.navigate('Addresses')}
+            >
               <MaterialCommunityIcons name="plus" size={20} color="#31C5FF" />
             </TouchableOpacity>
           </View>

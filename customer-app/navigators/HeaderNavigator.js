@@ -10,6 +10,7 @@ import SlotSelectionScreen from '../screens/SlotSelectionScreen';
 import CheckoutScreen from '../screens/CheckoutScreen';
 import LoginScreen from '../screens/LoginScreen';
 import RegisterScreen from '../screens/RegisterScreen';
+import AddressesScreen from '../screens/AddressesScreen';
 
 const Stack = createStackNavigator();
 
@@ -75,6 +76,11 @@ export default function HeaderNavigator() {
       <Stack.Screen 
         name="Checkout" 
         component={CheckoutScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen 
+        name="Addresses" 
+        component={AddressesScreen}
         options={{ headerShown: false }}
       />
     </Stack.Navigator>
