@@ -13,7 +13,7 @@ export default function CustomHeader() {
           <MaterialCommunityIcons 
             name="map-marker" 
             size={20} 
-            color="#000000" 
+            color="#FFFFFF" 
             style={styles.locationIcon}
           />
           <Text style={styles.addressText} numberOfLines={1} ellipsizeMode="tail">
@@ -22,7 +22,7 @@ export default function CustomHeader() {
           <MaterialCommunityIcons 
             name="chevron-down" 
             size={20} 
-            color="#000000" 
+            color="#FFFFFF" 
             style={styles.arrowIcon}
           />
         </TouchableOpacity>
@@ -31,14 +31,14 @@ export default function CustomHeader() {
             <MaterialCommunityIcons 
               name="cart" 
               size={24} 
-              color="#000000" 
+              color="#FFFFFF" 
             />
           </TouchableOpacity>
           <TouchableOpacity activeOpacity={0.7} style={styles.iconButton}>
             <MaterialCommunityIcons 
               name="car" 
               size={24} 
-              color="#000000" 
+              color="#FFFFFF" 
             />
           </TouchableOpacity>
         </View>
@@ -49,7 +49,7 @@ export default function CustomHeader() {
 
 const styles = StyleSheet.create({
   header: {
-    backgroundColor: '#fff',
+    backgroundColor: '#000000',
     paddingHorizontal: 16,
     paddingBottom: 12,
   },
@@ -77,7 +77,7 @@ const styles = StyleSheet.create({
   },
   addressText: {
     fontSize: 16,
-    color: '#000',
+    color: '#FFFFFF',
     fontWeight: '500',
     flexShrink: 1,
   },

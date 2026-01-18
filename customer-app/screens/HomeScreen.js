@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, Dimensions, TouchableOpacity, Image } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { StatusBar } from 'expo-status-bar';
 import CustomHeader from '../components/CustomHeader';
 
 const { width } = Dimensions.get('window');
@@ -16,8 +17,8 @@ export default function HomeScreen({ navigation }) {
   const ServiceImage = ({ uri, style, imageKey }) => {
     if (imageErrors[imageKey]) {
       return (
-        <View style={[style, { backgroundColor: '#E5E5E5', alignItems: 'center', justifyContent: 'center' }]}>
-          <MaterialCommunityIcons name="image-outline" size={32} color="#999999" />
+        <View style={[style, { backgroundColor: '#2A2A2A', alignItems: 'center', justifyContent: 'center' }]}>
+          <MaterialCommunityIcons name="image-outline" size={32} color="#666666" />
         </View>
       );
     }
@@ -33,33 +34,116 @@ export default function HomeScreen({ navigation }) {
 
   return (
     <View style={styles.container}>
+      <StatusBar style="light" />
       <CustomHeader />
       <ScrollView 
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.heroSection}>
-          <View style={styles.sliderContainer}>
-            <ScrollView
-              horizontal
-              pagingEnabled
-              showsHorizontalScrollIndicator={false}
-              style={styles.slider}
-            >
-              <View style={styles.slide}>
-                <View style={styles.heroImageContainer}>
-                  <View style={styles.textOverlay}>
-                    <Text style={styles.wooshText}>woosh</Text>
-                    <Text style={styles.tagline}>Here for your car wash, bike wash</Text>
-                    <Text style={styles.description}>Book now and get sparkling clean!</Text>
-                  </View>
-                </View>
-              </View>
-            </ScrollView>
-          </View>
+        {/* Special For You Section */}
+        <View style={styles.specialForYouSection}>
+          <Text style={styles.specialForYouTitle}>#WooshSpecialForYou</Text>
+          <TouchableOpacity>
+            <Text style={styles.seeAllText}>See All</Text>
+          </TouchableOpacity>
         </View>
-        
+
+        {/* Special Offer Banner */}
+        <ScrollView 
+          horizontal 
+          showsHorizontalScrollIndicator={false}
+          style={styles.offerScrollView}
+          contentContainerStyle={styles.offerScrollContent}
+        >
+          <View style={styles.offerCard}>
+            <ServiceImage 
+              uri="https://images.unsplash.com/photo-1502877338535-766e1452684a?w=400&h=300&fit=crop&auto=format&blur=50"
+              style={styles.offerBackgroundImage}
+              imageKey="offer1"
+            />
+            <View style={styles.offerOverlay} />
+            <View style={styles.offerBadge}>
+              <Text style={styles.offerBadgeText}>Limited time!</Text>
+            </View>
+            <View style={styles.offerContent}>
+              <Text style={styles.offerTitle}>Get Special Offer</Text>
+              <View style={styles.offerDiscountRow}>
+                <Text style={styles.offerUpTo}>Up to</Text>
+                <Text style={styles.offerPercentage}>40%</Text>
+              </View>
+              <Text style={styles.offerDescription}>All Washing Service Available | T&C Applied</Text>
+            </View>
+            <TouchableOpacity style={styles.claimButton}>
+              <Text style={styles.claimButtonText}>Claim</Text>
+            </TouchableOpacity>
+          </View>
+          <View style={styles.offerCard}>
+            <ServiceImage 
+              uri="https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&h=300&fit=crop&auto=format&blur=50"
+              style={styles.offerBackgroundImage}
+              imageKey="offer2"
+            />
+            <View style={styles.offerOverlay} />
+            <View style={styles.offerBadge}>
+              <Text style={styles.offerBadgeText}>Limited time!</Text>
+            </View>
+            <View style={styles.offerContent}>
+              <Text style={styles.offerTitle}>Get Special Offer</Text>
+              <View style={styles.offerDiscountRow}>
+                <Text style={styles.offerUpTo}>Up to</Text>
+                <Text style={styles.offerPercentage}>30%</Text>
+              </View>
+              <Text style={styles.offerDescription}>All Washing Service Available | T&C Applied</Text>
+            </View>
+            <TouchableOpacity style={styles.claimButton}>
+              <Text style={styles.claimButtonText}>Claim</Text>
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
+
+        {/* Services Section */}
+        <View style={styles.servicesSection}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Woosh Services</Text>
+            <TouchableOpacity>
+              <Text style={styles.seeAllText}>See All</Text>
+            </TouchableOpacity>
+          </View>
+          <ScrollView 
+            horizontal 
+            showsHorizontalScrollIndicator={false}
+            style={styles.servicesScrollView}
+            contentContainerStyle={styles.servicesScrollContent}
+          >
+            <TouchableOpacity style={styles.serviceIconContainer} activeOpacity={0.7}>
+              <View style={styles.serviceIconCircle}>
+                <MaterialCommunityIcons name="car-wash" size={32} color="#31C5FF" />
+              </View>
+              <Text style={styles.serviceIconLabel}>Exterior C...</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.serviceIconContainer} activeOpacity={0.7}>
+              <View style={styles.serviceIconCircle}>
+                <MaterialCommunityIcons name="vacuum" size={32} color="#31C5FF" />
+              </View>
+              <Text style={styles.serviceIconLabel}>Vacuum C...</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.serviceIconContainer} activeOpacity={0.7}>
+              <View style={styles.serviceIconCircle}>
+                <MaterialCommunityIcons name="car-seat" size={32} color="#31C5FF" />
+              </View>
+              <Text style={styles.serviceIconLabel}>Interior C...</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.serviceIconContainer} activeOpacity={0.7}>
+              <View style={styles.serviceIconCircle}>
+                <MaterialCommunityIcons name="car-cog" size={32} color="#31C5FF" />
+              </View>
+              <Text style={styles.serviceIconLabel}>Engine Ba...</Text>
+            </TouchableOpacity>
+          </ScrollView>
+        </View>
+
+        {/* Car Wash and Bike Wash Cards */}
         <View style={styles.mainServicesSection}>
           <View style={styles.mainServicesRow}>
             <View style={styles.mainServiceItem}>
@@ -92,75 +176,50 @@ export default function HomeScreen({ navigation }) {
             </View>
           </View>
         </View>
-        
-        <View style={styles.servicesSection}>
-          <Text style={styles.sectionTitle}>Recommended Services</Text>
-          <View style={styles.servicesGrid}>
-            <View style={styles.servicesRow}>
-              <View style={styles.serviceItem}>
-                <TouchableOpacity style={styles.serviceCard} activeOpacity={0.9}>
-                  <ServiceImage 
-                    uri="https://images.unsplash.com/photo-1605559424843-9e4c228bf1c2?w=300&h=200&fit=crop"
-                    style={styles.serviceImage}
-                    imageKey="premiumCarWash"
-                  />
-                </TouchableOpacity>
-                <Text style={styles.serviceName}>Premium Car Wash</Text>
-              </View>
-              <View style={styles.serviceItem}>
-                <TouchableOpacity style={styles.serviceCard} activeOpacity={0.9}>
-                  <ServiceImage 
-                    uri="https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=300&h=200&fit=crop"
-                    style={styles.serviceImage}
-                    imageKey="standardCarWash"
-                  />
-                </TouchableOpacity>
-                <Text style={styles.serviceName}>Standard Car Wash</Text>
-              </View>
-              <View style={styles.serviceItem}>
-                <TouchableOpacity style={styles.serviceCard} activeOpacity={0.9}>
-                  <ServiceImage 
-                    uri="https://images.unsplash.com/photo-1502877338535-766e1452684a?w=300&h=200&fit=crop"
-                    style={styles.serviceImage}
-                    imageKey="cleanupCarWash"
-                  />
-                </TouchableOpacity>
-                <Text style={styles.serviceName}>360 Cleanup Car Wash</Text>
-              </View>
-            </View>
-            <View style={styles.servicesRow}>
-              <View style={styles.serviceItem}>
-                <TouchableOpacity style={styles.serviceCard} activeOpacity={0.9}>
-                  <ServiceImage 
-                    uri="https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=300&h=200&fit=crop"
-                    style={styles.serviceImage}
-                    imageKey="expressCarWash"
-                  />
-                </TouchableOpacity>
-                <Text style={styles.serviceName}>Express Car Wash</Text>
-              </View>
-              <View style={styles.serviceItem}>
-                <TouchableOpacity style={styles.serviceCard} activeOpacity={0.9}>
-                  <ServiceImage 
-                    uri="https://images.unsplash.com/photo-1502877338535-766e1452684a?w=300&h=200&fit=crop"
-                    style={styles.serviceImage}
-                    imageKey="deepCleanCarWash"
-                  />
-                </TouchableOpacity>
-                <Text style={styles.serviceName}>Deep Clean Car Wash</Text>
-              </View>
-              <View style={styles.serviceItem}>
-                <TouchableOpacity style={styles.serviceCard} activeOpacity={0.9}>
-                  <ServiceImage 
-                    uri="https://images.unsplash.com/photo-1558980664-1db506751c6a?w=300&h=200&fit=crop"
-                    style={styles.serviceImage}
-                    imageKey="bikeWashService"
-                  />
-                </TouchableOpacity>
-                <Text style={styles.serviceName}>Bike Wash</Text>
-              </View>
-            </View>
+
+        {/* Popular Service Provider Section */}
+        <View style={styles.popularSection}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Popular Service Provider</Text>
+            <TouchableOpacity>
+              <Text style={styles.seeAllText}>See All</Text>
+            </TouchableOpacity>
           </View>
+          <ScrollView 
+            horizontal 
+            showsHorizontalScrollIndicator={false}
+            style={styles.providersScrollView}
+            contentContainerStyle={styles.providersScrollContent}
+          >
+            <TouchableOpacity style={styles.providerCard} activeOpacity={0.9}>
+              <View style={styles.providerRatingBadge}>
+                <MaterialCommunityIcons name="star" size={14} color="#FFD700" />
+                <Text style={styles.providerRating}>4.8</Text>
+              </View>
+              <TouchableOpacity style={styles.providerBookmark}>
+                <MaterialCommunityIcons name="bookmark-outline" size={20} color="#31C5FF" />
+              </TouchableOpacity>
+              <ServiceImage 
+                uri="https://images.unsplash.com/photo-1502877338535-766e1452684a?w=300&h=200&fit=crop"
+                style={styles.providerImage}
+                imageKey="provider1"
+              />
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.providerCard} activeOpacity={0.9}>
+              <View style={styles.providerRatingBadge}>
+                <MaterialCommunityIcons name="star" size={14} color="#FFD700" />
+                <Text style={styles.providerRating}>4.8</Text>
+              </View>
+              <TouchableOpacity style={styles.providerBookmark}>
+                <MaterialCommunityIcons name="bookmark-outline" size={20} color="#31C5FF" />
+              </TouchableOpacity>
+              <ServiceImage 
+                uri="https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=300&h=200&fit=crop"
+                style={styles.providerImage}
+                imageKey="provider2"
+              />
+            </TouchableOpacity>
+          </ScrollView>
         </View>
       </ScrollView>
     </View>
@@ -170,7 +229,7 @@ export default function HomeScreen({ navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F5F5F5',
+    backgroundColor: '#000000',
   },
   scrollView: {
     flex: 1,
@@ -178,69 +237,161 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingBottom: 100,
   },
-  heroSection: {
+  specialForYouSection: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    width: '100%',
+    paddingHorizontal: 16,
+    paddingTop: 20,
+    paddingBottom: 12,
   },
-  sliderContainer: {
-    width: width,
-    height: 220,
-    marginBottom: 30,
-    overflow: 'hidden',
-  },
-  slider: {
-    flex: 1,
-  },
-  slide: {
-    width: width,
-    height: 220,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  heroImageContainer: {
-    width: '100%',
-    height: '100%',
-    backgroundColor: '#17A9F9',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  textOverlay: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 20,
-  },
-  wooshText: {
-    fontSize: 48,
+  specialForYouTitle: {
+    fontSize: 18,
     fontWeight: 'bold',
     color: '#FFFFFF',
-    marginBottom: 12,
-    letterSpacing: 2,
-    textShadowColor: 'rgba(0, 0, 0, 0.5)',
-    textShadowOffset: { width: 0, height: 2 },
-    textShadowRadius: 4,
   },
-  tagline: {
-    fontSize: 20,
+  seeAllText: {
+    fontSize: 14,
+    color: '#31C5FF',
+    fontWeight: '600',
+  },
+  offerScrollView: {
+    marginVertical: 10,
+  },
+  offerScrollContent: {
+    paddingHorizontal: 16,
+    paddingRight: 32,
+  },
+  offerCard: {
+    width: width - 32,
+    height: 180,
+    backgroundColor: '#1A1A1A',
+    borderRadius: 16,
+    marginRight: 16,
+    padding: 16,
+    overflow: 'hidden',
+    position: 'relative',
+  },
+  offerBackgroundImage: {
+    position: 'absolute',
+    width: '100%',
+    height: '100%',
+    opacity: 0.3,
+  },
+  offerOverlay: {
+    position: 'absolute',
+    width: '100%',
+    height: '100%',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  },
+  offerBadge: {
+    position: 'absolute',
+    top: 12,
+    left: 12,
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+    zIndex: 2,
+  },
+  offerBadgeText: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: '#000000',
+  },
+  offerContent: {
+    marginTop: 32,
+    marginRight: 100,
+    zIndex: 2,
+    position: 'relative',
+  },
+  offerTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
     color: '#FFFFFF',
-    textAlign: 'center',
     marginBottom: 8,
-    fontWeight: '500',
-    textShadowColor: 'rgba(0, 0, 0, 0.5)',
-    textShadowOffset: { width: 0, height: 2 },
-    textShadowRadius: 4,
   },
-  description: {
-    fontSize: 16,
+  offerDiscountRow: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    marginBottom: 8,
+  },
+  offerUpTo: {
+    fontSize: 14,
+    color: '#FFFFFF',
+    marginRight: 4,
+  },
+  offerPercentage: {
+    fontSize: 32,
+    fontWeight: 'bold',
+    color: '#31C5FF',
+  },
+  offerDescription: {
+    fontSize: 11,
+    color: '#CCCCCC',
+    lineHeight: 14,
+  },
+  claimButton: {
+    position: 'absolute',
+    right: 16,
+    bottom: 16,
+    backgroundColor: '#31C5FF',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 20,
+    zIndex: 2,
+  },
+  claimButtonText: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#000000',
+  },
+  servicesSection: {
+    paddingHorizontal: 16,
+    paddingTop: 24,
+    paddingBottom: 20,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  sectionTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
+  },
+  servicesScrollView: {
+    marginHorizontal: -16,
+  },
+  servicesScrollContent: {
+    paddingHorizontal: 16,
+  },
+  serviceIconContainer: {
+    alignItems: 'center',
+    marginRight: 20,
+    width: 80,
+  },
+  serviceIconCircle: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    borderWidth: 2,
+    borderColor: '#31C5FF',
+    backgroundColor: '#1A1A1A',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  serviceIconLabel: {
+    fontSize: 12,
     color: '#FFFFFF',
     textAlign: 'center',
-    marginTop: 8,
-    textShadowColor: 'rgba(0, 0, 0, 0.5)',
-    textShadowOffset: { width: 0, height: 2 },
-    textShadowRadius: 4,
   },
   mainServicesSection: {
     paddingHorizontal: 16,
-    paddingTop: 30,
+    paddingTop: 20,
     paddingBottom: 20,
   },
   mainServicesRow: {
@@ -255,14 +406,16 @@ const styles = StyleSheet.create({
   mainServiceCard: {
     width: '100%',
     height: 120,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#1A1A1A',
     borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#333333',
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
       height: 2,
     },
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.3,
     shadowRadius: 4,
     elevation: 3,
     marginBottom: 8,
@@ -275,56 +428,55 @@ const styles = StyleSheet.create({
   mainServiceName: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#38383A',
+    color: '#FFFFFF',
     textAlign: 'center',
   },
-  servicesSection: {
+  popularSection: {
     paddingHorizontal: 16,
     paddingTop: 20,
     paddingBottom: 20,
   },
-  sectionTitle: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    color: '#38383A',
-    marginBottom: 16,
+  providersScrollView: {
+    marginHorizontal: -16,
   },
-  servicesGrid: {
-    // Grid container
+  providersScrollContent: {
+    paddingHorizontal: 16,
   },
-  servicesRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 20,
-  },
-  serviceItem: {
-    width: cardWidth,
-    alignItems: 'center',
-  },
-  serviceCard: {
-    width: cardWidth,
-    height: 100,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-    marginBottom: 8,
+  providerCard: {
+    width: 200,
+    height: 160,
+    backgroundColor: '#1A1A1A',
+    borderRadius: 16,
+    marginRight: 16,
     overflow: 'hidden',
+    position: 'relative',
   },
-  serviceImage: {
-    width: '100%',
-    height: '100%',
+  providerRatingBadge: {
+    position: 'absolute',
+    top: 12,
+    left: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#000000',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    zIndex: 1,
   },
-  serviceName: {
+  providerRating: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#38383A',
-    textAlign: 'center',
+    color: '#FFFFFF',
+    marginLeft: 4,
+  },
+  providerBookmark: {
+    position: 'absolute',
+    top: 12,
+    right: 12,
+    zIndex: 1,
+  },
+  providerImage: {
+    width: '100%',
+    height: '100%',
   },
 });

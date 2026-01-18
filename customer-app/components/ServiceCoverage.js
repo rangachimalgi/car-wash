@@ -7,7 +7,7 @@ export default function ServiceCoverage({ included = [], notIncluded = [] }) {
     <View key={item} style={styles.itemRow}>
       <View style={[styles.iconContainer, isIncluded ? styles.includedIcon : styles.notIncludedIcon]}>
         {isIncluded ? (
-          <MaterialCommunityIcons name="check" size={16} color="#FFFFFF" />
+          <MaterialCommunityIcons name="check" size={16} color="#31C5FF" />
         ) : (
           <MaterialCommunityIcons name="information" size={16} color="#FFFFFF" />
         )}
@@ -28,7 +28,7 @@ export default function ServiceCoverage({ included = [], notIncluded = [] }) {
         <View style={styles.column}>
           <View style={[styles.columnHeader, styles.includedHeader]}>
             <View style={[styles.headerIcon, styles.includedHeaderIcon]}>
-              <MaterialCommunityIcons name="check" size={18} color="#FFFFFF" />
+              <MaterialCommunityIcons name="check" size={18} color="#000000" />
             </View>
             <Text style={styles.columnHeaderText}>What's Included</Text>
           </View>
@@ -83,7 +83,7 @@ const styles = StyleSheet.create({
   },
   seeAllText: {
     fontSize: 14,
-    color: '#6BB6FF',
+    color: '#31C5FF',
     fontWeight: '600',
   },
   tableContainer: {
@@ -106,7 +106,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
   },
   includedHeader: {
-    backgroundColor: '#4CAF50',
+    backgroundColor: '#31C5FF',
   },
   notIncludedHeader: {
     backgroundColor: '#9E9E9E',
@@ -150,7 +150,7 @@ const styles = StyleSheet.create({
     marginRight: 10,
   },
   includedIcon: {
-    backgroundColor: '#4CAF50',
+    backgroundColor: 'rgba(49, 197, 255, 0.2)',
   },
   notIncludedIcon: {
     backgroundColor: '#9E9E9E',
