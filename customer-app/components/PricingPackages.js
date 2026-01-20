@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 
-export default function PricingPackages({ oneTimePrice = 299, serviceTitle = 'Service', serviceImage = '', duration = '50 mins', navigation, onSelectionChange }) {
+export default function PricingPackages({ oneTimePrice = 299, serviceTitle = 'Service', serviceImage = '', duration = '50 mins', navigation, onSelectionChange, packages = null }) {
   const [expandedSection, setExpandedSection] = useState(null);
   const [selectedPackage, setSelectedPackage] = useState('oneTime'); // Default to one time wash
 
@@ -10,23 +10,30 @@ export default function PricingPackages({ oneTimePrice = 299, serviceTitle = 'Se
     setExpandedSection(expandedSection === section ? null : section);
   };
 
-  // Calculate monthly packages based on one-time price
-  const monthlyPackages = [
+  // Use packages from API if available, otherwise calculate (fallback)
+  const monthlyPackages = packages?.monthly?.map((pkg, index) => ({
+    id: `m${index + 1}`,
+    ...pkg,
+  })) || [
     { id: '1', times: 2, discount: 5, price: oneTimePrice * 2 * 0.95, perWash: (oneTimePrice * 2 * 0.95) / 2 },
     { id: '2', times: 4, discount: 10, price: oneTimePrice * 4 * 0.90, perWash: (oneTimePrice * 4 * 0.90) / 4 },
     { id: '3', times: 6, discount: 15, price: oneTimePrice * 6 * 0.85, perWash: (oneTimePrice * 6 * 0.85) / 6 },
     { id: '4', times: 8, discount: 20, price: oneTimePrice * 8 * 0.80, perWash: (oneTimePrice * 8 * 0.80) / 8 },
   ];
 
-  // Quarterly packages (3 months)
-  const quarterlyPackages = [
+  const quarterlyPackages = packages?.quarterly?.map((pkg, index) => ({
+    id: `q${index + 1}`,
+    ...pkg,
+  })) || [
     { id: 'q1', times: 6, discount: 15, price: oneTimePrice * 6 * 0.85 * 3, perWash: (oneTimePrice * 6 * 0.85 * 3) / 18 },
     { id: 'q2', times: 12, discount: 20, price: oneTimePrice * 12 * 0.80 * 3, perWash: (oneTimePrice * 12 * 0.80 * 3) / 36 },
     { id: 'q3', times: 18, discount: 25, price: oneTimePrice * 18 * 0.75 * 3, perWash: (oneTimePrice * 18 * 0.75 * 3) / 54 },
   ];
 
-  // Yearly packages (12 months)
-  const yearlyPackages = [
+  const yearlyPackages = packages?.yearly?.map((pkg, index) => ({
+    id: `y${index + 1}`,
+    ...pkg,
+  })) || [
     { id: 'y1', times: 24, discount: 25, price: oneTimePrice * 24 * 0.75 * 12, perWash: (oneTimePrice * 24 * 0.75 * 12) / 288 },
     { id: 'y2', times: 36, discount: 30, price: oneTimePrice * 36 * 0.70 * 12, perWash: (oneTimePrice * 36 * 0.70 * 12) / 432 },
     { id: 'y3', times: 48, discount: 35, price: oneTimePrice * 48 * 0.65 * 12, perWash: (oneTimePrice * 48 * 0.65 * 12) / 576 },

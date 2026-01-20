@@ -1,141 +1,152 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import { ActivityIndicator, View, Text, StyleSheet } from 'react-native';
 import ServiceDetailsLayout from '../components/ServiceDetailsLayout';
+import { getServiceById } from '../services/serviceApi';
 
 export default function BikeWashDetailsScreen({ navigation, route }) {
-  const { serviceTitle = "Basic Bike Wash" } = route.params || {};
+  const { serviceId, serviceTitle, service: serviceFromRoute } = route.params || {};
+  const [service, setService] = useState(serviceFromRoute || null);
+  const [loading, setLoading] = useState(!serviceFromRoute);
+  const [error, setError] = useState(null);
 
-  // Determine image and specs based on service
-  const getServiceData = () => {
-    if (serviceTitle.includes("Basic")) {
-      return {
-        imageUri: 'https://images.unsplash.com/photo-1558981806-ec527fa84c39?w=800&h=400&fit=crop&auto=format',
-        specs: { duration: "20 mins", rating: "4.3", weight: "Quick" },
-        included: [
-          "Exterior Ceramic Wash",
-          "Tyre Polish",
-        ],
-        notIncluded: [
-          "Normal Interior Cleaning",
-          "Dashboard Polish",
-          "30 Days Air Freshener",
-          "Dustbin",
-          "Tissue Box",
-          "Bucket Bike Ceramic Wash",
-          "340 GSM Microfiber Cloth",
-          "Windshield Cleaning Tablet and Refill",
-          "Odour Eliminator",
-        ]
-      };
-    } else if (serviceTitle.includes("Premium")) {
-      return {
-        imageUri: 'https://images.unsplash.com/photo-1558981806-ec527fa84c39?w=800&h=400&fit=crop&auto=format',
-        specs: { duration: "1 hour", rating: "4.7", weight: "Standard" },
-        included: [
-          "Exterior Ceramic Wash",
-          "Tyre Polish",
-          "Normal Interior Cleaning",
-          "Dashboard Polish",
-          "340 GSM Microfiber Cloth",
-        ],
-        notIncluded: [
-          "30 Days Air Freshener",
-          "Dustbin",
-          "Tissue Box",
-          "Bucket Bike Ceramic Wash",
-          "Windshield Cleaning Tablet and Refill",
-          "Odour Eliminator",
-        ]
-      };
+  useEffect(() => {
+    // Fetch from API to get add-ons (list API doesn't include add-ons)
+    if (serviceId) {
+      fetchServiceDetails();
     } else {
-      return {
-        imageUri: 'https://images.unsplash.com/photo-1558981806-ec527fa84c39?w=800&h=400&fit=crop&auto=format',
-        specs: { duration: "2 hours", rating: "4.5", weight: "Deep" },
-        included: [
-          "Exterior Ceramic Wash",
-          "Tyre Polish",
-          "Normal Interior Cleaning",
-          "Dashboard Polish",
-          "30 Days Air Freshener",
-          "340 GSM Microfiber Cloth",
-          "Windshield Cleaning Tablet and Refill",
-          "Odour Eliminator",
-        ],
-        notIncluded: [
-          "Dustbin",
-          "Tissue Box",
-          "Bucket Bike Ceramic Wash",
-        ]
-      };
+      setError('Service ID is required');
+      setLoading(false);
+    }
+  }, [serviceId]);
+
+  const fetchServiceDetails = async () => {
+    try {
+      // Only show loading if we don't have service data yet
+      if (!service) {
+        setLoading(true);
+      }
+      setError(null);
+      
+      const response = await getServiceById(serviceId);
+      
+      if (response.success) {
+        // Merge with existing service data (if any) to preserve what we already have
+        setService(prev => ({
+          ...prev,
+          ...response.data,
+          // Ensure add-ons are included
+          addOnServices: response.data.addOnServices || prev?.addOnServices || [],
+          // Ensure packages are included from API
+          packages: response.data.packages || prev?.packages || null,
+        }));
+      } else {
+        throw new Error('Failed to fetch service details');
+      }
+    } catch (err) {
+      console.error('Error fetching service details:', err);
+      // Only set error if we don't have service data to show
+      if (!service) {
+        setError(err.message || 'Failed to load service details');
+      }
+      // If we have service from route, still show it (just without add-ons)
+      if (serviceFromRoute && !service) {
+        setService(serviceFromRoute);
+      }
+    } finally {
+      setLoading(false);
     }
   };
 
-  // Add-on services
-  const addOnServices = [
-    {
-      imageUri: 'https://images.unsplash.com/photo-1558980664-1db506751c6a?w=200&h=200&fit=crop',
-      title: 'Chain Deep Cleaning',
-      price: 79,
-    },
-    {
-      imageUri: 'https://images.unsplash.com/photo-1558981806-ec527fa84c39?w=200&h=200&fit=crop',
-      title: 'Engine Bay Cleaning',
-      price: 149,
-    },
-    {
-      imageUri: 'https://images.unsplash.com/photo-1558980664-1db506751c6a?w=200&h=200&fit=crop',
-      title: 'Underbody Cleaning',
-      price: 59,
-    },
-    {
-      imageUri: 'https://images.unsplash.com/photo-1558981806-ec527fa84c39?w=200&h=200&fit=crop',
-      title: 'Hybrid Ceramic Coat',
-      price: 199,
-    },
-    {
-      imageUri: 'https://images.unsplash.com/photo-1558980664-1db506751c6a?w=200&h=200&fit=crop',
-      title: 'Seat Deep Cleaning',
-      price: 129,
-    },
-    {
-      imageUri: 'https://images.unsplash.com/photo-1558981806-ec527fa84c39?w=200&h=200&fit=crop',
-      title: 'Tank Polish',
-      price: 179,
-    },
-    {
-      imageUri: 'https://images.unsplash.com/photo-1558980664-1db506751c6a?w=200&h=200&fit=crop',
-      title: 'Wheel Rim Polish',
-      price: 149,
-    },
-    {
-      imageUri: 'https://images.unsplash.com/photo-1558981806-ec527fa84c39?w=200&h=200&fit=crop',
-      title: 'Headlight Restoration',
-      price: 249,
-    },
-    {
-      imageUri: 'https://images.unsplash.com/photo-1558980664-1db506751c6a?w=200&h=200&fit=crop',
-      title: 'Tire Dressing',
-      price: 99,
-    },
-    {
-      imageUri: 'https://images.unsplash.com/photo-1558981806-ec527fa84c39?w=200&h=200&fit=crop',
-      title: 'Windshield Treatment',
-      price: 139,
-    },
-    {
-      imageUri: 'https://images.unsplash.com/photo-1558980664-1db506751c6a?w=200&h=200&fit=crop',
-      title: 'Handlebar Polish',
-      price: 89,
-    },
-  ];
+  // Get service data from API - coverage comes from specifications.coverage and notIncluded
+  const getServiceData = () => {
+    if (service) {
+      return {
+        imageUri: service.image || 'https://images.unsplash.com/photo-1558981806-ec527fa84c39?w=800&h=400&fit=crop&auto=format',
+        specs: {
+          duration: service.duration || '',
+          rating: service.rating?.toFixed(1) || '0',
+        },
+        // Coverage from API - specifications.coverage and notIncluded arrays
+        included: service.specifications?.coverage || [],
+        notIncluded: service.specifications?.notIncluded || [],
+      };
+    }
+    // Fallback (shouldn't reach here if service exists)
+    return {
+      imageUri: 'https://images.unsplash.com/photo-1558981806-ec527fa84c39?w=800&h=400&fit=crop&auto=format',
+      specs: { duration: '', rating: '0' },
+      included: [],
+      notIncluded: [],
+    };
+  };
 
-  return (
-    <ServiceDetailsLayout
-      navigation={navigation}
-      route={route}
-      getServiceData={getServiceData}
-      categoryText="BIKE WASH SERVICE"
-      addOnServices={addOnServices}
-    />
-  );
+  // Map API add-on services to component format
+  const addOnServices = service?.addOnServices?.map(addon => ({
+    imageUri: addon.image || 'https://images.unsplash.com/photo-1558981806-ec527fa84c39?w=200&h=200&fit=crop',
+    title: addon.name,
+    price: addon.basePrice,
+    _id: addon._id,
+  })) || [];
+
+  // If we have service data, render immediately (even if add-ons are still loading)
+  if (service) {
+    return (
+      <ServiceDetailsLayout
+        navigation={navigation}
+        route={route}
+        serviceData={service}
+        getServiceData={getServiceData}
+        categoryText={service?.category ? `${service.category.toUpperCase()} SERVICE` : "BIKE WASH SERVICE"}
+        addOnServices={addOnServices}
+      />
+    );
+  }
+
+  // Only show loading/error if we truly don't have service data
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#31C5FF" />
+        <Text style={styles.loadingText}>Loading service details...</Text>
+      </View>
+    );
+  }
+
+  if (error) {
+    return (
+      <View style={styles.errorContainer}>
+        <Text style={styles.errorText}>Failed to load service details</Text>
+      </View>
+    );
+  }
+
+  // Fallback (shouldn't reach here if serviceFromRoute is passed)
+  return null;
 }
+
+const styles = StyleSheet.create({
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#000000',
+  },
+  loadingText: {
+    marginTop: 16,
+    fontSize: 16,
+    color: '#FFFFFF',
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#000000',
+    paddingHorizontal: 32,
+  },
+  errorText: {
+    fontSize: 16,
+    color: '#FF3B30',
+    textAlign: 'center',
+  },
+});
 

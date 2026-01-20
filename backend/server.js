@@ -24,9 +24,16 @@ app.get('/', (req, res) => {
   });
 });
 
-// API Routes (you'll add these later)
+// API Routes
+import serviceRoutes from './routes/serviceRoutes.js';
+import { errorHandler } from './middleware/errorHandler.js';
+
+app.use('/api/services', serviceRoutes);
 // app.use('/api/auth', authRoutes);
 // app.use('/api/bookings', bookingRoutes);
+
+// Error handling middleware (must be after routes)
+app.use(errorHandler);
 
 const PORT = process.env.PORT || 5000;
 

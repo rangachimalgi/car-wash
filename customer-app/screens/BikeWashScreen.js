@@ -1,19 +1,87 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Alert, RefreshControl } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import BackHeader from '../components/BackHeader';
 import ServiceCard from '../components/ServiceCard';
+import { getServicesByCategory } from '../services/serviceApi';
 
 export default function BikeWashScreen({ navigation }) {
-  const [expanded, setExpanded] = useState({
-    basic: true,
-    premium: true,
-    deep: true,
-  });
+  const [services, setServices] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  const toggleExpanded = (key) => {
-    setExpanded({ ...expanded, [key]: !expanded[key] });
+  useEffect(() => {
+    fetchServices();
+  }, []);
+
+  const fetchServices = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await getServicesByCategory('BikeWash');
+      
+      if (response.success) {
+        setServices(response.data || []);
+      } else {
+        throw new Error('Failed to fetch services');
+      }
+    } catch (err) {
+      console.error('Error fetching bike wash services:', err);
+      setError(err.message || 'Failed to load services');
+      Alert.alert(
+        'Error',
+        'Failed to load services. Please check your connection and try again.',
+        [{ text: 'Retry', onPress: fetchServices }, { text: 'OK' }]
+      );
+    } finally {
+      setLoading(false);
+    }
   };
+
+  const formatPrice = (price) => {
+    return `₹${price}`;
+  };
+
+  const handleServicePress = (service) => {
+    navigation.navigate('BikeWashDetails', {
+      serviceId: service._id,
+      serviceTitle: service.name,
+      price: formatPrice(service.basePrice),
+      duration: service.duration,
+      service: service, // Pass full service object
+    });
+  };
+
+  if (loading) {
+    return (
+      <View style={styles.container}>
+        <StatusBar style="light" />
+        <BackHeader navigation={navigation} title="Bike Wash" />
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#31C5FF" />
+          <Text style={styles.loadingText}>Loading services...</Text>
+        </View>
+      </View>
+    );
+  }
+
+  if (error && services.length === 0) {
+    return (
+      <View style={styles.container}>
+        <StatusBar style="light" />
+        <BackHeader navigation={navigation} title="Bike Wash" />
+        <View style={styles.errorContainer}>
+          <MaterialCommunityIcons name="alert-circle" size={64} color="#FF3B30" />
+          <Text style={styles.errorText}>Failed to load services</Text>
+          <Text style={styles.errorSubtext}>{error}</Text>
+          <TouchableOpacity style={styles.retryButton} onPress={fetchServices}>
+            <Text style={styles.retryButtonText}>Retry</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -23,53 +91,42 @@ export default function BikeWashScreen({ navigation }) {
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={loading}
+            onRefresh={fetchServices}
+            tintColor="#31C5FF"
+          />
+        }
       >
         <View style={styles.content}>
           <Text style={styles.browseTitle}>browse woosh!</Text>
-          <View style={styles.serviceSection}>
-            {expanded.basic && (
-              <ServiceCard
-                imageUri="https://images.unsplash.com/photo-1558981806-ec527fa84c39?w=800&h=400&fit=crop&auto=format"
-                title="Basic Bike Wash"
-                description="Quick and efficient cleaning service for your bike or scooter"
-                price="₹79"
-                duration="20 mins"
-                onReadMore={() => navigation.navigate('BikeWashDetails', { serviceTitle: 'Basic Bike Wash', price: '₹79', duration: '20 mins' })}
-                onBookService={() => console.log('Book service - Basic Bike')}
-                onCardPress={() => navigation.navigate('BikeWashDetails', { serviceTitle: 'Basic Bike Wash', price: '₹79', duration: '20 mins' })}
-              />
-            )}
-          </View>
-
-          <View style={styles.serviceSection}>
-            {expanded.premium && (
-              <ServiceCard
-                imageUri="https://images.unsplash.com/photo-1558981806-ec527fa84c39?w=800&h=400&fit=crop&auto=format"
-                title="Premium Bike Care"
-                description="Comprehensive cleaning and detailing for your two-wheeler"
-                price="₹199"
-                duration="1 hour"
-                onReadMore={() => navigation.navigate('BikeWashDetails', { serviceTitle: 'Premium Bike Care', price: '₹199', duration: '1 hour' })}
-                onBookService={() => console.log('Book service - Premium Bike')}
-                onCardPress={() => navigation.navigate('BikeWashDetails', { serviceTitle: 'Premium Bike Care', price: '₹199', duration: '1 hour' })}
-              />
-            )}
-          </View>
-
-          <View style={styles.serviceSection}>
-            {expanded.deep && (
-              <ServiceCard
-                imageUri="https://images.unsplash.com/photo-1558981806-ec527fa84c39?w=800&h=400&fit=crop&auto=format"
-                title="360 Deep Bike Cleaning"
-                description="Complete deep cleaning and sanitization for your bike"
-                price="₹399"
-                duration="2 hours"
-                onReadMore={() => navigation.navigate('BikeWashDetails', { serviceTitle: '360 Deep Bike Cleaning', price: '₹399', duration: '2 hours' })}
-                onBookService={() => console.log('Book service - Deep Bike')}
-                onCardPress={() => navigation.navigate('BikeWashDetails', { serviceTitle: '360 Deep Bike Cleaning', price: '₹399', duration: '2 hours' })}
-              />
-            )}
-          </View>
+          
+          {services.length === 0 ? (
+            <View style={styles.emptyContainer}>
+              <MaterialCommunityIcons name="motorbike" size={64} color="#666666" />
+              <Text style={styles.emptyText}>No services available</Text>
+              <Text style={styles.emptySubtext}>Check back later for bike wash services</Text>
+            </View>
+          ) : (
+            services.map((service) => (
+              <View key={service._id} style={styles.serviceSection}>
+                <ServiceCard
+                  imageUri={service.image || 'https://images.unsplash.com/photo-1558981806-ec527fa84c39?w=800&h=400&fit=crop&auto=format'}
+                  title={service.name}
+                  description={service.description}
+                  price={formatPrice(service.basePrice)}
+                  duration={service.duration}
+                  onReadMore={() => handleServicePress(service)}
+                  onBookService={() => {
+                    // Navigate to service details or add to cart
+                    handleServicePress(service);
+                  }}
+                  onCardPress={() => handleServicePress(service)}
+                />
+              </View>
+            ))
+          )}
         </View>
       </ScrollView>
     </View>
@@ -99,5 +156,65 @@ const styles = StyleSheet.create({
   },
   serviceSection: {
     marginBottom: 12,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingTop: 100,
+  },
+  loadingText: {
+    marginTop: 16,
+    fontSize: 16,
+    color: '#FFFFFF',
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 32,
+    paddingTop: 100,
+  },
+  errorText: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#FFFFFF',
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  errorSubtext: {
+    fontSize: 14,
+    color: '#9E9E9E',
+    textAlign: 'center',
+    marginBottom: 24,
+  },
+  retryButton: {
+    backgroundColor: '#31C5FF',
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 8,
+  },
+  retryButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#000000',
+  },
+  emptyContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 60,
+    paddingHorizontal: 20,
+  },
+  emptyText: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#FFFFFF',
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  emptySubtext: {
+    fontSize: 14,
+    color: '#9E9E9E',
+    textAlign: 'center',
   },
 });

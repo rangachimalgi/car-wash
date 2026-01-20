@@ -24,9 +24,10 @@ export default function ServiceDetailsLayout({
   const bottomSheetRef = useRef(null);
   const [selectedPackage, setSelectedPackage] = useState('oneTime');
 
-  const data = serviceData || (getServiceData ? getServiceData() : {});
-  
-  const oneTimePrice = parseInt(price?.replace(/[₹,]/g, '')) || 299;
+  // Get data from API - all data comes from serviceData now
+  const data = getServiceData ? getServiceData() : {};
+  // Use basePrice from API (serviceData) - this is the source of truth
+  const oneTimePrice = serviceData?.basePrice || parseInt(price?.replace(/[₹,]/g, '')) || 0;
 
 
   return (
@@ -69,10 +70,6 @@ export default function ServiceDetailsLayout({
             <Text style={styles.specLabel}>Rating</Text>
             <Text style={styles.specValue}>{data.specs?.rating}</Text>
           </View>
-          <View style={styles.specItem}>
-            <Text style={styles.specLabel}>Type</Text>
-            <Text style={styles.specValue}>{data.specs?.weight}</Text>
-          </View>
           {/* QR Code Button */}
           <TouchableOpacity style={styles.qrButton}>
             <MaterialCommunityIcons name="qrcode-scan" size={24} color="#000000" />
@@ -89,19 +86,20 @@ export default function ServiceDetailsLayout({
               selectedPackage={selectedPackage}
               oneTimePrice={oneTimePrice}
               duration={data.specs?.duration}
-              serviceTitle={serviceTitle}
+              serviceTitle={serviceData?.name || serviceTitle}
               serviceImage={data.imageUri}
               navigation={navigation}
               onAddToCart={() => {
                 if (selectedPackage && selectedPackage !== 'oneTime' && navigation) {
-                  const packageTitle = `${serviceTitle} - ${selectedPackage.type} (${selectedPackage.times}x/month)`;
+                  const currentServiceTitle = serviceData?.name || serviceTitle;
+                  const packageTitle = `${currentServiceTitle} - ${selectedPackage.type} (${selectedPackage.times}x/month)`;
                   const packagePrice = Math.round(selectedPackage.price);
                   
                   navigation.navigate('Cart', {
                     addItem: {
                       id: `pkg_${selectedPackage.id}_${Date.now()}`,
                       title: packageTitle,
-                      image: data.imageUri || 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=300&h=200&fit=crop&auto=format',
+                      image: data.imageUri || serviceData?.image || '',
                       price: packagePrice,
                       quantity: 1,
                     }
@@ -118,17 +116,30 @@ export default function ServiceDetailsLayout({
         >
             <Text style={styles.categoryText}>{categoryText}</Text>
             <View style={styles.titleRow}>
-              <Text style={styles.serviceTitle}>{serviceTitle}</Text>
-              <Text style={styles.distanceText}>6 km</Text>
+              <Text style={styles.serviceTitle}>{serviceData?.name || serviceTitle}</Text>
             </View>
             <View style={styles.ratingRow}>
-              <MaterialCommunityIcons name="star" size={20} color="#FFD700" />
-              <MaterialCommunityIcons name="star" size={20} color="#FFD700" />
-              <MaterialCommunityIcons name="star" size={20} color="#FFD700" />
-              <MaterialCommunityIcons name="star" size={20} color="#FFD700" />
-              <MaterialCommunityIcons name="star-half-full" size={20} color="#FFD700" />
+              {[...Array(5)].map((_, i) => {
+                const rating = parseFloat(data.specs?.rating || 0);
+                const filledStars = Math.floor(rating);
+                const hasHalfStar = rating % 1 >= 0.5;
+                let iconName = 'star-outline';
+                if (i < filledStars) {
+                  iconName = 'star';
+                } else if (i === filledStars && hasHalfStar) {
+                  iconName = 'star-half-full';
+                }
+                return (
+                  <MaterialCommunityIcons 
+                    key={i}
+                    name={iconName} 
+                    size={20} 
+                    color="#FFD700" 
+                  />
+                );
+              })}
             </View>
-            <View style={styles.actionRow}>
+            {/* <View style={styles.actionRow}>
               <TouchableOpacity style={styles.viewButton} activeOpacity={0.8}>
                 <Text style={styles.viewButtonText}>View available</Text>
               </TouchableOpacity>
@@ -136,16 +147,17 @@ export default function ServiceDetailsLayout({
                 <Text style={styles.priceText}>{price}</Text>
                 <Text style={styles.priceUnit}>service</Text>
               </View>
-            </View>
+            </View> */}
             
             {/* Pricing Packages */}
             <PricingPackages 
               oneTimePrice={oneTimePrice}
-              serviceTitle={serviceTitle}
+              serviceTitle={serviceData?.name || serviceTitle}
               serviceImage={data.imageUri}
               duration={data.specs?.duration}
               navigation={navigation}
               onSelectionChange={setSelectedPackage}
+              packages={serviceData?.packages}
             />
             
             {/* Service Coverage Table */}
