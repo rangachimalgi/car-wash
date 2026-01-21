@@ -6,12 +6,14 @@ export default function AddOnServiceItem({
   imageUri, 
   title, 
   price, 
-  onAdd 
+  addOnId,
+  isSelected = false,
+  onToggle 
 }) {
   const [imageError, setImageError] = useState(false);
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, isSelected && styles.containerSelected]}>
       {!imageError ? (
         <Image 
           source={{ uri: imageUri }} 
@@ -29,11 +31,13 @@ export default function AddOnServiceItem({
         <Text style={styles.price}>₹{price}</Text>
       </View>
       <TouchableOpacity 
-        style={styles.addButton}
-        onPress={onAdd}
+        style={[styles.addButton, isSelected && styles.addButtonSelected]}
+        onPress={onToggle}
         activeOpacity={0.8}
       >
-        <Text style={styles.addButtonText}>Add</Text>
+        <Text style={[styles.addButtonText, isSelected && styles.addButtonTextSelected]}>
+          {isSelected ? 'Remove' : 'Add'}
+        </Text>
       </TouchableOpacity>
     </View>
   );
@@ -48,6 +52,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     borderBottomWidth: 1,
     borderBottomColor: '#333333',
+  },
+  containerSelected: {
+    backgroundColor: '#1A2A3A',
+    borderLeftWidth: 3,
+    borderLeftColor: '#31C5FF',
   },
   thumbnail: {
     width: 60,
@@ -85,9 +94,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  addButtonSelected: {
+    backgroundColor: '#FF3B30',
+  },
   addButtonText: {
     fontSize: 14,
     fontWeight: '700',
     color: '#000000',
+  },
+  addButtonTextSelected: {
+    color: '#FFFFFF',
   },
 });

@@ -6,20 +6,13 @@ import AddOnServiceItem from './AddOnServiceItem';
 export default function AddOnServicesList({ 
   services = [], 
   maxVisible = 4,
-  onAddService 
+  selectedAddOns = [],
+  onToggleAddOn
 }) {
   const [showAll, setShowAll] = useState(false);
   
   const visibleServices = showAll ? services : services.slice(0, maxVisible);
   const remainingCount = services.length - maxVisible;
-
-  const handleAdd = (service) => {
-    if (onAddService) {
-      onAddService(service);
-    } else {
-      console.log('Add service:', service);
-    }
-  };
 
   return (
     <View style={styles.container}>
@@ -28,11 +21,13 @@ export default function AddOnServicesList({
       </View>
       {visibleServices.map((service, index) => (
         <AddOnServiceItem
-          key={index}
+          key={service._id || index}
           imageUri={service.imageUri}
           title={service.title}
           price={service.price}
-          onAdd={() => handleAdd(service)}
+          addOnId={service._id}
+          isSelected={selectedAddOns.includes(service._id)}
+          onToggle={() => onToggleAddOn && onToggleAddOn(service._id)}
         />
       ))}
       

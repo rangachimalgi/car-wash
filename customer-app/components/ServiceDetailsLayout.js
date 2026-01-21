@@ -23,11 +23,49 @@ export default function ServiceDetailsLayout({
   const { serviceTitle, price, duration } = route?.params || {};
   const bottomSheetRef = useRef(null);
   const [selectedPackage, setSelectedPackage] = useState('oneTime');
+  const [selectedAddOns, setSelectedAddOns] = useState([]); // Array of add-on IDs
 
   // Get data from API - all data comes from serviceData now
   const data = getServiceData ? getServiceData() : {};
   // Use basePrice from API (serviceData) - this is the source of truth
   const oneTimePrice = serviceData?.basePrice || parseInt(price?.replace(/[₹,]/g, '')) || 0;
+
+  // Toggle add-on selection
+  const toggleAddOn = (addOnId) => {
+    setSelectedAddOns(prev => {
+      if (prev.includes(addOnId)) {
+        // Remove if already selected
+        return prev.filter(id => id !== addOnId);
+      } else {
+        // Add if not selected
+        return [...prev, addOnId];
+      }
+    });
+  };
+
+  // Calculate total price: base price + selected add-ons
+  const calculateTotalPrice = () => {
+    let basePrice = 0;
+    
+    // Get base price based on selected package
+    if (selectedPackage === 'oneTime') {
+      basePrice = oneTimePrice;
+    } else if (selectedPackage && selectedPackage.price) {
+      basePrice = selectedPackage.price;
+    } else {
+      basePrice = oneTimePrice;
+    }
+
+    // Add selected add-ons prices
+    const addOnsTotal = selectedAddOns.reduce((total, addOnId) => {
+      const addOn = addOnServices.find(a => a._id === addOnId);
+      return total + (addOn?.price || 0);
+    }, 0);
+
+    return basePrice + addOnsTotal;
+  };
+
+  const totalPrice = calculateTotalPrice();
 
 
   return (
@@ -85,9 +123,12 @@ export default function ServiceDetailsLayout({
             <AddToCartButton
               selectedPackage={selectedPackage}
               oneTimePrice={oneTimePrice}
+              totalPrice={totalPrice}
               duration={data.specs?.duration}
               serviceTitle={serviceData?.name || serviceTitle}
               serviceImage={data.imageUri}
+              selectedAddOns={selectedAddOns}
+              addOnServices={addOnServices}
               navigation={navigation}
               onAddToCart={() => {
                 if (selectedPackage && selectedPackage !== 'oneTime' && navigation) {
@@ -95,13 +136,19 @@ export default function ServiceDetailsLayout({
                   const packageTitle = `${currentServiceTitle} - ${selectedPackage.type} (${selectedPackage.times}x/month)`;
                   const packagePrice = Math.round(selectedPackage.price);
                   
+                  // Get selected add-ons details
+                  const selectedAddOnsDetails = selectedAddOns.map(addOnId => {
+                    return addOnServices.find(a => a._id === addOnId);
+                  }).filter(Boolean);
+                  
                   navigation.navigate('Cart', {
                     addItem: {
                       id: `pkg_${selectedPackage.id}_${Date.now()}`,
                       title: packageTitle,
                       image: data.imageUri || serviceData?.image || '',
-                      price: packagePrice,
+                      price: Math.round(totalPrice),
                       quantity: 1,
+                      addOns: selectedAddOnsDetails,
                     }
                   });
                 }
@@ -171,6 +218,8 @@ export default function ServiceDetailsLayout({
               <AddOnServicesList 
                 services={addOnServices}
                 maxVisible={4}
+                selectedAddOns={selectedAddOns}
+                onToggleAddOn={toggleAddOn}
               />
             )}
         </BottomSheetScrollView>

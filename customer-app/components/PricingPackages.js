@@ -181,8 +181,9 @@ export default function PricingPackages({ oneTimePrice = 299, serviceTitle = 'Se
 }
 
 // Separate component for fixed Add to Cart button
-export function AddToCartButton({ selectedPackage, oneTimePrice, duration, serviceTitle, serviceImage, navigation, onAddToCart }) {
-  const getPrice = () => {
+export function AddToCartButton({ selectedPackage, oneTimePrice, totalPrice, duration, serviceTitle, serviceImage, selectedAddOns = [], addOnServices = [], navigation, onAddToCart }) {
+  // Use totalPrice if provided, otherwise calculate from base price
+  const displayPrice = totalPrice !== undefined ? totalPrice : (() => {
     if (selectedPackage === 'oneTime') {
       return oneTimePrice;
     }
@@ -190,18 +191,25 @@ export function AddToCartButton({ selectedPackage, oneTimePrice, duration, servi
       return Math.round(selectedPackage.price);
     }
     return oneTimePrice;
-  };
+  })();
 
   const handlePress = () => {
     if (selectedPackage === 'oneTime') {
       if (!navigation) return;
+      
+      // Get selected add-ons details
+      const selectedAddOnsDetails = selectedAddOns.map(addOnId => {
+        return addOnServices.find(a => a._id === addOnId);
+      }).filter(Boolean);
+      
       navigation.navigate('Cart', {
         addItem: {
           id: `oneTime_${Date.now()}`,
           title: `${serviceTitle} - 1 Time Wash`,
           image: serviceImage || 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=300&h=200&fit=crop&auto=format',
-          price: oneTimePrice,
+          price: Math.round(displayPrice),
           quantity: 1,
+          addOns: selectedAddOnsDetails,
         }
       });
     } else if (onAddToCart) {
@@ -212,7 +220,7 @@ export function AddToCartButton({ selectedPackage, oneTimePrice, duration, servi
   return (
     <View style={styles.addToCartContainer}>
       <View style={styles.addToCartLeft}>
-        <Text style={styles.addToCartPrice}>₹{getPrice()}</Text>
+        <Text style={styles.addToCartPrice}>₹{Math.round(displayPrice)}</Text>
         <Text style={styles.addToCartDuration}>{duration || '50 mins'}</Text>
       </View>
       <TouchableOpacity 
