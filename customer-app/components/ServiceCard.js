@@ -104,7 +104,7 @@ const styles = StyleSheet.create({
   cardTitle: {
     fontSize: 22,
     fontWeight: 'bold',
-    color: '#2CD4FB',
+    color: '#85E4FC',
     marginBottom: 8,
   },
   cardDescription: {
@@ -154,7 +154,7 @@ const styles = StyleSheet.create({
   },
   bookButton: {
     flex: 1,
-    backgroundColor: '#2CD4FB',
+    backgroundColor: '#85E4FC',
     paddingVertical: 12,
     borderRadius: 8,
     flexDirection: 'row',

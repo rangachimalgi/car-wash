@@ -29,7 +29,7 @@ export default function UpcomingWashCard({ wash, onDelivered, onPress }) {
               <Text style={styles.serviceTypeText}>{wash.serviceType}</Text>
             </View>
             <View style={styles.statusBadge}>
-              <MaterialCommunityIcons name="clock-outline" size={14} color="#2CD4FB" />
+              <MaterialCommunityIcons name="clock-outline" size={14} color="#85E4FC" />
               <Text style={styles.statusText}>Upcoming</Text>
             </View>
           </View>
@@ -145,7 +145,7 @@ const styles = StyleSheet.create({
   },
   statusText: {
     fontSize: 11,
-    color: '#2CD4FB',
+    color: '#85E4FC',
     fontWeight: '600',
   },
   serviceName: {
@@ -188,7 +188,7 @@ const styles = StyleSheet.create({
   priceText: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#2CD4FB',
+    color: '#85E4FC',
   },
   deliveredButton: {
     flexDirection: 'row',

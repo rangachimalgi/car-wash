@@ -79,7 +79,7 @@ export default function ProfileScreen({ navigation }) {
         {/* Wallet Section */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <MaterialCommunityIcons name="wallet" size={24} color="#2CD4FB" />
+            <MaterialCommunityIcons name="wallet" size={24} color="#85E4FC" />
             <Text style={styles.sectionTitle}>Wallet</Text>
           </View>
           <TouchableOpacity style={styles.walletCard} activeOpacity={0.8}>
@@ -95,17 +95,17 @@ export default function ProfileScreen({ navigation }) {
             </View>
             <View style={styles.walletFooter}>
               <TouchableOpacity style={styles.walletAction}>
-                <MaterialCommunityIcons name="arrow-up" size={18} color="#2CD4FB" />
+                <MaterialCommunityIcons name="arrow-up" size={18} color="#85E4FC" />
                 <Text style={styles.walletActionText}>Send</Text>
               </TouchableOpacity>
               <View style={styles.divider} />
               <TouchableOpacity style={styles.walletAction}>
-                <MaterialCommunityIcons name="arrow-down" size={18} color="#2CD4FB" />
+                <MaterialCommunityIcons name="arrow-down" size={18} color="#85E4FC" />
                 <Text style={styles.walletActionText}>Receive</Text>
               </TouchableOpacity>
               <View style={styles.divider} />
               <TouchableOpacity style={styles.walletAction}>
-                <MaterialCommunityIcons name="history" size={18} color="#2CD4FB" />
+                <MaterialCommunityIcons name="history" size={18} color="#85E4FC" />
                 <Text style={styles.walletActionText}>History</Text>
               </TouchableOpacity>
             </View>
@@ -115,7 +115,7 @@ export default function ProfileScreen({ navigation }) {
         {/* Personal Information Section */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <MaterialCommunityIcons name="account-circle" size={24} color="#2CD4FB" />
+            <MaterialCommunityIcons name="account-circle" size={24} color="#85E4FC" />
             <Text style={styles.sectionTitle}>Personal Information</Text>
           </View>
           
@@ -147,13 +147,13 @@ export default function ProfileScreen({ navigation }) {
         {/* Addresses Section */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <MaterialCommunityIcons name="map-marker" size={24} color="#2CD4FB" />
+            <MaterialCommunityIcons name="map-marker" size={24} color="#85E4FC" />
             <Text style={styles.sectionTitle}>Addresses</Text>
             <TouchableOpacity 
               style={styles.addButton}
               onPress={() => navigation.navigate('Addresses')}
             >
-              <MaterialCommunityIcons name="plus" size={20} color="#2CD4FB" />
+              <MaterialCommunityIcons name="plus" size={20} color="#85E4FC" />
             </TouchableOpacity>
           </View>
           
@@ -164,7 +164,7 @@ export default function ProfileScreen({ navigation }) {
                   <MaterialCommunityIcons 
                     name={address.type === 'Home' ? 'home' : 'briefcase'} 
                     size={16} 
-                    color="#2CD4FB" 
+                    color="#85E4FC" 
                   />
                   <Text style={styles.addressTypeText}>{address.type}</Text>
                   {address.isDefault && (
@@ -186,10 +186,10 @@ export default function ProfileScreen({ navigation }) {
         {/* My Vehicles Section */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <MaterialCommunityIcons name="car" size={24} color="#2CD4FB" />
+            <MaterialCommunityIcons name="car" size={24} color="#85E4FC" />
             <Text style={styles.sectionTitle}>My Vehicles</Text>
             <TouchableOpacity style={styles.addButton}>
-              <MaterialCommunityIcons name="plus" size={20} color="#2CD4FB" />
+              <MaterialCommunityIcons name="plus" size={20} color="#85E4FC" />
             </TouchableOpacity>
           </View>
           
@@ -200,7 +200,7 @@ export default function ProfileScreen({ navigation }) {
                   <MaterialCommunityIcons 
                     name={vehicle.type === 'Car' ? 'car' : 'motorbike'} 
                     size={32} 
-                    color="#2CD4FB" 
+                    color="#85E4FC" 
                   />
                 </View>
                 <View style={styles.vehicleInfo}>
@@ -287,7 +287,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 3,
-    borderColor: '#2CD4FB',
+    borderColor: '#85E4FC',
   },
   editAvatarButton: {
     position: 'absolute',
@@ -296,7 +296,7 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: '#2CD4FB',
+    backgroundColor: '#85E4FC',
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 3,
@@ -356,12 +356,12 @@ const styles = StyleSheet.create({
   walletBalance: {
     fontSize: 32,
     fontWeight: 'bold',
-    color: '#2CD4FB',
+    color: '#85E4FC',
   },
   addMoneyButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#2CD4FB',
+    backgroundColor: '#85E4FC',
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderRadius: 8,
@@ -386,7 +386,7 @@ const styles = StyleSheet.create({
   },
   walletActionText: {
     fontSize: 14,
-    color: '#2CD4FB',
+    color: '#85E4FC',
     fontWeight: '600',
   },
   divider: {
@@ -446,7 +446,7 @@ const styles = StyleSheet.create({
   addressTypeText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#2CD4FB',
+    color: '#85E4FC',
   },
   defaultBadge: {
     backgroundColor: 'rgba(49, 197, 255, 0.15)',
@@ -457,7 +457,7 @@ const styles = StyleSheet.create({
   },
   defaultBadgeText: {
     fontSize: 10,
-    color: '#2CD4FB',
+    color: '#85E4FC',
     fontWeight: '600',
   },
   addressText: {

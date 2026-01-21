@@ -7,7 +7,7 @@ export default function ServiceCoverage({ included = [], notIncluded = [] }) {
     <View key={item} style={styles.itemRow}>
       <View style={[styles.iconContainer, isIncluded ? styles.includedIcon : styles.notIncludedIcon]}>
         {isIncluded ? (
-          <MaterialCommunityIcons name="check" size={16} color="#2CD4FB" />
+          <MaterialCommunityIcons name="check" size={16} color="#85E4FC" />
         ) : (
           <MaterialCommunityIcons name="information" size={16} color="#FFFFFF" />
         )}
@@ -83,7 +83,7 @@ const styles = StyleSheet.create({
   },
   seeAllText: {
     fontSize: 14,
-    color: '#2CD4FB',
+    color: '#85E4FC',
     fontWeight: '600',
   },
   tableContainer: {
@@ -106,7 +106,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
   },
   includedHeader: {
-    backgroundColor: '#2CD4FB',
+    backgroundColor: '#85E4FC',
   },
   notIncludedHeader: {
     backgroundColor: '#9E9E9E',

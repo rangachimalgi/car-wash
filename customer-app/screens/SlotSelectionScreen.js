@@ -89,7 +89,7 @@ export default function SlotSelectionScreen({ navigation, route }) {
         {/* Service at Section */}
         <View style={styles.serviceAtSection}>
           <View style={styles.locationHeader}>
-            <MaterialCommunityIcons name="map-marker" size={20} color="#2CD4FB" />
+            <MaterialCommunityIcons name="map-marker" size={20} color="#85E4FC" />
             <Text style={styles.serviceAtTitle}>Service at</Text>
           </View>
           <Text style={styles.addressText}>
@@ -238,7 +238,7 @@ const styles = StyleSheet.create({
   },
   changeAddressText: {
     fontSize: 14,
-    color: '#2CD4FB',
+    color: '#85E4FC',
     fontWeight: '600',
   },
   dateSection: {
@@ -270,8 +270,8 @@ const styles = StyleSheet.create({
     paddingTop: 8,
   },
   dateCardSelected: {
-    backgroundColor: '#2CD4FB',
-    borderColor: '#2CD4FB',
+    backgroundColor: '#85E4FC',
+    borderColor: '#85E4FC',
   },
   dateDay: {
     fontSize: 12,
@@ -301,7 +301,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 4,
     right: 4,
-    backgroundColor: '#2CD4FB',
+    backgroundColor: '#85E4FC',
     paddingHorizontal: 4,
     paddingVertical: 2,
     borderRadius: 4,
@@ -333,8 +333,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   timeSlotCardSelected: {
-    backgroundColor: '#2CD4FB',
-    borderColor: '#2CD4FB',
+    backgroundColor: '#85E4FC',
+    borderColor: '#85E4FC',
   },
   timeSlotText: {
     fontSize: 14,
@@ -366,7 +366,7 @@ const styles = StyleSheet.create({
   totalAmount: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#2CD4FB',
+    color: '#85E4FC',
   },
   checkoutButtonContainer: {
     paddingHorizontal: 16,
@@ -378,7 +378,7 @@ const styles = StyleSheet.create({
   },
   checkoutButton: {
     flexDirection: 'row',
-    backgroundColor: '#2CD4FB',
+    backgroundColor: '#85E4FC',
     paddingVertical: 16,
     borderRadius: 12,
     justifyContent: 'center',

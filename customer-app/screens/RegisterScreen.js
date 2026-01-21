@@ -87,7 +87,7 @@ export default function RegisterScreen({ navigation }) {
             <MaterialCommunityIcons name="chevron-left" size={28} color="#FFFFFF" />
           </TouchableOpacity>
           <View style={styles.logoContainer}>
-            <MaterialCommunityIcons name="car-wash" size={64} color="#2CD4FB" />
+            <MaterialCommunityIcons name="car-wash" size={64} color="#85E4FC" />
           </View>
           <Text style={styles.welcomeText}>Create Account</Text>
           <Text style={styles.subtitleText}>Sign up to get started</Text>
@@ -394,7 +394,7 @@ const styles = StyleSheet.create({
   },
   signInLink: {
     fontSize: 14,
-    color: '#2CD4FB',
+    color: '#85E4FC',
     fontWeight: '600',
   },
 });

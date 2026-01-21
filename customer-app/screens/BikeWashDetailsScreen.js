@@ -107,7 +107,7 @@ export default function BikeWashDetailsScreen({ navigation, route }) {
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#2CD4FB" />
+        <ActivityIndicator size="large" color="#85E4FC" />
         <Text style={styles.loadingText}>Loading service details...</Text>
       </View>
     );

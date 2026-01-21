@@ -217,7 +217,7 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   continueShoppingButton: {
-    backgroundColor: '#2CD4FB',
+    backgroundColor: '#85E4FC',
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 8,
@@ -262,7 +262,7 @@ const styles = StyleSheet.create({
   },
   slotText: {
     fontSize: 12,
-    color: '#2CD4FB',
+    color: '#85E4FC',
     marginBottom: 8,
   },
   quantityContainer: {
@@ -337,11 +337,11 @@ const styles = StyleSheet.create({
   totalValue: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#2CD4FB',
+    color: '#85E4FC',
   },
   checkoutButton: {
     flexDirection: 'row',
-    backgroundColor: '#2CD4FB',
+    backgroundColor: '#85E4FC',
     marginHorizontal: 16,
     marginTop: 16,
     paddingVertical: 16,

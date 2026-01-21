@@ -59,7 +59,7 @@ export default function CarWashScreen({ navigation }) {
         <StatusBar style="light" />
         <BackHeader navigation={navigation} title="Car Wash" />
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#2CD4FB" />
+          <ActivityIndicator size="large" color="#85E4FC" />
           <Text style={styles.loadingText}>Loading services...</Text>
         </View>
       </View>
@@ -95,7 +95,7 @@ export default function CarWashScreen({ navigation }) {
           <RefreshControl
             refreshing={loading}
             onRefresh={fetchServices}
-            tintColor="#2CD4FB"
+            tintColor="#85E4FC"
           />
         }
       >
@@ -189,7 +189,7 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   retryButton: {
-    backgroundColor: '#2CD4FB',
+    backgroundColor: '#85E4FC',
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 8,

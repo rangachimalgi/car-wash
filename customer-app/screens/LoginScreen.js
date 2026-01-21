@@ -78,7 +78,7 @@ export default function LoginScreen({ navigation }) {
         {/* Logo/Header Section */}
         <View style={styles.headerSection}>
           <View style={styles.logoContainer}>
-            <MaterialCommunityIcons name="car-wash" size={64} color="#2CD4FB" />
+            <MaterialCommunityIcons name="car-wash" size={64} color="#85E4FC" />
           </View>
           <Text style={styles.welcomeText}>Welcome to Woosh!</Text>
           <Text style={styles.subtitleText}>
@@ -279,7 +279,7 @@ const styles = StyleSheet.create({
   },
   changeNumberText: {
     fontSize: 14,
-    color: '#2CD4FB',
+    color: '#85E4FC',
     fontWeight: '600',
   },
   primaryButton: {
@@ -308,7 +308,7 @@ const styles = StyleSheet.create({
   },
   resendLink: {
     fontSize: 14,
-    color: '#2CD4FB',
+    color: '#85E4FC',
     fontWeight: '600',
   },
 });
