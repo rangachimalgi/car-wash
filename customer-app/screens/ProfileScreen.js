@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Alert } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import CustomHeader from '../components/CustomHeader';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function ProfileScreen({ navigation }) {
   const insets = useSafeAreaInsets();
@@ -11,7 +12,7 @@ export default function ProfileScreen({ navigation }) {
   // Mock user data
   const [userData, setUserData] = useState({
     name: 'John Doe',
-    email: 'john.doe@example.com',
+    phone: '',
     walletBalance: '₹2,500',
     addresses: [
       {
@@ -53,6 +54,25 @@ export default function ProfileScreen({ navigation }) {
     ],
   });
 
+  useEffect(() => {
+    const loadProfile = async () => {
+      try {
+        const [storedName, storedPhone] = await Promise.all([
+          AsyncStorage.getItem('authName'),
+          AsyncStorage.getItem('authPhone'),
+        ]);
+        setUserData(prev => ({
+          ...prev,
+          name: storedName || prev.name,
+          phone: storedPhone || prev.phone,
+        }));
+      } catch (error) {
+        console.error('Error loading profile:', error);
+      }
+    };
+    loadProfile();
+  }, []);
+
   return (
     <View style={styles.container}>
       <StatusBar style="light" />
@@ -73,7 +93,7 @@ export default function ProfileScreen({ navigation }) {
             </TouchableOpacity>
           </View>
           <Text style={styles.userName}>{userData.name}</Text>
-          <Text style={styles.userEmail}>{userData.email}</Text>
+          <Text style={styles.userEmail}>{userData.phone ? `+91 ${userData.phone}` : 'Phone not set'}</Text>
         </View>
 
         {/* Wallet Section */}
@@ -131,13 +151,13 @@ export default function ProfileScreen({ navigation }) {
             <MaterialCommunityIcons name="chevron-right" size={24} color="#9E9E9E" />
           </TouchableOpacity>
 
-          {/* Email */}
+          {/* Phone */}
           <TouchableOpacity style={styles.infoCard} activeOpacity={0.7}>
             <View style={styles.infoContent}>
-              <MaterialCommunityIcons name="email" size={20} color="#9E9E9E" />
+              <MaterialCommunityIcons name="phone" size={20} color="#9E9E9E" />
               <View style={styles.infoTextContainer}>
-                <Text style={styles.infoLabel}>Email</Text>
-                <Text style={styles.infoValue}>{userData.email}</Text>
+                <Text style={styles.infoLabel}>Phone</Text>
+                <Text style={styles.infoValue}>{userData.phone ? `+91 ${userData.phone}` : '-'}</Text>
               </View>
             </View>
             <MaterialCommunityIcons name="chevron-right" size={24} color="#9E9E9E" />

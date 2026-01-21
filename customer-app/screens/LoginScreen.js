@@ -3,16 +3,23 @@ import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Keyboa
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { requestOtp, verifyOtp } from '../services/authApi';
 
 export default function LoginScreen({ navigation }) {
   const insets = useSafeAreaInsets();
   const [phoneNumber, setPhoneNumber] = useState('');
+  const [name, setName] = useState('');
   const [otp, setOtp] = useState('');
   const [otpSent, setOtpSent] = useState(false);
   const [errors, setErrors] = useState({});
 
   const validatePhoneNumber = () => {
     const newErrors = {};
+
+    if (!name.trim()) {
+      newErrors.name = 'Name is required';
+    }
     
     if (!phoneNumber.trim()) {
       newErrors.phone = 'Phone number is required';
@@ -29,39 +36,50 @@ export default function LoginScreen({ navigation }) {
     
     if (!otp.trim()) {
       newErrors.otp = 'OTP is required';
-    } else if (!/^\d{6}$/.test(otp)) {
-      newErrors.otp = 'OTP must be 6 digits';
+    } else if (!/^\d{4}$/.test(otp)) {
+      newErrors.otp = 'OTP must be 4 digits';
     }
     
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSendOtp = () => {
-    if (validatePhoneNumber()) {
-      // Handle OTP sending logic here (API call)
-      console.log('Sending OTP to:', phoneNumber);
+  const handleSendOtp = async () => {
+    if (!validatePhoneNumber()) return;
+    try {
+      const response = await requestOtp(phoneNumber, name);
+      console.log('OTP response:', response);
       setOtpSent(true);
-      // In real app, you would call your backend API here
       Alert.alert('OTP Sent', `OTP has been sent to +91 ${phoneNumber}`);
+    } catch (error) {
+      Alert.alert('OTP Failed', 'Unable to send OTP right now.');
     }
   };
 
-  const handleVerifyOtp = () => {
-    if (validateOtp()) {
-      // Handle OTP verification logic here (API call)
-      console.log('Verifying OTP:', otp);
-      // In real app, you would call your backend API here
-      // On success, navigate to main app
+  const handleVerifyOtp = async () => {
+    if (!validateOtp()) return;
+    try {
+      const response = await verifyOtp(phoneNumber, otp, name);
+      console.log('Verify OTP response:', response);
+      if (response?.success && response?.token) {
+        await AsyncStorage.setItem('authToken', response.token);
+        await AsyncStorage.setItem('authPhone', phoneNumber);
+        await AsyncStorage.setItem('authName', response.user?.name || name);
+      }
       navigation.navigate('MainTabs');
+    } catch (error) {
+      Alert.alert('Invalid OTP', 'Please check the OTP and try again.');
     }
   };
 
-  const handleResendOtp = () => {
-    // Handle resend OTP logic
-    console.log('Resending OTP to:', phoneNumber);
-    setOtp('');
-    Alert.alert('OTP Resent', `New OTP has been sent to +91 ${phoneNumber}`);
+  const handleResendOtp = async () => {
+    try {
+      await requestOtp(phoneNumber);
+      setOtp('');
+      Alert.alert('OTP Resent', `New OTP has been sent to +91 ${phoneNumber}`);
+    } catch (error) {
+      Alert.alert('OTP Failed', 'Unable to resend OTP right now.');
+    }
   };
 
   return (
@@ -91,6 +109,25 @@ export default function LoginScreen({ navigation }) {
           {!otpSent ? (
             // Phone Number Input
             <>
+              <View style={styles.inputContainer}>
+                <Text style={styles.label}>Full Name</Text>
+                <View style={[styles.inputWrapper, errors.name && styles.inputError]}>
+                  <MaterialCommunityIcons name="account-outline" size={20} color="#9E9E9E" style={styles.inputIcon} />
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Enter your full name"
+                    placeholderTextColor="#666666"
+                    value={name}
+                    onChangeText={(text) => {
+                      setName(text);
+                      if (errors.name) setErrors({ ...errors, name: '' });
+                    }}
+                    autoCapitalize="words"
+                  />
+                </View>
+                {errors.name && <Text style={styles.errorText}>{errors.name}</Text>}
+              </View>
+
               <View style={styles.inputContainer}>
                 <Text style={styles.label}>Phone Number</Text>
                 <View style={[styles.inputWrapper, errors.phone && styles.inputError]}>
@@ -133,16 +170,16 @@ export default function LoginScreen({ navigation }) {
                   <MaterialCommunityIcons name="key-outline" size={20} color="#9E9E9E" style={styles.inputIcon} />
                   <TextInput
                     style={styles.input}
-                    placeholder="Enter 6-digit OTP"
+                    placeholder="Enter 4-digit OTP"
                     placeholderTextColor="#666666"
                     value={otp}
                     onChangeText={(text) => {
-                      const numericText = text.replace(/[^0-9]/g, '').slice(0, 6);
+                      const numericText = text.replace(/[^0-9]/g, '').slice(0, 4);
                       setOtp(numericText);
                       if (errors.otp) setErrors({ ...errors, otp: '' });
                     }}
                     keyboardType="number-pad"
-                    maxLength={6}
+                    maxLength={4}
                   />
                 </View>
                 {errors.otp && <Text style={styles.errorText}>{errors.otp}</Text>}
