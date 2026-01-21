@@ -4,6 +4,7 @@ import { StatusBar } from 'expo-status-bar';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import BackHeader from '../components/BackHeader';
 import { createOrder } from '../services/orderApi';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const { width } = Dimensions.get('window');
 
@@ -95,6 +96,8 @@ export default function CheckoutScreen({ navigation, route }) {
         },
       });
       console.log('Order created:', response);
+
+      await AsyncStorage.removeItem('cartItems');
 
       // Show toast notification
       setShowToast(true);
