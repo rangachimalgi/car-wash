@@ -533,6 +533,20 @@
   margin: 0;
 }
 
+.order-card-details {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid #e0e0e0;
+}
+
+.order-card-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
 .order-status {
   padding: 0.25rem 0.75rem;
   border-radius: 12px;

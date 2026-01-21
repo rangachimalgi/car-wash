@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 
-export default function UpcomingWashCard({ wash, onCancel, onPress }) {
+export default function UpcomingWashCard({ wash, onDelivered, onPress }) {
   return (
     <TouchableOpacity 
       style={styles.card} 
@@ -53,14 +53,14 @@ export default function UpcomingWashCard({ wash, onCancel, onPress }) {
               <Text style={styles.priceText}>{wash.price}</Text>
             </View>
             <TouchableOpacity 
-              style={styles.cancelButton}
+              style={styles.deliveredButton}
               onPress={(e) => {
                 e.stopPropagation();
-                onCancel?.(wash);
+                onDelivered?.(wash);
               }}
             >
-              <MaterialCommunityIcons name="close-circle" size={18} color="#FF5252" />
-              <Text style={styles.cancelButtonText}>Cancel</Text>
+              <MaterialCommunityIcons name="check-circle" size={18} color="#4CAF50" />
+              <Text style={styles.deliveredButtonText}>Delivered</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -190,18 +190,18 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#31C5FF',
   },
-  cancelButton: {
+  deliveredButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255, 82, 82, 0.15)',
+    backgroundColor: 'rgba(76, 175, 80, 0.15)',
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 8,
     gap: 6,
   },
-  cancelButtonText: {
+  deliveredButtonText: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#FF5252',
+    color: '#4CAF50',
   },
 });

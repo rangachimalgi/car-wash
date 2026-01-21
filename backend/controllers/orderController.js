@@ -103,7 +103,17 @@ export const createOrder = async (req, res) => {
 // @access  Admin (will add auth later)
 export const getOrders = async (req, res) => {
   try {
-    const orders = await Order.find()
+    const { status } = req.query;
+    const query = {};
+
+    if (status) {
+      const statuses = status.split(',').map(s => s.trim()).filter(Boolean);
+      if (statuses.length > 0) {
+        query.status = { $in: statuses };
+      }
+    }
+
+    const orders = await Order.find(query)
       .sort({ createdAt: -1 })
       .populate('items.service', 'name category')
       .populate('items.addOns', 'name basePrice');
@@ -118,6 +128,50 @@ export const getOrders = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error fetching orders',
+      error: error.message,
+    });
+  }
+};
+
+// @desc    Update order status
+// @route   PATCH /api/orders/:id
+// @access  Admin/Customer (will add auth later)
+export const updateOrderStatus = async (req, res) => {
+  try {
+    const { status } = req.body;
+    const validStatuses = ['Pending', 'Paid', 'Scheduled', 'Completed', 'Cancelled'];
+
+    if (!status || !validStatuses.includes(status)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid status',
+      });
+    }
+
+    const order = await Order.findByIdAndUpdate(
+      req.params.id,
+      { status },
+      { new: true }
+    )
+      .populate('items.service', 'name category')
+      .populate('items.addOns', 'name basePrice');
+
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message: 'Order not found',
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: order,
+    });
+  } catch (error) {
+    console.error('Error updating order status:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error updating order status',
       error: error.message,
     });
   }

@@ -220,6 +220,26 @@ function App() {
     }
   }
 
+  const markOrderDelivered = async (orderId) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/orders/${orderId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ status: 'Completed' }),
+      })
+      const data = await response.json()
+      if (data.success) {
+        setOrders(prev => prev.map(order => (
+          order._id === orderId ? data.data : order
+        )))
+      }
+    } catch (error) {
+      console.error('Error updating order status:', error)
+    }
+  }
+
   const handleAddOnChange = (e) => {
     const { name, value, type, checked } = e.target
     
@@ -1243,6 +1263,16 @@ function App() {
                         <span className="detail-label">Created:</span>
                         <span className="detail-value">{new Date(order.createdAt).toLocaleString()}</span>
                       </div>
+                    </div>
+                    <div className="order-card-actions">
+                      <button
+                        type="button"
+                        className="secondary-button"
+                        disabled={order.status === 'Completed'}
+                        onClick={() => markOrderDelivered(order._id)}
+                      >
+                        Mark Delivered
+                      </button>
                     </div>
                   </div>
                 ))}
