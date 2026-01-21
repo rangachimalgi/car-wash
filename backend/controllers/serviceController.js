@@ -69,7 +69,6 @@ export const getServices = async (req, res) => {
 export const getServiceById = async (req, res) => {
   try {
     const service = await Service.findById(req.params.id)
-      .populate('addOnServices', 'name basePrice category')
       .select('-createdBy -__v');
 
     if (!service) {
@@ -87,9 +86,40 @@ export const getServiceById = async (req, res) => {
       });
     }
 
+    let addOnServices = [];
+
+    if (service.category === 'CarWash' || service.category === 'BikeWash') {
+      const applicableAddOns = await Service.find({
+        category: 'AddOn',
+        isActive: true,
+        $or: [
+          { applicableFor: service.category },
+          { applicableFor: { $size: 0 } },
+          { applicableFor: { $exists: false } },
+        ],
+      }).select('name basePrice category image duration rating totalReviews');
+
+      const manualAddOnIds = Array.isArray(service.addOnServices) ? service.addOnServices : [];
+      const manualAddOns = manualAddOnIds.length > 0
+        ? await Service.find({
+            _id: { $in: manualAddOnIds },
+            isActive: true,
+          }).select('name basePrice category image duration rating totalReviews')
+        : [];
+
+      const merged = new Map();
+      [...applicableAddOns, ...manualAddOns].forEach(addOn => {
+        merged.set(addOn._id.toString(), addOn);
+      });
+      addOnServices = Array.from(merged.values());
+    }
+
     res.status(200).json({
       success: true,
-      data: service,
+      data: {
+        ...service.toObject(),
+        addOnServices,
+      },
     });
   } catch (error) {
     console.error('Error fetching service:', error);
@@ -151,7 +181,7 @@ export const getServicesByCategory = async (req, res) => {
     const { sortBy } = req.query;
 
     // Validate category
-    const validCategories = ['CarWash', 'BikeWash', 'AddOn'];
+    const validCategories = ['CarWash', 'BikeWash', 'AddOn', 'Coverage'];
     if (!validCategories.includes(category)) {
       return res.status(400).json({
         success: false,
@@ -187,6 +217,140 @@ export const getServicesByCategory = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error fetching services by category',
+      error: error.message,
+    });
+  }
+};
+
+// @desc    Create new service
+// @route   POST /api/services
+// @access  Admin (will add auth middleware later)
+export const createService = async (req, res) => {
+  try {
+    const {
+      name,
+      description,
+      category,
+      basePrice,
+      duration,
+      image,
+      images,
+      rating,
+      totalReviews,
+      isActive,
+      specifications,
+      addOnServices,
+      packages,
+      applicableFor,
+    } = req.body;
+
+    // Validate required fields
+    if (!name || !category || basePrice === undefined) {
+      return res.status(400).json({
+        success: false,
+        message: 'Missing required fields: name, category, basePrice',
+      });
+    }
+
+    // Validate category
+    const validCategories = ['CarWash', 'BikeWash', 'AddOn', 'Coverage'];
+    if (!validCategories.includes(category)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid category. Must be one of: CarWash, BikeWash, AddOn',
+      });
+    }
+
+    // Validate basePrice
+    if (basePrice < 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Base price must be positive',
+      });
+    }
+
+    // Validate required fields for non-add-on/non-coverage services
+    if (category !== 'AddOn' && category !== 'Coverage') {
+      if (!description || !duration) {
+        return res.status(400).json({
+          success: false,
+          message: 'Missing required fields: description, duration',
+        });
+      }
+    }
+
+    // Validate applicableFor for AddOn or Coverage category
+    if (
+      (category === 'AddOn' || category === 'Coverage') &&
+      (!applicableFor || !Array.isArray(applicableFor) || applicableFor.length === 0)
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: 'Add-On and Coverage items must specify applicableFor (CarWash and/or BikeWash)',
+      });
+    }
+
+    // Validate applicableFor values
+    if (applicableFor && Array.isArray(applicableFor)) {
+      const validTypes = ['CarWash', 'BikeWash'];
+      const invalidTypes = applicableFor.filter(type => !validTypes.includes(type));
+      if (invalidTypes.length > 0) {
+        return res.status(400).json({
+          success: false,
+          message: `Invalid applicableFor values: ${invalidTypes.join(', ')}. Must be CarWash and/or BikeWash`,
+        });
+      }
+    }
+
+    // Create service object
+    const serviceData = {
+      name: name.trim(),
+      description: description ? description.trim() : '',
+      category,
+      basePrice: Number(basePrice),
+      duration: duration || (category === 'AddOn' || category === 'Coverage' ? '' : '30 mins'),
+      image: image || '',
+      images: images || [],
+      rating: rating || 0,
+      totalReviews: totalReviews || 0,
+      isActive: isActive !== undefined ? isActive : true,
+      specifications: {
+        coverage: specifications?.coverage || [],
+        notIncluded: specifications?.notIncluded || [],
+      },
+      addOnServices: addOnServices || [],
+      packages: packages || {
+        monthly: [],
+        quarterly: [],
+        yearly: [],
+      },
+      applicableFor: applicableFor || [], // Only for AddOn category
+    };
+
+    // Create service
+    const service = await Service.create(serviceData);
+
+    res.status(201).json({
+      success: true,
+      message: 'Service created successfully',
+      data: service,
+    });
+  } catch (error) {
+    console.error('Error creating service:', error);
+    
+    // Handle validation errors
+    if (error.name === 'ValidationError') {
+      const messages = Object.values(error.errors).map(err => err.message);
+      return res.status(400).json({
+        success: false,
+        message: 'Validation error',
+        errors: messages,
+      });
+    }
+
+    res.status(500).json({
+      success: false,
+      message: 'Error creating service',
       error: error.message,
     });
   }

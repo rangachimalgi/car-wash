@@ -14,7 +14,7 @@ export default function AddOnServiceItem({
 
   return (
     <View style={[styles.container, isSelected && styles.containerSelected]}>
-      {!imageError ? (
+      {imageUri && !imageError ? (
         <Image 
           source={{ uri: imageUri }} 
           style={styles.thumbnail}

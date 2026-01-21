@@ -8,13 +8,19 @@ const serviceSchema = new mongoose.Schema({
   },
   description: {
     type: String,
-    required: [true, 'Service description is required'],
+    required: [
+      function () {
+        return this.category !== 'AddOn' && this.category !== 'Coverage';
+      },
+      'Service description is required',
+    ],
     trim: true,
+    default: '',
   },
   category: {
     type: String,
     required: [true, 'Service category is required'],
-    enum: ['CarWash', 'BikeWash', 'AddOn'],
+    enum: ['CarWash', 'BikeWash', 'AddOn', 'Coverage'],
     index: true,
   },
   basePrice: {
@@ -24,8 +30,13 @@ const serviceSchema = new mongoose.Schema({
   },
   duration: {
     type: String,
-    required: [true, 'Duration is required'],
-    default: '30 mins',
+    required: [
+      function () {
+        return this.category !== 'AddOn' && this.category !== 'Coverage';
+      },
+      'Duration is required',
+    ],
+    default: '',
   },
   image: {
     type: String,
@@ -65,6 +76,11 @@ const serviceSchema = new mongoose.Schema({
   addOnServices: [{
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Service',
+  }],
+  // For AddOn category: which service types can use this add-on
+  applicableFor: [{
+    type: String,
+    enum: ['CarWash', 'BikeWash'],
   }],
   // Pricing packages (monthly, quarterly, yearly)
   packages: {

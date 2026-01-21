@@ -4,9 +4,15 @@ import {
   getServiceById,
   getPopularServices,
   getServicesByCategory,
+  createService,
 } from '../controllers/serviceController.js';
 
 const router = express.Router();
+
+// @route   POST /api/services
+// @desc    Create new service
+// @access  Admin (will add auth middleware later)
+router.post('/', createService);
 
 // @route   GET /api/services
 // @desc    Get all services (with filters: category, search, sortBy)

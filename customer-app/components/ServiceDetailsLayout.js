@@ -108,10 +108,6 @@ export default function ServiceDetailsLayout({
             <Text style={styles.specLabel}>Rating</Text>
             <Text style={styles.specValue}>{data.specs?.rating}</Text>
           </View>
-          {/* QR Code Button */}
-          <TouchableOpacity style={styles.qrButton}>
-            <MaterialCommunityIcons name="qrcode-scan" size={24} color="#000000" />
-          </TouchableOpacity>
         </View>
       </View>
 
@@ -165,6 +161,9 @@ export default function ServiceDetailsLayout({
             <View style={styles.titleRow}>
               <Text style={styles.serviceTitle}>{serviceData?.name || serviceTitle}</Text>
             </View>
+            {serviceData?.description ? (
+              <Text style={styles.serviceDescription}>{serviceData.description}</Text>
+            ) : null}
             <View style={styles.ratingRow}>
               {[...Array(5)].map((_, i) => {
                 const rating = parseFloat(data.specs?.rating || 0);
@@ -303,15 +302,6 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#000000',
   },
-  qrButton: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    width: 56,
-    height: 56,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 20,
-  },
   serviceImage: {
     width: '100%',
     height: '100%',
@@ -348,6 +338,13 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 12,
+  },
+  serviceDescription: {
+    fontSize: 14,
+    color: '#FFFFFF',
+    opacity: 0.85,
+    marginBottom: 16,
+    lineHeight: 20,
   },
   serviceTitle: {
     fontSize: 24,
