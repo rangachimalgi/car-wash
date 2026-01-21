@@ -308,7 +308,7 @@ const styles = StyleSheet.create({
   },
   bottomSheetContent: {
     padding: 20,
-    paddingBottom: 20,
+    paddingBottom: 160,
   },
   addToCartFooter: {
     backgroundColor: '#28282A',
