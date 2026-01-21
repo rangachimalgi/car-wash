@@ -3,11 +3,45 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Dimensions
 import { StatusBar } from 'expo-status-bar';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import BackHeader from '../components/BackHeader';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const { width } = Dimensions.get('window');
 
 export default function CartScreen({ navigation, route }) {
   const [cartItems, setCartItems] = useState([]);
+  const [cartLoaded, setCartLoaded] = useState(false);
+
+  const loadCart = async () => {
+    try {
+      const stored = await AsyncStorage.getItem('cartItems');
+      if (stored) {
+        const storedItems = JSON.parse(stored);
+        setCartItems(prevItems => (prevItems.length ? prevItems : storedItems));
+      }
+    } catch (error) {
+      console.error('Error loading cart:', error);
+    } finally {
+      setCartLoaded(true);
+    }
+  };
+
+  const saveCart = async (items) => {
+    try {
+      await AsyncStorage.setItem('cartItems', JSON.stringify(items));
+    } catch (error) {
+      console.error('Error saving cart:', error);
+    }
+  };
+
+  useEffect(() => {
+    loadCart();
+  }, []);
+
+  useEffect(() => {
+    if (cartLoaded) {
+      saveCart(cartItems);
+    }
+  }, [cartItems, cartLoaded]);
 
   // Handle adding items from navigation params
   useEffect(() => {
