@@ -5,7 +5,7 @@ import './App.css'
 const API_BASE_URL = 'http://localhost:8000/api'
 
 function App() {
-  const [activeTab, setActiveTab] = useState('services') // 'services' or 'addons'
+  const [activeTab, setActiveTab] = useState('services') // 'services', 'addons', 'coverage', 'orders'
   
   // Services form data
   const [formData, setFormData] = useState({
@@ -54,9 +54,11 @@ function App() {
   const [loadingAllAddOns, setLoadingAllAddOns] = useState(false)
   const [loadingCoverage, setLoadingCoverage] = useState(false)
   const [loadingAllCoverage, setLoadingAllCoverage] = useState(false)
+  const [loadingOrders, setLoadingOrders] = useState(false)
   const [message, setMessage] = useState({ type: '', text: '' })
   const [addOnMessage, setAddOnMessage] = useState({ type: '', text: '' })
   const [coverageMessage, setCoverageMessage] = useState({ type: '', text: '' })
+  const [orders, setOrders] = useState([])
 
   // Fetch available add-ons when component mounts
   useEffect(() => {
@@ -64,6 +66,7 @@ function App() {
     fetchAllAddOns()
     fetchCoverage()
     fetchAllCoverage()
+    fetchOrders()
   }, [])
 
   // Fetch all add-ons for listing
@@ -146,6 +149,12 @@ function App() {
     }
   }, [coverageMessage.text, activeTab])
 
+  useEffect(() => {
+    if (activeTab === 'orders') {
+      fetchOrders()
+    }
+  }, [activeTab])
+
   const fetchAddOns = async () => {
     setLoadingAddOns(true)
     try {
@@ -193,6 +202,21 @@ function App() {
       console.error('Error fetching coverage items:', error)
     } finally {
       setLoadingCoverage(false)
+    }
+  }
+
+  const fetchOrders = async () => {
+    setLoadingOrders(true)
+    try {
+      const response = await fetch(`${API_BASE_URL}/orders`)
+      const data = await response.json()
+      if (data.success) {
+        setOrders(data.data || [])
+      }
+    } catch (error) {
+      console.error('Error fetching orders:', error)
+    } finally {
+      setLoadingOrders(false)
     }
   }
 
@@ -660,6 +684,13 @@ function App() {
             onClick={() => setActiveTab('coverage')}
           >
             Coverage
+          </button>
+          <button
+            type="button"
+            className={`tab ${activeTab === 'orders' ? 'active' : ''}`}
+            onClick={() => setActiveTab('orders')}
+          >
+            Orders
           </button>
         </div>
 
@@ -1169,6 +1200,55 @@ function App() {
               </button>
             </form>
           </>
+        )}
+
+        {/* Orders */}
+        {activeTab === 'orders' && (
+          <div className="orders-section">
+            <div className="section-header">
+              <h2 className="section-title">Orders</h2>
+              <button
+                type="button"
+                className="secondary-button"
+                onClick={fetchOrders}
+              >
+                Refresh
+              </button>
+            </div>
+
+            {loadingOrders ? (
+              <div className="loading-text">Loading orders...</div>
+            ) : orders.length === 0 ? (
+              <div className="info-text">No orders yet.</div>
+            ) : (
+              <div className="orders-grid">
+                {orders.map(order => (
+                  <div key={order._id} className="order-card">
+                    <div className="order-card-header">
+                      <h3 className="order-card-title">Order #{order._id.slice(-6)}</h3>
+                      <span className={`order-status ${order.status?.toLowerCase()}`}>
+                        {order.status || 'Pending'}
+                      </span>
+                    </div>
+                    <div className="order-card-details">
+                      <div className="detail-item">
+                        <span className="detail-label">Total:</span>
+                        <span className="detail-value">₹{order.totalAmount?.toFixed(2)}</span>
+                      </div>
+                      <div className="detail-item">
+                        <span className="detail-label">Items:</span>
+                        <span className="detail-value">{order.items?.length || 0}</span>
+                      </div>
+                      <div className="detail-item">
+                        <span className="detail-label">Created:</span>
+                        <span className="detail-value">{new Date(order.createdAt).toLocaleString()}</span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         )}
       </div>
     </div>

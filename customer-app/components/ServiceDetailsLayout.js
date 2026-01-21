@@ -121,33 +121,17 @@ export default function ServiceDetailsLayout({
               oneTimePrice={oneTimePrice}
               totalPrice={totalPrice}
               duration={data.specs?.duration}
+              serviceId={serviceData?._id}
               serviceTitle={serviceData?.name || serviceTitle}
               serviceImage={data.imageUri}
               selectedAddOns={selectedAddOns}
               addOnServices={addOnServices}
               navigation={navigation}
-              onAddToCart={() => {
-                if (selectedPackage && selectedPackage !== 'oneTime' && navigation) {
-                  const currentServiceTitle = serviceData?.name || serviceTitle;
-                  const packageTitle = `${currentServiceTitle} - ${selectedPackage.type} (${selectedPackage.times}x/month)`;
-                  const packagePrice = Math.round(selectedPackage.price);
-                  
-                  // Get selected add-ons details
-                  const selectedAddOnsDetails = selectedAddOns.map(addOnId => {
-                    return addOnServices.find(a => a._id === addOnId);
-                  }).filter(Boolean);
-                  
-                  navigation.navigate('Cart', {
-                    addItem: {
-                      id: `pkg_${selectedPackage.id}_${Date.now()}`,
-                      title: packageTitle,
-                      image: data.imageUri || serviceData?.image || '',
-                      price: Math.round(totalPrice),
-                      quantity: 1,
-                      addOns: selectedAddOnsDetails,
-                    }
-                  });
-                }
+              onSelectSlot={(item) => {
+                if (!navigation) return;
+                navigation.navigate('SlotSelection', {
+                  pendingItem: item,
+                });
               }}
             />
           </View>

@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, TextInput,
 import { StatusBar } from 'expo-status-bar';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import BackHeader from '../components/BackHeader';
+import { createOrder } from '../services/orderApi';
 
 const { width } = Dimensions.get('window');
 
@@ -10,8 +11,14 @@ export default function CheckoutScreen({ navigation, route }) {
   const cartItems = route?.params?.cartItems || [];
   // Convert ISO string back to Date object (it was serialized for navigation)
   const selectedDateParam = route?.params?.selectedDate;
-  const selectedDate = selectedDateParam ? new Date(selectedDateParam) : null;
-  const selectedTimeSlot = route?.params?.selectedTimeSlot || null;
+  const selectedTimeSlotParam = route?.params?.selectedTimeSlot || null;
+  const slotItem = cartItems.find(item => item.selectedDate && item.selectedTimeSlot) || null;
+  const selectedDate = selectedDateParam
+    ? new Date(selectedDateParam)
+    : slotItem?.selectedDate
+      ? new Date(slotItem.selectedDate)
+      : null;
+  const selectedTimeSlot = selectedTimeSlotParam || slotItem?.selectedTimeSlot || null;
   const subtotal = route?.params?.subtotal || 0;
   const tax = route?.params?.tax || 0;
   const total = route?.params?.total || 0;
@@ -57,18 +64,53 @@ export default function CheckoutScreen({ navigation, route }) {
 
   const finalTotal = total - discount;
 
-  const handlePayNow = () => {
-    // Show toast notification
-    setShowToast(true);
-    
-    // Hide toast after 2 seconds and navigate to home
-    setTimeout(() => {
-      setShowToast(false);
-      navigation.reset({
-        index: 0,
-        routes: [{ name: 'MainTabs' }],
+  const handlePayNow = async () => {
+    try {
+      const itemsPayload = cartItems.map((item) => {
+        const addOnIds = (item.addOns || []).map(addOn => addOn?._id || addOn).filter(Boolean);
+        if (!item.serviceId) {
+          throw new Error('Service ID missing from cart item');
+        }
+        if (!item.selectedDate || !item.selectedTimeSlot) {
+          throw new Error('Scheduled slot missing from cart item');
+        }
+
+        return {
+          serviceId: item.serviceId,
+          addOnIds,
+          packageType: item.packageType || 'OneTime',
+          packageTimes: item.packageTimes || 1,
+          scheduledDate: item.selectedDate,
+          scheduledTimeSlot: item.selectedTimeSlot?.time || item.selectedTimeSlot,
+        };
       });
-    }, 2000);
+
+      console.log('Creating order payload:', itemsPayload);
+      const response = await createOrder({
+        items: itemsPayload,
+        customer: {
+          name: '',
+          phone: '',
+          address: '',
+        },
+      });
+      console.log('Order created:', response);
+
+      // Show toast notification
+      setShowToast(true);
+      
+      // Hide toast after 2 seconds and navigate to home
+      setTimeout(() => {
+        setShowToast(false);
+        navigation.reset({
+          index: 0,
+          routes: [{ name: 'MainTabs' }],
+        });
+      }, 2000);
+    } catch (error) {
+      console.error('Order creation failed:', error);
+      Alert.alert('Order failed', 'Unable to place order right now.');
+    }
   };
 
   return (

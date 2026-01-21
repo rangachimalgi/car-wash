@@ -7,10 +7,11 @@ import BackHeader from '../components/BackHeader';
 const { width } = Dimensions.get('window');
 
 export default function SlotSelectionScreen({ navigation, route }) {
-  const cartItems = route?.params?.cartItems || [];
-  const subtotal = route?.params?.subtotal || 0;
+  const pendingItem = route?.params?.pendingItem || null;
+  const cartItems = route?.params?.cartItems || (pendingItem ? [pendingItem] : []);
+  const subtotal = route?.params?.subtotal || (pendingItem?.price || 0);
   const tax = route?.params?.tax || 0;
-  const total = route?.params?.total || 0;
+  const total = route?.params?.total || (pendingItem?.price || 0);
 
   const [selectedDate, setSelectedDate] = useState(null);
   const [selectedTimeSlot, setSelectedTimeSlot] = useState(null);
@@ -63,15 +64,16 @@ export default function SlotSelectionScreen({ navigation, route }) {
       // Show alert or toast
       return;
     }
-    // Navigate to checkout/confirmation screen
-    // Convert Date to ISO string for navigation params (must be serializable)
-    navigation.navigate('Checkout', {
+    if (!pendingItem) return;
+
+    const itemWithSlot = {
+      ...pendingItem,
       selectedDate: selectedDate.toISOString(),
       selectedTimeSlot,
-      cartItems,
-      subtotal,
-      tax,
-      total,
+    };
+
+    navigation.navigate('Cart', {
+      addItem: itemWithSlot,
     });
   };
 
@@ -167,7 +169,7 @@ export default function SlotSelectionScreen({ navigation, route }) {
         </View>
       </ScrollView>
 
-      {/* Checkout Button */}
+      {/* Add to Cart Button */}
       <View style={styles.checkoutButtonContainer}>
         <TouchableOpacity 
           style={[
@@ -181,7 +183,7 @@ export default function SlotSelectionScreen({ navigation, route }) {
             styles.checkoutButtonText,
             (!selectedDate || !selectedTimeSlot) && styles.checkoutButtonTextDisabled
           ]}>
-            Checkout
+            Add to Cart
           </Text>
           <MaterialCommunityIcons 
             name="arrow-right" 

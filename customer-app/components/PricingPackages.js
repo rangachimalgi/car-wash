@@ -181,7 +181,7 @@ export default function PricingPackages({ oneTimePrice = 299, serviceTitle = 'Se
 }
 
 // Separate component for fixed Add to Cart button
-export function AddToCartButton({ selectedPackage, oneTimePrice, totalPrice, duration, serviceTitle, serviceImage, selectedAddOns = [], addOnServices = [], navigation, onAddToCart }) {
+export function AddToCartButton({ selectedPackage, oneTimePrice, totalPrice, duration, serviceId, serviceTitle, serviceImage, selectedAddOns = [], addOnServices = [], navigation, onSelectSlot }) {
   // Use totalPrice if provided, otherwise calculate from base price
   const displayPrice = totalPrice !== undefined ? totalPrice : (() => {
     if (selectedPackage === 'oneTime') {
@@ -194,26 +194,42 @@ export function AddToCartButton({ selectedPackage, oneTimePrice, totalPrice, dur
   })();
 
   const handlePress = () => {
-    if (selectedPackage === 'oneTime') {
-      if (!navigation) return;
-      
-      // Get selected add-ons details
-      const selectedAddOnsDetails = selectedAddOns.map(addOnId => {
-        return addOnServices.find(a => a._id === addOnId);
-      }).filter(Boolean);
-      
-      navigation.navigate('Cart', {
-        addItem: {
+    if (!selectedPackage) return;
+
+    const selectedAddOnsDetails = selectedAddOns.map(addOnId => {
+      return addOnServices.find(a => a._id === addOnId);
+    }).filter(Boolean);
+
+    const item = selectedPackage === 'oneTime'
+      ? {
           id: `oneTime_${Date.now()}`,
+          serviceId,
           title: `${serviceTitle} - 1 Time Wash`,
           image: serviceImage || 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=300&h=200&fit=crop&auto=format',
           price: Math.round(displayPrice),
           quantity: 1,
           addOns: selectedAddOnsDetails,
+          packageType: 'OneTime',
         }
-      });
-    } else if (onAddToCart) {
-      onAddToCart();
+      : {
+          id: `pkg_${selectedPackage.id}_${Date.now()}`,
+          serviceId,
+          title: `${serviceTitle} - ${selectedPackage.type} (${selectedPackage.times}x/month)`,
+          image: serviceImage || 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=300&h=200&fit=crop&auto=format',
+          price: Math.round(selectedPackage.price || displayPrice),
+          quantity: 1,
+          addOns: selectedAddOnsDetails,
+          packageType: selectedPackage.type,
+          packageTimes: selectedPackage.times,
+        };
+
+    if (onSelectSlot) {
+      onSelectSlot(item);
+      return;
+    }
+
+    if (navigation) {
+      navigation.navigate('SlotSelection', { pendingItem: item });
     }
   };
 
@@ -228,7 +244,7 @@ export function AddToCartButton({ selectedPackage, oneTimePrice, totalPrice, dur
         onPress={handlePress}
         activeOpacity={0.8}
       >
-        <Text style={styles.addToCartButtonText}>Add to Cart</Text>
+        <Text style={styles.addToCartButtonText}>Select Slot</Text>
         <MaterialCommunityIcons name="arrow-right" size={20} color="#FFFFFF" />
       </TouchableOpacity>
     </View>

@@ -7,29 +7,7 @@ import BackHeader from '../components/BackHeader';
 const { width } = Dimensions.get('window');
 
 export default function CartScreen({ navigation, route }) {
-  const [cartItems, setCartItems] = useState([
-    {
-      id: '1',
-      title: 'Basic Car Wash',
-      image: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=300&h=200&fit=crop&auto=format',
-      price: 299,
-      quantity: 1,
-    },
-    {
-      id: '2',
-      title: 'Premium Bike Care',
-      image: 'https://images.unsplash.com/photo-1558981806-ec527fa84c39?w=300&h=200&fit=crop&auto=format',
-      price: 199,
-      quantity: 2,
-    },
-    {
-      id: '3',
-      title: 'Interior Cleaning',
-      image: 'https://images.unsplash.com/photo-1502877338535-766e1452684a?w=300&h=200&fit=crop&auto=format',
-      price: 399,
-      quantity: 1,
-    },
-  ]);
+  const [cartItems, setCartItems] = useState([]);
 
   // Handle adding items from navigation params
   useEffect(() => {
@@ -65,6 +43,15 @@ export default function CartScreen({ navigation, route }) {
 
   const removeItem = (id) => {
     setCartItems(items => items.filter(item => item.id !== id));
+  };
+
+  const formatSlot = (item) => {
+    if (!item?.selectedDate || !item?.selectedTimeSlot) return null;
+    const date = new Date(item.selectedDate);
+    const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const label = `${days[date.getDay()]}, ${date.getDate()} ${months[date.getMonth()]}`;
+    return `${label} • ${item.selectedTimeSlot.time}`;
   };
 
   const subtotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
@@ -104,6 +91,9 @@ export default function CartScreen({ navigation, route }) {
                   <View style={styles.itemDetails}>
                     <Text style={styles.itemTitle}>{item.title}</Text>
                     <Text style={styles.itemPrice}>₹{item.price}</Text>
+                    {formatSlot(item) && (
+                      <Text style={styles.slotText}>{formatSlot(item)}</Text>
+                    )}
                     <View style={styles.quantityContainer}>
                       <TouchableOpacity 
                         style={styles.quantityButton}
@@ -152,14 +142,14 @@ export default function CartScreen({ navigation, route }) {
 
             <TouchableOpacity 
               style={styles.checkoutButton}
-              onPress={() => navigation.navigate('SlotSelection', {
+              onPress={() => navigation.navigate('Checkout', {
                 cartItems,
                 subtotal,
                 tax,
                 total,
               })}
             >
-              <Text style={styles.checkoutButtonText}>Select Slot</Text>
+              <Text style={styles.checkoutButtonText}>Checkout</Text>
               <MaterialCommunityIcons name="arrow-right" size={20} color="#000000" />
             </TouchableOpacity>
           </>
@@ -234,6 +224,11 @@ const styles = StyleSheet.create({
   itemPrice: {
     fontSize: 14,
     color: '#CCCCCC',
+    marginBottom: 8,
+  },
+  slotText: {
+    fontSize: 12,
+    color: '#31C5FF',
     marginBottom: 8,
   },
   quantityContainer: {
