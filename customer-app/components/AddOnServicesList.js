@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import AddOnServiceItem from './AddOnServiceItem';
+import { useTheme } from '../theme/ThemeContext';
 
 export default function AddOnServicesList({ 
   services = [], 
@@ -10,6 +11,8 @@ export default function AddOnServicesList({
   onToggleAddOn
 }) {
   const [showAll, setShowAll] = useState(false);
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   
   const visibleServices = showAll ? services : services.slice(0, maxVisible);
   const remainingCount = services.length - maxVisible;
@@ -38,46 +41,46 @@ export default function AddOnServicesList({
           activeOpacity={0.8}
         >
           <Text style={styles.moreText}>+{remainingCount} More</Text>
-          <MaterialCommunityIcons name="chevron-down" size={20} color="#FFFFFF" />
+          <MaterialCommunityIcons name="chevron-down" size={20} color={theme.textPrimary} />
         </TouchableOpacity>
       )}
     </View>
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = theme => StyleSheet.create({
   container: {
-    backgroundColor: '#000000',
+    backgroundColor: theme.cardBackground,
     borderRadius: 12,
     overflow: 'hidden',
     marginTop: 24,
     borderWidth: 1,
-    borderColor: '#333333',
+    borderColor: theme.cardBorder,
   },
   header: {
     paddingVertical: 16,
     paddingHorizontal: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#333333',
+    borderBottomColor: theme.cardBorder,
   },
   title: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#FFFFFF',
+    color: theme.textPrimary,
   },
   moreButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 16,
-    backgroundColor: '#000000',
+    backgroundColor: theme.cardBackground,
     borderTopWidth: 1,
-    borderTopColor: '#333333',
+    borderTopColor: theme.cardBorder,
   },
   moreText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#FFFFFF',
+    color: theme.textPrimary,
     marginRight: 4,
   },
 });

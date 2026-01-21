@@ -1,15 +1,19 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { useTheme } from '../theme/ThemeContext';
 
 export default function ServiceCoverage({ included = [], notIncluded = [] }) {
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
+
   const renderItem = (item, isIncluded) => (
     <View key={item} style={styles.itemRow}>
       <View style={[styles.iconContainer, isIncluded ? styles.includedIcon : styles.notIncludedIcon]}>
         {isIncluded ? (
-          <MaterialCommunityIcons name="check" size={16} color="#85E4FC" />
+          <MaterialCommunityIcons name="check" size={16} color={theme.accent} />
         ) : (
-          <MaterialCommunityIcons name="information" size={16} color="#FFFFFF" />
+          <MaterialCommunityIcons name="information" size={16} color={theme.textPrimary} />
         )}
       </View>
       <Text style={styles.itemText}>{item}</Text>
@@ -47,7 +51,7 @@ export default function ServiceCoverage({ included = [], notIncluded = [] }) {
         <View style={[styles.column, { borderRightWidth: 0 }]}>
           <View style={[styles.columnHeader, styles.notIncludedHeader]}>
             <View style={[styles.headerIcon, styles.notIncludedHeaderIcon]}>
-              <MaterialCommunityIcons name="information" size={18} color="#FFFFFF" />
+              <MaterialCommunityIcons name="information" size={18} color={theme.textPrimary} />
             </View>
             <Text style={styles.columnHeaderText}>Not Included</Text>
           </View>
@@ -66,7 +70,7 @@ export default function ServiceCoverage({ included = [], notIncluded = [] }) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = theme => StyleSheet.create({
   container: {
     marginTop: 24,
   },
@@ -79,25 +83,25 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#FFFFFF',
+    color: theme.textPrimary,
   },
   seeAllText: {
     fontSize: 14,
-    color: '#85E4FC',
+    color: theme.accent,
     fontWeight: '600',
   },
   tableContainer: {
     flexDirection: 'row',
-    backgroundColor: '#000000',
+    backgroundColor: theme.cardBackground,
     borderRadius: 12,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: '#333333',
+    borderColor: theme.cardBorder,
   },
   column: {
     flex: 1,
     borderRightWidth: 1,
-    borderRightColor: '#333333',
+    borderRightColor: theme.cardBorder,
   },
   columnHeader: {
     flexDirection: 'row',
@@ -106,10 +110,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
   },
   includedHeader: {
-    backgroundColor: '#85E4FC',
+    backgroundColor: theme.accent,
   },
   notIncludedHeader: {
-    backgroundColor: '#9E9E9E',
+    backgroundColor: theme.textSecondary,
   },
   headerIcon: {
     width: 24,
@@ -128,10 +132,10 @@ const styles = StyleSheet.create({
   columnHeaderText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#FFFFFF',
+    color: theme.textPrimary,
   },
   itemsContainer: {
-    backgroundColor: '#000000',
+    backgroundColor: theme.cardBackground,
   },
   itemRow: {
     flexDirection: 'row',
@@ -139,7 +143,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#333333',
+    borderBottomColor: theme.cardBorder,
   },
   iconContainer: {
     width: 20,
@@ -150,19 +154,19 @@ const styles = StyleSheet.create({
     marginRight: 10,
   },
   includedIcon: {
-    backgroundColor: 'rgba(49, 197, 255, 0.2)',
+    backgroundColor: theme.accentSoft,
   },
   notIncludedIcon: {
-    backgroundColor: '#9E9E9E',
+    backgroundColor: theme.cardBorder,
   },
   itemText: {
     flex: 1,
     fontSize: 14,
-    color: '#FFFFFF',
+    color: theme.textPrimary,
   },
   emptyText: {
     fontSize: 14,
-    color: '#666666',
+    color: theme.textSecondary,
     fontStyle: 'italic',
   },
 });

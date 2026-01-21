@@ -1,15 +1,18 @@
-import React, { useState, useEffect } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Alert, RefreshControl } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import BackHeader from '../components/BackHeader';
 import ServiceCard from '../components/ServiceCard';
 import { getServicesByCategory } from '../services/serviceApi';
+import { useTheme } from '../theme/ThemeContext';
 
 export default function BikeWashScreen({ navigation }) {
   const [services, setServices] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const { theme, isLightMode } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
 
   useEffect(() => {
     fetchServices();
@@ -56,10 +59,10 @@ export default function BikeWashScreen({ navigation }) {
   if (loading) {
     return (
       <View style={styles.container}>
-        <StatusBar style="light" />
+        <StatusBar style={isLightMode ? 'dark' : 'light'} />
         <BackHeader navigation={navigation} title="Bike Wash" />
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#85E4FC" />
+          <ActivityIndicator size="large" color={theme.accent} />
           <Text style={styles.loadingText}>Loading services...</Text>
         </View>
       </View>
@@ -69,10 +72,10 @@ export default function BikeWashScreen({ navigation }) {
   if (error && services.length === 0) {
     return (
       <View style={styles.container}>
-        <StatusBar style="light" />
+        <StatusBar style={isLightMode ? 'dark' : 'light'} />
         <BackHeader navigation={navigation} title="Bike Wash" />
         <View style={styles.errorContainer}>
-          <MaterialCommunityIcons name="alert-circle" size={64} color="#FF3B30" />
+          <MaterialCommunityIcons name="alert-circle" size={64} color={theme.danger} />
           <Text style={styles.errorText}>Failed to load services</Text>
           <Text style={styles.errorSubtext}>{error}</Text>
           <TouchableOpacity style={styles.retryButton} onPress={fetchServices}>
@@ -85,7 +88,7 @@ export default function BikeWashScreen({ navigation }) {
 
   return (
     <View style={styles.container}>
-      <StatusBar style="light" />
+      <StatusBar style={isLightMode ? 'dark' : 'light'} />
       <BackHeader navigation={navigation} title="Bike Wash" />
       <ScrollView 
         style={styles.scrollView}
@@ -95,7 +98,7 @@ export default function BikeWashScreen({ navigation }) {
           <RefreshControl
             refreshing={loading}
             onRefresh={fetchServices}
-            tintColor="#85E4FC"
+            tintColor={theme.accent}
           />
         }
       >
@@ -104,7 +107,7 @@ export default function BikeWashScreen({ navigation }) {
           
           {services.length === 0 ? (
             <View style={styles.emptyContainer}>
-              <MaterialCommunityIcons name="motorbike" size={64} color="#666666" />
+              <MaterialCommunityIcons name="motorbike" size={64} color={theme.textSecondary} />
               <Text style={styles.emptyText}>No services available</Text>
               <Text style={styles.emptySubtext}>Check back later for bike wash services</Text>
             </View>
@@ -133,10 +136,10 @@ export default function BikeWashScreen({ navigation }) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = theme => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#000000',
+    backgroundColor: theme.background,
   },
   scrollView: {
     flex: 1,
@@ -150,7 +153,7 @@ const styles = StyleSheet.create({
   browseTitle: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: '#FFFFFF',
+    color: theme.textPrimary,
     paddingHorizontal: 16,
     marginBottom: 20,
   },
@@ -166,7 +169,7 @@ const styles = StyleSheet.create({
   loadingText: {
     marginTop: 16,
     fontSize: 16,
-    color: '#FFFFFF',
+    color: theme.textSecondary,
   },
   errorContainer: {
     flex: 1,
@@ -178,18 +181,18 @@ const styles = StyleSheet.create({
   errorText: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#FFFFFF',
+    color: theme.textPrimary,
     marginTop: 16,
     marginBottom: 8,
   },
   errorSubtext: {
     fontSize: 14,
-    color: '#9E9E9E',
+    color: theme.textSecondary,
     textAlign: 'center',
     marginBottom: 24,
   },
   retryButton: {
-    backgroundColor: '#85E4FC',
+    backgroundColor: theme.accent,
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 8,
@@ -208,13 +211,13 @@ const styles = StyleSheet.create({
   emptyText: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#FFFFFF',
+    color: theme.textPrimary,
     marginTop: 16,
     marginBottom: 8,
   },
   emptySubtext: {
     fontSize: 14,
-    color: '#9E9E9E',
+    color: theme.textSecondary,
     textAlign: 'center',
   },
 });

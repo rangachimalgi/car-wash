@@ -1,13 +1,16 @@
-import React, { useState, useEffect } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { ActivityIndicator, View, Text, StyleSheet } from 'react-native';
 import ServiceDetailsLayout from '../components/ServiceDetailsLayout';
 import { getServiceById } from '../services/serviceApi';
+import { useTheme } from '../theme/ThemeContext';
 
 export default function BikeWashDetailsScreen({ navigation, route }) {
   const { serviceId, serviceTitle, service: serviceFromRoute } = route.params || {};
   const [service, setService] = useState(serviceFromRoute || null);
   const [loading, setLoading] = useState(!serviceFromRoute);
   const [error, setError] = useState(null);
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
 
   useEffect(() => {
     // Fetch from API to get add-ons (list API doesn't include add-ons)
@@ -107,7 +110,7 @@ export default function BikeWashDetailsScreen({ navigation, route }) {
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#85E4FC" />
+        <ActivityIndicator size="large" color={theme.accent} />
         <Text style={styles.loadingText}>Loading service details...</Text>
       </View>
     );
@@ -125,28 +128,28 @@ export default function BikeWashDetailsScreen({ navigation, route }) {
   return null;
 }
 
-const styles = StyleSheet.create({
+const createStyles = theme => StyleSheet.create({
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#000000',
+    backgroundColor: theme.background,
   },
   loadingText: {
     marginTop: 16,
     fontSize: 16,
-    color: '#FFFFFF',
+    color: theme.textSecondary,
   },
   errorContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#000000',
+    backgroundColor: theme.background,
     paddingHorizontal: 32,
   },
   errorText: {
     fontSize: 16,
-    color: '#FF3B30',
+    color: theme.danger,
     textAlign: 'center',
   },
 });

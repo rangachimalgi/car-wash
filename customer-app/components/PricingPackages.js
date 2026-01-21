@@ -1,10 +1,13 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { useTheme } from '../theme/ThemeContext';
 
 export default function PricingPackages({ oneTimePrice = 299, serviceTitle = 'Service', serviceImage = '', duration = '50 mins', navigation, onSelectionChange, packages = null }) {
   const [expandedSection, setExpandedSection] = useState(null);
   const [selectedPackage, setSelectedPackage] = useState('oneTime'); // Default to one time wash
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
 
   const toggleSection = (section) => {
     setExpandedSection(expandedSection === section ? null : section);
@@ -91,7 +94,7 @@ export default function PricingPackages({ oneTimePrice = 299, serviceTitle = 'Se
         </View>
         {isSelected && (
           <View style={styles.selectedIndicator}>
-            <MaterialCommunityIcons name="check-circle" size={20} color="#85E4FC" />
+            <MaterialCommunityIcons name="check-circle" size={20} color={theme.accent} />
           </View>
         )}
       </TouchableOpacity>
@@ -112,7 +115,7 @@ export default function PricingPackages({ oneTimePrice = 299, serviceTitle = 'Se
             <Text style={styles.oneTimePrice}>₹{oneTimePrice}</Text>
           </View>
           {selectedPackage === 'oneTime' ? (
-            <MaterialCommunityIcons name="check-circle" size={24} color="#85E4FC" />
+            <MaterialCommunityIcons name="check-circle" size={24} color={theme.accent} />
           ) : (
             <View style={styles.circlePlaceholder} />
           )}
@@ -129,7 +132,7 @@ export default function PricingPackages({ oneTimePrice = 299, serviceTitle = 'Se
         <MaterialCommunityIcons 
           name={expandedSection === 'monthly' ? 'chevron-up' : 'chevron-down'} 
           size={24} 
-          color="#FFFFFF" 
+          color={theme.textPrimary} 
         />
       </TouchableOpacity>
       {expandedSection === 'monthly' && (
@@ -148,7 +151,7 @@ export default function PricingPackages({ oneTimePrice = 299, serviceTitle = 'Se
         <MaterialCommunityIcons 
           name={expandedSection === 'quarterly' ? 'chevron-up' : 'chevron-down'} 
           size={24} 
-          color="#FFFFFF" 
+          color={theme.textPrimary} 
         />
       </TouchableOpacity>
       {expandedSection === 'quarterly' && (
@@ -167,7 +170,7 @@ export default function PricingPackages({ oneTimePrice = 299, serviceTitle = 'Se
         <MaterialCommunityIcons 
           name={expandedSection === 'yearly' ? 'chevron-up' : 'chevron-down'} 
           size={24} 
-          color="#FFFFFF" 
+          color={theme.textPrimary} 
         />
       </TouchableOpacity>
       {expandedSection === 'yearly' && (
@@ -182,6 +185,9 @@ export default function PricingPackages({ oneTimePrice = 299, serviceTitle = 'Se
 
 // Separate component for fixed Add to Cart button
 export function AddToCartButton({ selectedPackage, oneTimePrice, totalPrice, duration, serviceId, serviceTitle, serviceImage, selectedAddOns = [], addOnServices = [], navigation, onSelectSlot }) {
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
+
   // Use totalPrice if provided, otherwise calculate from base price
   const displayPrice = totalPrice !== undefined ? totalPrice : (() => {
     if (selectedPackage === 'oneTime') {
@@ -251,27 +257,27 @@ export function AddToCartButton({ selectedPackage, oneTimePrice, totalPrice, dur
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = theme => StyleSheet.create({
   container: {
     marginTop: 24,
   },
   oneTimeSection: {
-    backgroundColor: '#1A1A1A',
+    backgroundColor: theme.cardBackground,
     borderRadius: 12,
     padding: 16,
     borderWidth: 1,
-    borderColor: '#333333',
+    borderColor: theme.cardBorder,
     marginBottom: 16,
   },
   oneTimeSectionSelected: {
-    borderColor: '#85E4FC',
+    borderColor: theme.accent,
   },
   circlePlaceholder: {
     width: 24,
     height: 24,
     borderRadius: 12,
     borderWidth: 2,
-    borderColor: '#666666',
+    borderColor: theme.textSecondary,
   },
   oneTimeRow: {
     flexDirection: 'row',
@@ -280,13 +286,13 @@ const styles = StyleSheet.create({
   },
   oneTimeLabel: {
     fontSize: 14,
-    color: '#CCCCCC',
+    color: theme.textSecondary,
     marginBottom: 4,
   },
   oneTimePrice: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#FFFFFF',
+    color: theme.textPrimary,
   },
   sectionHeader: {
     flexDirection: 'row',
@@ -294,13 +300,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#333333',
+    borderBottomColor: theme.cardBorder,
     marginBottom: 12,
   },
   sectionTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#FFFFFF',
+    color: theme.textPrimary,
   },
   packagesList: {
     marginBottom: 16,
@@ -309,17 +315,17 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: '#1A1A1A',
+    backgroundColor: theme.cardBackground,
     borderRadius: 8,
     padding: 12,
     marginBottom: 8,
     borderWidth: 1,
-    borderColor: '#333333',
+    borderColor: theme.cardBorder,
     position: 'relative',
   },
   packageItemSelected: {
-    borderColor: '#85E4FC',
-    backgroundColor: '#1A2A3A',
+    borderColor: theme.accent,
+    backgroundColor: theme.accentSoft,
   },
   selectedIndicator: {
     position: 'absolute',
@@ -332,12 +338,12 @@ const styles = StyleSheet.create({
   packageTimes: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#FFFFFF',
+    color: theme.textPrimary,
     marginBottom: 4,
   },
   packageDiscount: {
     fontSize: 12,
-    color: '#85E4FC',
+    color: theme.accent,
   },
   packageRight: {
     alignItems: 'flex-end',
@@ -345,23 +351,23 @@ const styles = StyleSheet.create({
   packagePerWash: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#85E4FC',
+    color: theme.accent,
     marginBottom: 4,
   },
   packageTotal: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#FFFFFF',
+    color: theme.textPrimary,
   },
   addToCartContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.cardBackground,
     borderRadius: 12,
     padding: 16,
     borderWidth: 1,
-    borderColor: '#E5E5E5',
+    borderColor: theme.cardBorder,
   },
   addToCartLeft: {
     flex: 1,
@@ -369,17 +375,17 @@ const styles = StyleSheet.create({
   addToCartPrice: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#85E4FC',
+    color: theme.accent,
     marginBottom: 4,
   },
   addToCartDuration: {
     fontSize: 14,
-    color: '#000000',
+    color: theme.textSecondary,
   },
   addToCartButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#000000',
+    backgroundColor: theme.accent,
     borderRadius: 8,
     paddingVertical: 14,
     paddingHorizontal: 24,

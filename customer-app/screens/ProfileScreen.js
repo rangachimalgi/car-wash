@@ -1,13 +1,16 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Alert } from 'react-native';
+import React, { useEffect, useMemo, useState } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Alert, Switch } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import CustomHeader from '../components/CustomHeader';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useTheme } from '../theme/ThemeContext';
 
 export default function ProfileScreen({ navigation }) {
   const insets = useSafeAreaInsets();
+  const { theme, isLightMode, toggleColorScheme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   
   // Mock user data
   const [userData, setUserData] = useState({
@@ -75,7 +78,7 @@ export default function ProfileScreen({ navigation }) {
 
   return (
     <View style={styles.container}>
-      <StatusBar style="light" />
+      <StatusBar style={isLightMode ? 'dark' : 'light'} />
       <CustomHeader navigation={navigation} />
       <ScrollView 
         style={styles.scrollView}
@@ -86,10 +89,10 @@ export default function ProfileScreen({ navigation }) {
         <View style={styles.profileHeader}>
           <View style={styles.avatarContainer}>
             <View style={styles.avatar}>
-              <MaterialCommunityIcons name="account" size={48} color="#FFFFFF" />
+              <MaterialCommunityIcons name="account" size={48} color={theme.textPrimary} />
             </View>
             <TouchableOpacity style={styles.editAvatarButton}>
-              <MaterialCommunityIcons name="camera" size={16} color="#FFFFFF" />
+              <MaterialCommunityIcons name="camera" size={16} color={theme.textPrimary} />
             </TouchableOpacity>
           </View>
           <Text style={styles.userName}>{userData.name}</Text>
@@ -99,7 +102,7 @@ export default function ProfileScreen({ navigation }) {
         {/* Wallet Section */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <MaterialCommunityIcons name="wallet" size={24} color="#85E4FC" />
+            <MaterialCommunityIcons name="wallet" size={24} color={theme.accent} />
             <Text style={styles.sectionTitle}>Wallet</Text>
           </View>
           <TouchableOpacity style={styles.walletCard} activeOpacity={0.8}>
@@ -115,17 +118,17 @@ export default function ProfileScreen({ navigation }) {
             </View>
             <View style={styles.walletFooter}>
               <TouchableOpacity style={styles.walletAction}>
-                <MaterialCommunityIcons name="arrow-up" size={18} color="#85E4FC" />
+                <MaterialCommunityIcons name="arrow-up" size={18} color={theme.accent} />
                 <Text style={styles.walletActionText}>Send</Text>
               </TouchableOpacity>
               <View style={styles.divider} />
               <TouchableOpacity style={styles.walletAction}>
-                <MaterialCommunityIcons name="arrow-down" size={18} color="#85E4FC" />
+                <MaterialCommunityIcons name="arrow-down" size={18} color={theme.accent} />
                 <Text style={styles.walletActionText}>Receive</Text>
               </TouchableOpacity>
               <View style={styles.divider} />
               <TouchableOpacity style={styles.walletAction}>
-                <MaterialCommunityIcons name="history" size={18} color="#85E4FC" />
+                <MaterialCommunityIcons name="history" size={18} color={theme.accent} />
                 <Text style={styles.walletActionText}>History</Text>
               </TouchableOpacity>
             </View>
@@ -135,45 +138,45 @@ export default function ProfileScreen({ navigation }) {
         {/* Personal Information Section */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <MaterialCommunityIcons name="account-circle" size={24} color="#85E4FC" />
+            <MaterialCommunityIcons name="account-circle" size={24} color={theme.accent} />
             <Text style={styles.sectionTitle}>Personal Information</Text>
           </View>
           
           {/* Name */}
           <TouchableOpacity style={styles.infoCard} activeOpacity={0.7}>
             <View style={styles.infoContent}>
-              <MaterialCommunityIcons name="account" size={20} color="#9E9E9E" />
+              <MaterialCommunityIcons name="account" size={20} color={theme.textSecondary} />
               <View style={styles.infoTextContainer}>
                 <Text style={styles.infoLabel}>Name</Text>
                 <Text style={styles.infoValue}>{userData.name}</Text>
               </View>
             </View>
-            <MaterialCommunityIcons name="chevron-right" size={24} color="#9E9E9E" />
+            <MaterialCommunityIcons name="chevron-right" size={24} color={theme.textSecondary} />
           </TouchableOpacity>
 
           {/* Phone */}
           <TouchableOpacity style={styles.infoCard} activeOpacity={0.7}>
             <View style={styles.infoContent}>
-              <MaterialCommunityIcons name="phone" size={20} color="#9E9E9E" />
+              <MaterialCommunityIcons name="phone" size={20} color={theme.textSecondary} />
               <View style={styles.infoTextContainer}>
                 <Text style={styles.infoLabel}>Phone</Text>
                 <Text style={styles.infoValue}>{userData.phone ? `+91 ${userData.phone}` : '-'}</Text>
               </View>
             </View>
-            <MaterialCommunityIcons name="chevron-right" size={24} color="#9E9E9E" />
+            <MaterialCommunityIcons name="chevron-right" size={24} color={theme.textSecondary} />
           </TouchableOpacity>
         </View>
 
         {/* Addresses Section */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <MaterialCommunityIcons name="map-marker" size={24} color="#85E4FC" />
+            <MaterialCommunityIcons name="map-marker" size={24} color={theme.accent} />
             <Text style={styles.sectionTitle}>Addresses</Text>
             <TouchableOpacity 
               style={styles.addButton}
               onPress={() => navigation.navigate('Addresses')}
             >
-              <MaterialCommunityIcons name="plus" size={20} color="#85E4FC" />
+              <MaterialCommunityIcons name="plus" size={20} color={theme.accent} />
             </TouchableOpacity>
           </View>
           
@@ -184,7 +187,7 @@ export default function ProfileScreen({ navigation }) {
                   <MaterialCommunityIcons 
                     name={address.type === 'Home' ? 'home' : 'briefcase'} 
                     size={16} 
-                    color="#85E4FC" 
+                    color={theme.accent} 
                   />
                   <Text style={styles.addressTypeText}>{address.type}</Text>
                   {address.isDefault && (
@@ -194,7 +197,7 @@ export default function ProfileScreen({ navigation }) {
                   )}
                 </View>
                 <TouchableOpacity>
-                  <MaterialCommunityIcons name="pencil" size={18} color="#9E9E9E" />
+                  <MaterialCommunityIcons name="pencil" size={18} color={theme.textSecondary} />
                 </TouchableOpacity>
               </View>
               <Text style={styles.addressText}>{address.address}</Text>
@@ -206,10 +209,10 @@ export default function ProfileScreen({ navigation }) {
         {/* My Vehicles Section */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <MaterialCommunityIcons name="car" size={24} color="#85E4FC" />
+            <MaterialCommunityIcons name="car" size={24} color={theme.accent} />
             <Text style={styles.sectionTitle}>My Vehicles</Text>
             <TouchableOpacity style={styles.addButton}>
-              <MaterialCommunityIcons name="plus" size={20} color="#85E4FC" />
+              <MaterialCommunityIcons name="plus" size={20} color={theme.accent} />
             </TouchableOpacity>
           </View>
           
@@ -220,7 +223,7 @@ export default function ProfileScreen({ navigation }) {
                   <MaterialCommunityIcons 
                     name={vehicle.type === 'Car' ? 'car' : 'motorbike'} 
                     size={32} 
-                    color="#85E4FC" 
+                    color={theme.accent} 
                   />
                 </View>
                 <View style={styles.vehicleInfo}>
@@ -235,11 +238,32 @@ export default function ProfileScreen({ navigation }) {
                   <Text style={styles.vehicleDetails}>{vehicle.year} • {vehicle.plateNumber}</Text>
                 </View>
                 <TouchableOpacity>
-                  <MaterialCommunityIcons name="pencil" size={18} color="#9E9E9E" />
+                  <MaterialCommunityIcons name="pencil" size={18} color={theme.textSecondary} />
                 </TouchableOpacity>
               </View>
             </TouchableOpacity>
           ))}
+        </View>
+
+        {/* Appearance Section */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <MaterialCommunityIcons name="theme-light-dark" size={24} color={theme.accent} />
+            <Text style={styles.sectionTitle}>Appearance</Text>
+          </View>
+          <View style={styles.settingCard}>
+            <View style={styles.settingText}>
+              <Text style={styles.settingLabel}>Light mode</Text>
+              <Text style={styles.settingDescription}>Use a light color scheme</Text>
+            </View>
+            <Switch
+              value={isLightMode}
+              onValueChange={toggleColorScheme}
+              trackColor={{ false: theme.cardBorder, true: theme.accent }}
+              thumbColor={isLightMode ? '#FFFFFF' : theme.textSecondary}
+              ios_backgroundColor={theme.cardBorder}
+            />
+          </View>
         </View>
 
         {/* Logout Button */}
@@ -269,7 +293,7 @@ export default function ProfileScreen({ navigation }) {
             }}
             activeOpacity={0.8}
           >
-            <MaterialCommunityIcons name="logout" size={20} color="#FF5252" />
+            <MaterialCommunityIcons name="logout" size={20} color={theme.danger} />
             <Text style={styles.logoutButtonText}>Logout</Text>
           </TouchableOpacity>
         </View>
@@ -278,10 +302,10 @@ export default function ProfileScreen({ navigation }) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = theme => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#28282A',
+    backgroundColor: theme.background,
   },
   scrollView: {
     flex: 1,
@@ -303,11 +327,11 @@ const styles = StyleSheet.create({
     width: 100,
     height: 100,
     borderRadius: 50,
-    backgroundColor: '#1A1A1A',
+    backgroundColor: theme.avatarBackground,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 3,
-    borderColor: '#85E4FC',
+    borderColor: theme.accent,
   },
   editAvatarButton: {
     position: 'absolute',
@@ -316,21 +340,21 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: '#85E4FC',
+    backgroundColor: theme.accent,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 3,
-    borderColor: '#28282A',
+    borderColor: theme.background,
   },
   userName: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#FFFFFF',
+    color: theme.textPrimary,
     marginBottom: 4,
   },
   userEmail: {
     fontSize: 14,
-    color: '#9E9E9E',
+    color: theme.textSecondary,
   },
   section: {
     marginBottom: 32,
@@ -344,23 +368,23 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#FFFFFF',
+    color: theme.textPrimary,
     flex: 1,
   },
   addButton: {
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: 'rgba(49, 197, 255, 0.15)',
+    backgroundColor: theme.accentSoft,
     alignItems: 'center',
     justifyContent: 'center',
   },
   walletCard: {
-    backgroundColor: '#1A1A1A',
+    backgroundColor: theme.cardBackground,
     borderRadius: 16,
     padding: 20,
     borderWidth: 1,
-    borderColor: '#333333',
+    borderColor: theme.cardBorder,
   },
   walletContent: {
     flexDirection: 'row',
@@ -370,18 +394,18 @@ const styles = StyleSheet.create({
   },
   walletLabel: {
     fontSize: 14,
-    color: '#9E9E9E',
+    color: theme.textSecondary,
     marginBottom: 4,
   },
   walletBalance: {
     fontSize: 32,
     fontWeight: 'bold',
-    color: '#85E4FC',
+    color: theme.accent,
   },
   addMoneyButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#85E4FC',
+    backgroundColor: theme.accent,
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderRadius: 8,
@@ -397,7 +421,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-around',
     paddingTop: 16,
     borderTopWidth: 1,
-    borderTopColor: '#333333',
+    borderTopColor: theme.cardBorder,
   },
   walletAction: {
     flexDirection: 'row',
@@ -406,16 +430,16 @@ const styles = StyleSheet.create({
   },
   walletActionText: {
     fontSize: 14,
-    color: '#85E4FC',
+    color: theme.accent,
     fontWeight: '600',
   },
   divider: {
     width: 1,
     height: 20,
-    backgroundColor: '#333333',
+    backgroundColor: theme.divider,
   },
   infoCard: {
-    backgroundColor: '#1A1A1A',
+    backgroundColor: theme.cardBackground,
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,
@@ -423,7 +447,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#333333',
+    borderColor: theme.cardBorder,
   },
   infoContent: {
     flexDirection: 'row',
@@ -436,21 +460,21 @@ const styles = StyleSheet.create({
   },
   infoLabel: {
     fontSize: 12,
-    color: '#9E9E9E',
+    color: theme.textSecondary,
     marginBottom: 4,
   },
   infoValue: {
     fontSize: 16,
-    color: '#FFFFFF',
+    color: theme.textPrimary,
     fontWeight: '500',
   },
   addressCard: {
-    backgroundColor: '#1A1A1A',
+    backgroundColor: theme.cardBackground,
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: '#333333',
+    borderColor: theme.cardBorder,
   },
   addressHeader: {
     flexDirection: 'row',
@@ -466,10 +490,10 @@ const styles = StyleSheet.create({
   addressTypeText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#85E4FC',
+    color: theme.accent,
   },
   defaultBadge: {
-    backgroundColor: 'rgba(49, 197, 255, 0.15)',
+    backgroundColor: theme.accentSoft,
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: 4,
@@ -477,26 +501,26 @@ const styles = StyleSheet.create({
   },
   defaultBadgeText: {
     fontSize: 10,
-    color: '#85E4FC',
+    color: theme.accent,
     fontWeight: '600',
   },
   addressText: {
     fontSize: 14,
-    color: '#FFFFFF',
+    color: theme.textPrimary,
     marginBottom: 4,
     lineHeight: 20,
   },
   addressCity: {
     fontSize: 13,
-    color: '#9E9E9E',
+    color: theme.textSecondary,
   },
   vehicleCard: {
-    backgroundColor: '#1A1A1A',
+    backgroundColor: theme.cardBackground,
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: '#333333',
+    borderColor: theme.cardBorder,
   },
   vehicleHeader: {
     flexDirection: 'row',
@@ -507,7 +531,7 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 12,
-    backgroundColor: 'rgba(49, 197, 255, 0.15)',
+    backgroundColor: theme.accentSoft,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -523,11 +547,35 @@ const styles = StyleSheet.create({
   vehicleName: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#FFFFFF',
+    color: theme.textPrimary,
   },
   vehicleDetails: {
     fontSize: 13,
-    color: '#9E9E9E',
+    color: theme.textSecondary,
+  },
+  settingCard: {
+    backgroundColor: theme.cardBackground,
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: theme.cardBorder,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  settingText: {
+    flex: 1,
+  },
+  settingLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: theme.textPrimary,
+    marginBottom: 4,
+  },
+  settingDescription: {
+    fontSize: 12,
+    color: theme.textSecondary,
   },
   logoutSection: {
     marginTop: 32,
@@ -537,7 +585,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(255, 82, 82, 0.15)',
+    backgroundColor: theme.dangerSoft,
     borderRadius: 12,
     paddingVertical: 16,
     borderWidth: 1,
@@ -547,6 +595,6 @@ const styles = StyleSheet.create({
   logoutButtonText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#FF5252',
+    color: theme.danger,
   },
 });

@@ -1,8 +1,12 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { useTheme } from '../theme/ThemeContext';
 
 export default function UpcomingWashCard({ wash, onDelivered, onPress }) {
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
+
   return (
     <TouchableOpacity 
       style={styles.card} 
@@ -29,7 +33,7 @@ export default function UpcomingWashCard({ wash, onDelivered, onPress }) {
               <Text style={styles.serviceTypeText}>{wash.serviceType}</Text>
             </View>
             <View style={styles.statusBadge}>
-              <MaterialCommunityIcons name="clock-outline" size={14} color="#85E4FC" />
+              <MaterialCommunityIcons name="clock-outline" size={14} color={theme.accent} />
               <Text style={styles.statusText}>Upcoming</Text>
             </View>
           </View>
@@ -38,11 +42,11 @@ export default function UpcomingWashCard({ wash, onDelivered, onPress }) {
 
           <View style={styles.detailsContainer}>
             <View style={styles.detailItem}>
-              <MaterialCommunityIcons name="clock-time-four" size={16} color="#FFFFFF" />
+              <MaterialCommunityIcons name="clock-time-four" size={16} color={theme.textPrimary} />
               <Text style={styles.detailText}>{wash.time}</Text>
             </View>
             <View style={styles.detailItem}>
-              <MaterialCommunityIcons name="map-marker" size={16} color="#FFFFFF" />
+              <MaterialCommunityIcons name="map-marker" size={16} color={theme.textPrimary} />
               <Text style={styles.detailText} numberOfLines={1}>{wash.address}</Text>
             </View>
           </View>
@@ -69,13 +73,13 @@ export default function UpcomingWashCard({ wash, onDelivered, onPress }) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = theme => StyleSheet.create({
   card: {
-    backgroundColor: '#1A1A1A',
+    backgroundColor: theme.cardBackground,
     borderRadius: 16,
     marginBottom: 16,
     borderWidth: 1,
-    borderColor: '#333333',
+    borderColor: theme.cardBorder,
     overflow: 'hidden',
   },
   content: {
@@ -95,7 +99,7 @@ const styles = StyleSheet.create({
   image: {
     width: '100%',
     height: '100%',
-    backgroundColor: '#2A2A2A',
+    backgroundColor: theme.accentSoft,
   },
   dateBadge: {
     position: 'absolute',
@@ -123,21 +127,21 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   serviceTypeBadge: {
-    backgroundColor: '#2A2A2A',
+    backgroundColor: theme.accentSoft,
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 6,
   },
   serviceTypeText: {
     fontSize: 11,
-    color: '#CCCCCC',
+    color: theme.textSecondary,
     fontWeight: '600',
     textTransform: 'uppercase',
   },
   statusBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(49, 197, 255, 0.15)',
+    backgroundColor: theme.accentSoft,
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 6,
@@ -145,13 +149,13 @@ const styles = StyleSheet.create({
   },
   statusText: {
     fontSize: 11,
-    color: '#85E4FC',
+    color: theme.accent,
     fontWeight: '600',
   },
   serviceName: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#FFFFFF',
+    color: theme.textPrimary,
     marginBottom: 12,
   },
   detailsContainer: {
@@ -165,7 +169,7 @@ const styles = StyleSheet.create({
   },
   detailText: {
     fontSize: 13,
-    color: '#CCCCCC',
+    color: theme.textSecondary,
     flex: 1,
   },
   footer: {
@@ -174,7 +178,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingTop: 12,
     borderTopWidth: 1,
-    borderTopColor: '#333333',
+    borderTopColor: theme.cardBorder,
   },
   priceContainer: {
     flexDirection: 'row',
@@ -183,12 +187,12 @@ const styles = StyleSheet.create({
   },
   priceLabel: {
     fontSize: 12,
-    color: '#9E9E9E',
+    color: theme.textSecondary,
   },
   priceText: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#85E4FC',
+    color: theme.accent,
   },
   deliveredButton: {
     flexDirection: 'row',

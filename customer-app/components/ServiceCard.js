@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Dimensions, Image } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { useTheme } from '../theme/ThemeContext';
 
 const { width } = Dimensions.get('window');
 
@@ -15,6 +16,8 @@ export default function ServiceCard({
   onCardPress,
 }) {
   const [imageError, setImageError] = useState(false);
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
 
   return (
     <TouchableOpacity 
@@ -32,7 +35,7 @@ export default function ServiceCard({
           />
         ) : (
           <View style={[styles.serviceImage, styles.placeholderImage]}>
-            <MaterialCommunityIcons name="bike" size={48} color="#6BB6FF" />
+            <MaterialCommunityIcons name="bike" size={48} color={theme.accent} />
           </View>
         )}
       </View>
@@ -63,14 +66,14 @@ export default function ServiceCard({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = theme => StyleSheet.create({
   serviceCard: {
-    backgroundColor: '#1A1A1A',
+    backgroundColor: theme.cardBackground,
     borderRadius: 16,
     marginHorizontal: 16,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: '#333333',
+    borderColor: theme.cardBorder,
     overflow: 'hidden',
     shadowColor: '#000',
     shadowOffset: {
@@ -93,7 +96,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   placeholderImage: {
-    backgroundColor: '#2A2A2A',
+    backgroundColor: theme.accentSoft,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -104,12 +107,12 @@ const styles = StyleSheet.create({
   cardTitle: {
     fontSize: 22,
     fontWeight: 'bold',
-    color: '#85E4FC',
+    color: theme.accent,
     marginBottom: 8,
   },
   cardDescription: {
     fontSize: 14,
-    color: '#CCCCCC',
+    color: theme.textSecondary,
     marginBottom: 16,
     lineHeight: 20,
   },
@@ -122,13 +125,13 @@ const styles = StyleSheet.create({
   cardPrice: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#FFFFFF',
+    color: theme.textPrimary,
   },
   cardDuration: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#999999',
-    backgroundColor: '#2A2A2A',
+    color: theme.textSecondary,
+    backgroundColor: theme.accentSoft,
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 8,
@@ -142,7 +145,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#FFFFFF',
+    borderColor: theme.cardBorder,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 6,
@@ -150,11 +153,11 @@ const styles = StyleSheet.create({
   readMoreText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#FFFFFF',
+    color: theme.textPrimary,
   },
   bookButton: {
     flex: 1,
-    backgroundColor: '#85E4FC',
+    backgroundColor: theme.accent,
     paddingVertical: 12,
     borderRadius: 8,
     flexDirection: 'row',

@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
@@ -8,12 +8,15 @@ import CustomHeader from '../components/CustomHeader';
 import UpcomingWashCard from '../components/UpcomingWashCard';
 import RecentServiceCard from '../components/RecentServiceCard';
 import { getOrders, updateOrderStatus } from '../services/orderApi';
+import { useTheme } from '../theme/ThemeContext';
 
 export default function BookingsScreen({ navigation }) {
   const insets = useSafeAreaInsets();
   const [upcomingWashes, setUpcomingWashes] = useState([]);
   const [recentServices, setRecentServices] = useState([]);
   const [loading, setLoading] = useState(false);
+  const { theme, isLightMode } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
 
   const formatShortDate = (dateValue) => {
     const date = new Date(dateValue);
@@ -111,7 +114,7 @@ export default function BookingsScreen({ navigation }) {
 
   return (
     <View style={styles.container}>
-      <StatusBar style="light" />
+      <StatusBar style={isLightMode ? 'dark' : 'light'} />
       <CustomHeader navigation={navigation} />
       <ScrollView 
         style={styles.scrollView}
@@ -126,7 +129,7 @@ export default function BookingsScreen({ navigation }) {
           
           {upcomingWashes.length === 0 ? (
             <View style={styles.emptyState}>
-              <MaterialCommunityIcons name="calendar-remove" size={64} color="#666666" />
+              <MaterialCommunityIcons name="calendar-remove" size={64} color={theme.textSecondary} />
               <Text style={styles.emptyStateText}>No upcoming washes</Text>
               <Text style={styles.emptyStateSubtext}>Book a service to see it here</Text>
             </View>
@@ -153,7 +156,7 @@ export default function BookingsScreen({ navigation }) {
           
           {recentServices.length === 0 ? (
             <View style={styles.emptyState}>
-              <MaterialCommunityIcons name="history" size={64} color="#666666" />
+              <MaterialCommunityIcons name="history" size={64} color={theme.textSecondary} />
               <Text style={styles.emptyStateText}>No recent services</Text>
               <Text style={styles.emptyStateSubtext}>Your service history will appear here</Text>
             </View>
@@ -179,10 +182,10 @@ export default function BookingsScreen({ navigation }) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = theme => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#28282A',
+    backgroundColor: theme.background,
   },
   scrollView: {
     flex: 1,
@@ -200,7 +203,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#FFFFFF',
+    color: theme.textPrimary,
   },
   emptyState: {
     alignItems: 'center',
@@ -211,13 +214,13 @@ const styles = StyleSheet.create({
   emptyStateText: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#FFFFFF',
+    color: theme.textPrimary,
     marginTop: 16,
     marginBottom: 8,
   },
   emptyStateSubtext: {
     fontSize: 14,
-    color: '#9E9E9E',
+    color: theme.textSecondary,
     textAlign: 'center',
   },
 });

@@ -2,12 +2,18 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTheme } from '../theme/ThemeContext';
 
 export default function CustomHeader({ navigation }) {
   const insets = useSafeAreaInsets();
+  const { theme } = useTheme();
+  const colors = {
+    background: theme.headerBackground,
+    text: theme.textPrimary,
+  };
 
   return (
-    <View style={[styles.header, { paddingTop: insets.top }]}>
+    <View style={[styles.header, { paddingTop: insets.top, backgroundColor: colors.background }]}>
       <View style={styles.headerContent}>
         <TouchableOpacity 
           style={styles.leftSection} 
@@ -17,16 +23,16 @@ export default function CustomHeader({ navigation }) {
           <MaterialCommunityIcons 
             name="map-marker" 
             size={20} 
-            color="#FFFFFF" 
+            color={colors.text} 
             style={styles.locationIcon}
           />
-          <Text style={styles.addressText} numberOfLines={1} ellipsizeMode="tail">
+          <Text style={[styles.addressText, { color: colors.text }]} numberOfLines={1} ellipsizeMode="tail">
             Add Address
           </Text>
           <MaterialCommunityIcons 
             name="chevron-down" 
             size={20} 
-            color="#FFFFFF" 
+            color={colors.text} 
             style={styles.arrowIcon}
           />
         </TouchableOpacity>
@@ -39,14 +45,14 @@ export default function CustomHeader({ navigation }) {
             <MaterialCommunityIcons 
               name="cart" 
               size={24} 
-              color="#FFFFFF" 
+              color={colors.text} 
             />
           </TouchableOpacity>
           <TouchableOpacity activeOpacity={0.7} style={styles.iconButton}>
             <MaterialCommunityIcons 
               name="car" 
               size={24} 
-              color="#FFFFFF" 
+              color={colors.text} 
             />
           </TouchableOpacity>
         </View>

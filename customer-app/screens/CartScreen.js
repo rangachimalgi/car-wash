@@ -1,15 +1,18 @@
-import React, { useState, useEffect } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Dimensions } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import BackHeader from '../components/BackHeader';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useTheme } from '../theme/ThemeContext';
 
 const { width } = Dimensions.get('window');
 
 export default function CartScreen({ navigation, route }) {
   const [cartItems, setCartItems] = useState([]);
   const [cartLoaded, setCartLoaded] = useState(false);
+  const { theme, isLightMode } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
 
   const loadCart = async () => {
     try {
@@ -94,7 +97,7 @@ export default function CartScreen({ navigation, route }) {
 
   return (
     <View style={styles.container}>
-      <StatusBar style="light" />
+      <StatusBar style={isLightMode ? 'dark' : 'light'} />
       <BackHeader navigation={navigation} title="Cart" />
       <ScrollView 
         style={styles.scrollView}
@@ -103,7 +106,7 @@ export default function CartScreen({ navigation, route }) {
       >
         {cartItems.length === 0 ? (
           <View style={styles.emptyContainer}>
-            <MaterialCommunityIcons name="cart-off" size={64} color="#666666" />
+            <MaterialCommunityIcons name="cart-off" size={64} color={theme.textSecondary} />
             <Text style={styles.emptyText}>Your cart is empty</Text>
             <TouchableOpacity 
               style={styles.continueShoppingButton}
@@ -133,14 +136,14 @@ export default function CartScreen({ navigation, route }) {
                         style={styles.quantityButton}
                         onPress={() => updateQuantity(item.id, -1)}
                       >
-                        <MaterialCommunityIcons name="minus" size={18} color="#FFFFFF" />
+                        <MaterialCommunityIcons name="minus" size={18} color={theme.textPrimary} />
                       </TouchableOpacity>
                       <Text style={styles.quantityText}>{item.quantity}</Text>
                       <TouchableOpacity 
                         style={styles.quantityButton}
                         onPress={() => updateQuantity(item.id, 1)}
                       >
-                        <MaterialCommunityIcons name="plus" size={18} color="#FFFFFF" />
+                        <MaterialCommunityIcons name="plus" size={18} color={theme.textPrimary} />
                       </TouchableOpacity>
                     </View>
                   </View>
@@ -152,7 +155,7 @@ export default function CartScreen({ navigation, route }) {
                       style={styles.removeButton}
                       onPress={() => removeItem(item.id)}
                     >
-                      <MaterialCommunityIcons name="delete-outline" size={20} color="#FF3B30" />
+                      <MaterialCommunityIcons name="delete-outline" size={20} color={theme.danger} />
                     </TouchableOpacity>
                   </View>
                 </View>
@@ -193,10 +196,10 @@ export default function CartScreen({ navigation, route }) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = theme => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#000000',
+    backgroundColor: theme.background,
   },
   scrollView: {
     flex: 1,
@@ -212,12 +215,12 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 18,
-    color: '#FFFFFF',
+    color: theme.textPrimary,
     marginTop: 16,
     marginBottom: 24,
   },
   continueShoppingButton: {
-    backgroundColor: '#85E4FC',
+    backgroundColor: theme.accent,
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 8,
@@ -233,12 +236,12 @@ const styles = StyleSheet.create({
   },
   cartItem: {
     flexDirection: 'row',
-    backgroundColor: '#1A1A1A',
+    backgroundColor: theme.cardBackground,
     borderRadius: 12,
     padding: 12,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: '#333333',
+    borderColor: theme.cardBorder,
   },
   itemImage: {
     width: 80,
@@ -252,17 +255,17 @@ const styles = StyleSheet.create({
   itemTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#FFFFFF',
+    color: theme.textPrimary,
     marginBottom: 4,
   },
   itemPrice: {
     fontSize: 14,
-    color: '#CCCCCC',
+    color: theme.textSecondary,
     marginBottom: 8,
   },
   slotText: {
     fontSize: 12,
-    color: '#85E4FC',
+    color: theme.accent,
     marginBottom: 8,
   },
   quantityContainer: {
@@ -273,14 +276,14 @@ const styles = StyleSheet.create({
     width: 28,
     height: 28,
     borderRadius: 6,
-    backgroundColor: '#333333',
+    backgroundColor: theme.cardBorder,
     justifyContent: 'center',
     alignItems: 'center',
   },
   quantityText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#FFFFFF',
+    color: theme.textPrimary,
     marginHorizontal: 12,
     minWidth: 20,
     textAlign: 'center',
@@ -292,20 +295,20 @@ const styles = StyleSheet.create({
   itemTotalPrice: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#FFFFFF',
+    color: theme.textPrimary,
     marginBottom: 8,
   },
   removeButton: {
     padding: 4,
   },
   summaryContainer: {
-    backgroundColor: '#1A1A1A',
+    backgroundColor: theme.cardBackground,
     marginHorizontal: 16,
     marginTop: 16,
     padding: 16,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#333333',
+    borderColor: theme.cardBorder,
   },
   summaryRow: {
     flexDirection: 'row',
@@ -315,16 +318,16 @@ const styles = StyleSheet.create({
   },
   summaryLabel: {
     fontSize: 14,
-    color: '#CCCCCC',
+    color: theme.textSecondary,
   },
   summaryValue: {
     fontSize: 14,
-    color: '#FFFFFF',
+    color: theme.textPrimary,
     fontWeight: '600',
   },
   totalRow: {
     borderTopWidth: 1,
-    borderTopColor: '#333333',
+    borderTopColor: theme.cardBorder,
     paddingTop: 12,
     marginTop: 4,
     marginBottom: 0,
@@ -332,16 +335,16 @@ const styles = StyleSheet.create({
   totalLabel: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#FFFFFF',
+    color: theme.textPrimary,
   },
   totalValue: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#85E4FC',
+    color: theme.accent,
   },
   checkoutButton: {
     flexDirection: 'row',
-    backgroundColor: '#85E4FC',
+    backgroundColor: theme.accent,
     marginHorizontal: 16,
     marginTop: 16,
     paddingVertical: 16,

@@ -2,6 +2,7 @@ import React, { useRef, useMemo, forwardRef, useImperativeHandle } from 'react';
 import { View, Text, StyleSheet, Dimensions } from 'react-native';
 import BottomSheet, { BottomSheetScrollView, BottomSheetFooter } from '@gorhom/bottom-sheet';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTheme } from '../theme/ThemeContext';
 
 const { height } = Dimensions.get('window');
 
@@ -14,6 +15,8 @@ const ServiceDetailsBottomSheet = forwardRef(({
 }, ref) => {
   const bottomSheetRef = useRef(null);
   const insets = useSafeAreaInsets();
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
 
   // Bottom sheet snap points - using absolute values to ensure max 70%
   const snapPoints = useMemo(() => [
@@ -66,12 +69,12 @@ const ServiceDetailsBottomSheet = forwardRef(({
 
 ServiceDetailsBottomSheet.displayName = 'ServiceDetailsBottomSheet';
 
-const styles = StyleSheet.create({
+const createStyles = theme => StyleSheet.create({
   bottomSheetBackground: {
-    backgroundColor: '#28282A',
+    backgroundColor: theme.cardBackground,
   },
   bottomSheetHandle: {
-    backgroundColor: '#9E9E9E',
+    backgroundColor: theme.textSecondary,
   },
 });
 

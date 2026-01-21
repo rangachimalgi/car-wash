@@ -1,13 +1,16 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, Alert } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { requestOtp, verifyOtp } from '../services/authApi';
+import { useTheme } from '../theme/ThemeContext';
 
 export default function LoginScreen({ navigation }) {
   const insets = useSafeAreaInsets();
+  const { theme, isLightMode } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   const [phoneNumber, setPhoneNumber] = useState('');
   const [name, setName] = useState('');
   const [otp, setOtp] = useState('');
@@ -87,7 +90,7 @@ export default function LoginScreen({ navigation }) {
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
-      <StatusBar style="light" />
+      <StatusBar style={isLightMode ? 'dark' : 'light'} />
       <ScrollView 
         contentContainerStyle={[styles.scrollContent, { paddingTop: 20 + insets.top, paddingBottom: 40 + insets.bottom }]}
         showsVerticalScrollIndicator={false}
@@ -96,7 +99,7 @@ export default function LoginScreen({ navigation }) {
         {/* Logo/Header Section */}
         <View style={styles.headerSection}>
           <View style={styles.logoContainer}>
-            <MaterialCommunityIcons name="car-wash" size={64} color="#85E4FC" />
+            <MaterialCommunityIcons name="car-wash" size={64} color={theme.accent} />
           </View>
           <Text style={styles.welcomeText}>Welcome to Woosh!</Text>
           <Text style={styles.subtitleText}>
@@ -112,11 +115,11 @@ export default function LoginScreen({ navigation }) {
               <View style={styles.inputContainer}>
                 <Text style={styles.label}>Full Name</Text>
                 <View style={[styles.inputWrapper, errors.name && styles.inputError]}>
-                  <MaterialCommunityIcons name="account-outline" size={20} color="#9E9E9E" style={styles.inputIcon} />
+                  <MaterialCommunityIcons name="account-outline" size={20} color={theme.textSecondary} style={styles.inputIcon} />
                   <TextInput
                     style={styles.input}
                     placeholder="Enter your full name"
-                    placeholderTextColor="#666666"
+                    placeholderTextColor={theme.textSecondary}
                     value={name}
                     onChangeText={(text) => {
                       setName(text);
@@ -137,7 +140,7 @@ export default function LoginScreen({ navigation }) {
                   <TextInput
                     style={styles.input}
                     placeholder="Enter your 10-digit phone number"
-                    placeholderTextColor="#666666"
+                    placeholderTextColor={theme.textSecondary}
                     value={phoneNumber}
                     onChangeText={(text) => {
                       const numericText = text.replace(/[^0-9]/g, '').slice(0, 10);
@@ -158,7 +161,7 @@ export default function LoginScreen({ navigation }) {
                 activeOpacity={0.8}
               >
                 <Text style={styles.primaryButtonText}>Send OTP</Text>
-                <MaterialCommunityIcons name="arrow-right" size={20} color="#000000" />
+                <MaterialCommunityIcons name="arrow-right" size={20} color="#FFFFFF" />
               </TouchableOpacity>
             </>
           ) : (
@@ -167,11 +170,11 @@ export default function LoginScreen({ navigation }) {
               <View style={styles.inputContainer}>
                 <Text style={styles.label}>Enter OTP</Text>
                 <View style={[styles.inputWrapper, errors.otp && styles.inputError]}>
-                  <MaterialCommunityIcons name="key-outline" size={20} color="#9E9E9E" style={styles.inputIcon} />
+                  <MaterialCommunityIcons name="key-outline" size={20} color={theme.textSecondary} style={styles.inputIcon} />
                   <TextInput
                     style={styles.input}
                     placeholder="Enter 4-digit OTP"
-                    placeholderTextColor="#666666"
+                    placeholderTextColor={theme.textSecondary}
                     value={otp}
                     onChangeText={(text) => {
                       const numericText = text.replace(/[^0-9]/g, '').slice(0, 4);
@@ -200,7 +203,7 @@ export default function LoginScreen({ navigation }) {
                 activeOpacity={0.8}
               >
                 <Text style={styles.primaryButtonText}>Verify OTP</Text>
-                <MaterialCommunityIcons name="check" size={20} color="#000000" />
+                <MaterialCommunityIcons name="check" size={20} color="#FFFFFF" />
               </TouchableOpacity>
 
               {/* Resend OTP */}
@@ -218,10 +221,10 @@ export default function LoginScreen({ navigation }) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = theme => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#28282A',
+    backgroundColor: theme.background,
   },
   scrollContent: {
     flexGrow: 1,
@@ -235,7 +238,7 @@ const styles = StyleSheet.create({
     width: 120,
     height: 120,
     borderRadius: 60,
-    backgroundColor: 'rgba(49, 197, 255, 0.15)',
+    backgroundColor: theme.accentSoft,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 24,
@@ -243,12 +246,12 @@ const styles = StyleSheet.create({
   welcomeText: {
     fontSize: 32,
     fontWeight: 'bold',
-    color: '#FFFFFF',
+    color: theme.textPrimary,
     marginBottom: 8,
   },
   subtitleText: {
     fontSize: 16,
-    color: '#9E9E9E',
+    color: theme.textSecondary,
     textAlign: 'center',
   },
   formSection: {
@@ -260,16 +263,16 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#FFFFFF',
+    color: theme.textPrimary,
     marginBottom: 8,
   },
   inputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#1A1A1A',
+    backgroundColor: theme.cardBackground,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#333333',
+    borderColor: theme.cardBorder,
     paddingHorizontal: 16,
     minHeight: 56,
   },
@@ -277,7 +280,7 @@ const styles = StyleSheet.create({
     borderColor: '#FF5252',
   },
   countryCode: {
-    backgroundColor: '#2A2A2A',
+    backgroundColor: theme.cardBorder,
     paddingHorizontal: 12,
     paddingVertical: 16,
     borderRadius: 8,
@@ -285,7 +288,7 @@ const styles = StyleSheet.create({
   },
   countryCodeText: {
     fontSize: 16,
-    color: '#FFFFFF',
+    color: theme.textPrimary,
     fontWeight: '600',
   },
   inputIcon: {
@@ -294,7 +297,7 @@ const styles = StyleSheet.create({
   input: {
     flex: 1,
     fontSize: 16,
-    color: '#FFFFFF',
+    color: theme.textPrimary,
     paddingVertical: 16,
   },
   errorText: {
@@ -312,15 +315,15 @@ const styles = StyleSheet.create({
   },
   phoneDisplayText: {
     fontSize: 14,
-    color: '#9E9E9E',
+    color: theme.textSecondary,
   },
   changeNumberText: {
     fontSize: 14,
-    color: '#85E4FC',
+    color: theme.accent,
     fontWeight: '600',
   },
   primaryButton: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.accent,
     borderRadius: 12,
     paddingVertical: 16,
     flexDirection: 'row',
@@ -332,7 +335,7 @@ const styles = StyleSheet.create({
   primaryButtonText: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#000000',
+    color: '#FFFFFF',
   },
   resendContainer: {
     flexDirection: 'row',
@@ -341,11 +344,11 @@ const styles = StyleSheet.create({
   },
   resendText: {
     fontSize: 14,
-    color: '#9E9E9E',
+    color: theme.textSecondary,
   },
   resendLink: {
     fontSize: 14,
-    color: '#85E4FC',
+    color: theme.accent,
     fontWeight: '600',
   },
 });

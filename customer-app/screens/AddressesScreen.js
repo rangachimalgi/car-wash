@@ -1,11 +1,14 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import BackHeader from '../components/BackHeader';
+import { useTheme } from '../theme/ThemeContext';
 
 export default function AddressesScreen({ navigation, route }) {
   const [searchQuery, setSearchQuery] = useState('');
+  const { theme, isLightMode } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   const [savedAddresses, setSavedAddresses] = useState([
     {
       id: '1',
@@ -70,7 +73,7 @@ export default function AddressesScreen({ navigation, route }) {
 
   return (
     <View style={styles.container}>
-      <StatusBar style="light" />
+      <StatusBar style={isLightMode ? 'dark' : 'light'} />
       <BackHeader navigation={navigation} title="Select Address" />
       
       <ScrollView 
@@ -84,13 +87,13 @@ export default function AddressesScreen({ navigation, route }) {
             <MaterialCommunityIcons 
               name="magnify" 
               size={20} 
-              color="#9E9E9E" 
+              color={theme.textSecondary} 
               style={styles.searchIcon}
             />
             <TextInput
               style={styles.searchInput}
               placeholder="Search for area, street, landmark..."
-              placeholderTextColor="#9E9E9E"
+              placeholderTextColor={theme.textSecondary}
               value={searchQuery}
               onChangeText={setSearchQuery}
             />
@@ -99,7 +102,7 @@ export default function AddressesScreen({ navigation, route }) {
                 onPress={() => setSearchQuery('')}
                 style={styles.clearButton}
               >
-                <MaterialCommunityIcons name="close-circle" size={20} color="#9E9E9E" />
+                <MaterialCommunityIcons name="close-circle" size={20} color={theme.textSecondary} />
               </TouchableOpacity>
             )}
           </View>
@@ -112,13 +115,13 @@ export default function AddressesScreen({ navigation, route }) {
           activeOpacity={0.8}
         >
           <View style={styles.currentLocationIconContainer}>
-            <MaterialCommunityIcons name="crosshairs-gps" size={24} color="#85E4FC" />
+            <MaterialCommunityIcons name="crosshairs-gps" size={24} color={theme.accent} />
           </View>
           <View style={styles.currentLocationContent}>
             <Text style={styles.currentLocationTitle}>Use Current Location</Text>
             <Text style={styles.currentLocationSubtitle}>Get your current location automatically</Text>
           </View>
-          <MaterialCommunityIcons name="chevron-right" size={24} color="#9E9E9E" />
+          <MaterialCommunityIcons name="chevron-right" size={24} color={theme.textSecondary} />
         </TouchableOpacity>
 
         {/* Saved Addresses Section */}
@@ -126,13 +129,13 @@ export default function AddressesScreen({ navigation, route }) {
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Saved Addresses</Text>
             <TouchableOpacity onPress={handleAddNewAddress}>
-              <MaterialCommunityIcons name="plus-circle" size={24} color="#85E4FC" />
+              <MaterialCommunityIcons name="plus-circle" size={24} color={theme.accent} />
             </TouchableOpacity>
           </View>
 
           {savedAddresses.length === 0 ? (
             <View style={styles.emptyState}>
-              <MaterialCommunityIcons name="map-marker-off" size={64} color="#666666" />
+              <MaterialCommunityIcons name="map-marker-off" size={64} color={theme.textSecondary} />
               <Text style={styles.emptyStateText}>No saved addresses</Text>
               <Text style={styles.emptyStateSubtext}>Add an address to get started</Text>
               <TouchableOpacity 
@@ -156,7 +159,7 @@ export default function AddressesScreen({ navigation, route }) {
                       <MaterialCommunityIcons 
                         name={address.type === 'Home' ? 'home' : address.type === 'Work' ? 'briefcase' : 'map-marker'} 
                         size={20} 
-                        color="#85E4FC" 
+                        color={theme.accent} 
                       />
                       <Text style={styles.addressType}>{address.type}</Text>
                       {address.isDefault && (
@@ -173,7 +176,7 @@ export default function AddressesScreen({ navigation, route }) {
                         <MaterialCommunityIcons 
                           name={address.isDefault ? 'star' : 'star-outline'} 
                           size={20} 
-                          color={address.isDefault ? "#FFD700" : "#9E9E9E"} 
+                          color={address.isDefault ? "#FFD700" : theme.textSecondary} 
                         />
                       </TouchableOpacity>
                       <TouchableOpacity
@@ -189,7 +192,7 @@ export default function AddressesScreen({ navigation, route }) {
                     {address.area}, {address.city} - {address.pincode}
                   </Text>
                 </View>
-                <MaterialCommunityIcons name="chevron-right" size={24} color="#9E9E9E" />
+                <MaterialCommunityIcons name="chevron-right" size={24} color={theme.textSecondary} />
               </TouchableOpacity>
             ))
           )}
@@ -199,10 +202,10 @@ export default function AddressesScreen({ navigation, route }) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = theme => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#000000',
+    backgroundColor: theme.background,
   },
   scrollView: {
     flex: 1,
@@ -218,10 +221,10 @@ const styles = StyleSheet.create({
   searchInputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#1A1A1A',
+    backgroundColor: theme.cardBackground,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#333333',
+    borderColor: theme.cardBorder,
     paddingHorizontal: 16,
     minHeight: 56,
   },
@@ -231,7 +234,7 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     fontSize: 16,
-    color: '#FFFFFF',
+    color: theme.textPrimary,
     paddingVertical: 16,
   },
   clearButton: {
@@ -240,19 +243,19 @@ const styles = StyleSheet.create({
   currentLocationCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#1A1A1A',
+    backgroundColor: theme.cardBackground,
     borderRadius: 12,
     padding: 16,
     marginHorizontal: 16,
     marginBottom: 24,
     borderWidth: 1,
-    borderColor: '#333333',
+    borderColor: theme.cardBorder,
   },
   currentLocationIconContainer: {
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: 'rgba(49, 197, 255, 0.15)',
+    backgroundColor: theme.accentSoft,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 16,
@@ -263,12 +266,12 @@ const styles = StyleSheet.create({
   currentLocationTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#FFFFFF',
+    color: theme.textPrimary,
     marginBottom: 4,
   },
   currentLocationSubtitle: {
     fontSize: 14,
-    color: '#9E9E9E',
+    color: theme.textSecondary,
   },
   savedAddressesSection: {
     paddingHorizontal: 16,
@@ -282,7 +285,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#FFFFFF',
+    color: theme.textPrimary,
   },
   emptyState: {
     alignItems: 'center',
@@ -293,18 +296,18 @@ const styles = StyleSheet.create({
   emptyStateText: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#FFFFFF',
+    color: theme.textPrimary,
     marginTop: 16,
     marginBottom: 8,
   },
   emptyStateSubtext: {
     fontSize: 14,
-    color: '#9E9E9E',
+    color: theme.textSecondary,
     textAlign: 'center',
     marginBottom: 24,
   },
   addAddressButton: {
-    backgroundColor: '#85E4FC',
+    backgroundColor: theme.accent,
     borderRadius: 12,
     paddingVertical: 14,
     paddingHorizontal: 24,
@@ -312,17 +315,17 @@ const styles = StyleSheet.create({
   addAddressButtonText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#000000',
+    color: '#FFFFFF',
   },
   addressCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#1A1A1A',
+    backgroundColor: theme.cardBackground,
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: '#333333',
+    borderColor: theme.cardBorder,
   },
   addressCardContent: {
     flex: 1,
@@ -341,10 +344,10 @@ const styles = StyleSheet.create({
   addressType: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#85E4FC',
+    color: theme.accent,
   },
   defaultBadge: {
-    backgroundColor: 'rgba(49, 197, 255, 0.15)',
+    backgroundColor: theme.accentSoft,
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 4,
@@ -352,7 +355,7 @@ const styles = StyleSheet.create({
   defaultBadgeText: {
     fontSize: 10,
     fontWeight: '600',
-    color: '#85E4FC',
+    color: theme.accent,
   },
   addressActions: {
     flexDirection: 'row',
@@ -364,11 +367,11 @@ const styles = StyleSheet.create({
   addressText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#FFFFFF',
+    color: theme.textPrimary,
     marginBottom: 4,
   },
   addressDetails: {
     fontSize: 14,
-    color: '#9E9E9E',
+    color: theme.textSecondary,
   },
 });

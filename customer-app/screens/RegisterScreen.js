@@ -1,11 +1,14 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTheme } from '../theme/ThemeContext';
 
 export default function RegisterScreen({ navigation }) {
   const insets = useSafeAreaInsets();
+  const { theme, isLightMode } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -72,7 +75,7 @@ export default function RegisterScreen({ navigation }) {
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
-      <StatusBar style="light" />
+      <StatusBar style={isLightMode ? 'dark' : 'light'} />
       <ScrollView 
         contentContainerStyle={[styles.scrollContent, { paddingTop: 20 + insets.top, paddingBottom: 40 + insets.bottom }]}
         showsVerticalScrollIndicator={false}
@@ -84,10 +87,10 @@ export default function RegisterScreen({ navigation }) {
             style={styles.backButton}
             onPress={() => navigation.goBack()}
           >
-            <MaterialCommunityIcons name="chevron-left" size={28} color="#FFFFFF" />
+            <MaterialCommunityIcons name="chevron-left" size={28} color={theme.textPrimary} />
           </TouchableOpacity>
           <View style={styles.logoContainer}>
-            <MaterialCommunityIcons name="car-wash" size={64} color="#85E4FC" />
+            <MaterialCommunityIcons name="car-wash" size={64} color={theme.accent} />
           </View>
           <Text style={styles.welcomeText}>Create Account</Text>
           <Text style={styles.subtitleText}>Sign up to get started</Text>
@@ -99,11 +102,11 @@ export default function RegisterScreen({ navigation }) {
           <View style={styles.inputContainer}>
             <Text style={styles.label}>Full Name</Text>
             <View style={[styles.inputWrapper, errors.name && styles.inputError]}>
-              <MaterialCommunityIcons name="account-outline" size={20} color="#9E9E9E" style={styles.inputIcon} />
+              <MaterialCommunityIcons name="account-outline" size={20} color={theme.textSecondary} style={styles.inputIcon} />
               <TextInput
                 style={styles.input}
                 placeholder="Enter your full name"
-                placeholderTextColor="#666666"
+                placeholderTextColor={theme.textSecondary}
                 value={formData.name}
                 onChangeText={(text) => handleInputChange('name', text)}
                 autoCapitalize="words"
@@ -116,11 +119,11 @@ export default function RegisterScreen({ navigation }) {
           <View style={styles.inputContainer}>
             <Text style={styles.label}>Email</Text>
             <View style={[styles.inputWrapper, errors.email && styles.inputError]}>
-              <MaterialCommunityIcons name="email-outline" size={20} color="#9E9E9E" style={styles.inputIcon} />
+              <MaterialCommunityIcons name="email-outline" size={20} color={theme.textSecondary} style={styles.inputIcon} />
               <TextInput
                 style={styles.input}
                 placeholder="Enter your email"
-                placeholderTextColor="#666666"
+                placeholderTextColor={theme.textSecondary}
                 value={formData.email}
                 onChangeText={(text) => handleInputChange('email', text)}
                 keyboardType="email-address"
@@ -135,11 +138,11 @@ export default function RegisterScreen({ navigation }) {
           <View style={styles.inputContainer}>
             <Text style={styles.label}>Phone Number</Text>
             <View style={[styles.inputWrapper, errors.phone && styles.inputError]}>
-              <MaterialCommunityIcons name="phone-outline" size={20} color="#9E9E9E" style={styles.inputIcon} />
+              <MaterialCommunityIcons name="phone-outline" size={20} color={theme.textSecondary} style={styles.inputIcon} />
               <TextInput
                 style={styles.input}
                 placeholder="Enter your phone number"
-                placeholderTextColor="#666666"
+                placeholderTextColor={theme.textSecondary}
                 value={formData.phone}
                 onChangeText={(text) => handleInputChange('phone', text)}
                 keyboardType="phone-pad"
@@ -153,11 +156,11 @@ export default function RegisterScreen({ navigation }) {
           <View style={styles.inputContainer}>
             <Text style={styles.label}>Password</Text>
             <View style={[styles.inputWrapper, errors.password && styles.inputError]}>
-              <MaterialCommunityIcons name="lock-outline" size={20} color="#9E9E9E" style={styles.inputIcon} />
+              <MaterialCommunityIcons name="lock-outline" size={20} color={theme.textSecondary} style={styles.inputIcon} />
               <TextInput
                 style={styles.input}
                 placeholder="Enter your password"
-                placeholderTextColor="#666666"
+                placeholderTextColor={theme.textSecondary}
                 value={formData.password}
                 onChangeText={(text) => handleInputChange('password', text)}
                 secureTextEntry={!showPassword}
@@ -171,7 +174,7 @@ export default function RegisterScreen({ navigation }) {
                 <MaterialCommunityIcons 
                   name={showPassword ? 'eye-off-outline' : 'eye-outline'} 
                   size={20} 
-                  color="#9E9E9E" 
+                  color={theme.textSecondary} 
                 />
               </TouchableOpacity>
             </View>
@@ -182,11 +185,11 @@ export default function RegisterScreen({ navigation }) {
           <View style={styles.inputContainer}>
             <Text style={styles.label}>Confirm Password</Text>
             <View style={[styles.inputWrapper, errors.confirmPassword && styles.inputError]}>
-              <MaterialCommunityIcons name="lock-check-outline" size={20} color="#9E9E9E" style={styles.inputIcon} />
+              <MaterialCommunityIcons name="lock-check-outline" size={20} color={theme.textSecondary} style={styles.inputIcon} />
               <TextInput
                 style={styles.input}
                 placeholder="Confirm your password"
-                placeholderTextColor="#666666"
+                placeholderTextColor={theme.textSecondary}
                 value={formData.confirmPassword}
                 onChangeText={(text) => handleInputChange('confirmPassword', text)}
                 secureTextEntry={!showConfirmPassword}
@@ -200,7 +203,7 @@ export default function RegisterScreen({ navigation }) {
                 <MaterialCommunityIcons 
                   name={showConfirmPassword ? 'eye-off-outline' : 'eye-outline'} 
                   size={20} 
-                  color="#9E9E9E" 
+                  color={theme.textSecondary} 
                 />
               </TouchableOpacity>
             </View>
@@ -227,13 +230,13 @@ export default function RegisterScreen({ navigation }) {
           {/* Social Login Buttons */}
           <View style={styles.socialButtonsContainer}>
             <TouchableOpacity style={styles.socialButton}>
-              <MaterialCommunityIcons name="google" size={24} color="#FFFFFF" />
+              <MaterialCommunityIcons name="google" size={24} color={theme.textPrimary} />
             </TouchableOpacity>
             <TouchableOpacity style={styles.socialButton}>
-              <MaterialCommunityIcons name="facebook" size={24} color="#FFFFFF" />
+              <MaterialCommunityIcons name="facebook" size={24} color={theme.textPrimary} />
             </TouchableOpacity>
             <TouchableOpacity style={styles.socialButton}>
-              <MaterialCommunityIcons name="apple" size={24} color="#FFFFFF" />
+              <MaterialCommunityIcons name="apple" size={24} color={theme.textPrimary} />
             </TouchableOpacity>
           </View>
 
@@ -250,10 +253,10 @@ export default function RegisterScreen({ navigation }) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = theme => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#28282A',
+    backgroundColor: theme.background,
   },
   scrollContent: {
     flexGrow: 1,
@@ -277,7 +280,7 @@ const styles = StyleSheet.create({
     width: 120,
     height: 120,
     borderRadius: 60,
-    backgroundColor: 'rgba(49, 197, 255, 0.15)',
+    backgroundColor: theme.accentSoft,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 24,
@@ -286,12 +289,12 @@ const styles = StyleSheet.create({
   welcomeText: {
     fontSize: 32,
     fontWeight: 'bold',
-    color: '#FFFFFF',
+    color: theme.textPrimary,
     marginBottom: 8,
   },
   subtitleText: {
     fontSize: 16,
-    color: '#9E9E9E',
+    color: theme.textSecondary,
   },
   formSection: {
     flex: 1,
@@ -302,21 +305,21 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#FFFFFF',
+    color: theme.textPrimary,
     marginBottom: 8,
   },
   inputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#1A1A1A',
+    backgroundColor: theme.cardBackground,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#333333',
+    borderColor: theme.cardBorder,
     paddingHorizontal: 16,
     minHeight: 56,
   },
   inputError: {
-    borderColor: '#FF5252',
+    borderColor: theme.danger,
   },
   inputIcon: {
     marginRight: 12,
@@ -324,7 +327,7 @@ const styles = StyleSheet.create({
   input: {
     flex: 1,
     fontSize: 16,
-    color: '#FFFFFF',
+    color: theme.textPrimary,
     paddingVertical: 16,
   },
   eyeIcon: {
@@ -332,12 +335,12 @@ const styles = StyleSheet.create({
   },
   errorText: {
     fontSize: 12,
-    color: '#FF5252',
+    color: theme.danger,
     marginTop: 4,
     marginLeft: 4,
   },
   registerButton: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.accent,
     borderRadius: 12,
     paddingVertical: 16,
     flexDirection: 'row',
@@ -360,11 +363,11 @@ const styles = StyleSheet.create({
   divider: {
     flex: 1,
     height: 1,
-    backgroundColor: '#333333',
+    backgroundColor: theme.cardBorder,
   },
   dividerText: {
     fontSize: 14,
-    color: '#9E9E9E',
+    color: theme.textSecondary,
     marginHorizontal: 16,
   },
   socialButtonsContainer: {
@@ -377,11 +380,11 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: '#1A1A1A',
+    backgroundColor: theme.cardBackground,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: '#333333',
+    borderColor: theme.cardBorder,
   },
   signInContainer: {
     flexDirection: 'row',
@@ -390,11 +393,11 @@ const styles = StyleSheet.create({
   },
   signInText: {
     fontSize: 14,
-    color: '#9E9E9E',
+    color: theme.textSecondary,
   },
   signInLink: {
     fontSize: 14,
-    color: '#85E4FC',
+    color: theme.accent,
     fontWeight: '600',
   },
 });

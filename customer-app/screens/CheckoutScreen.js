@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, TextInput, Dimensions, Alert } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import BackHeader from '../components/BackHeader';
 import { createOrder } from '../services/orderApi';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useTheme } from '../theme/ThemeContext';
 
 const { width } = Dimensions.get('window');
 
@@ -28,6 +29,8 @@ export default function CheckoutScreen({ navigation, route }) {
   const [appliedCoupon, setAppliedCoupon] = useState(null);
   const [discount, setDiscount] = useState(0);
   const [showToast, setShowToast] = useState(false);
+  const { theme, isLightMode } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
 
   const formatDate = (date) => {
     if (!date) return '';
@@ -118,13 +121,13 @@ export default function CheckoutScreen({ navigation, route }) {
 
   return (
     <View style={styles.container}>
-      <StatusBar style="light" />
+      <StatusBar style={isLightMode ? 'dark' : 'light'} />
       <BackHeader navigation={navigation} title="Checkout" />
       
       {/* Toast Notification */}
       {showToast && (
         <View style={styles.toastContainer}>
-          <MaterialCommunityIcons name="check-circle" size={24} color="#85E4FC" />
+          <MaterialCommunityIcons name="check-circle" size={24} color={theme.accent} />
           <Text style={styles.toastText}>Service booked</Text>
         </View>
       )}
@@ -137,13 +140,13 @@ export default function CheckoutScreen({ navigation, route }) {
         {selectedDate && selectedTimeSlot && (
           <View style={styles.serviceDetailsSection}>
             <View style={styles.serviceDetailRow}>
-              <MaterialCommunityIcons name="calendar" size={20} color="#85E4FC" />
+              <MaterialCommunityIcons name="calendar" size={20} color={theme.accent} />
               <Text style={styles.serviceDetailText}>
                 {formatDate(selectedDate)}
               </Text>
             </View>
             <View style={styles.serviceDetailRow}>
-              <MaterialCommunityIcons name="clock-outline" size={20} color="#85E4FC" />
+              <MaterialCommunityIcons name="clock-outline" size={20} color={theme.accent} />
               <Text style={styles.serviceDetailText}>
                 {selectedTimeSlot.time}
               </Text>
@@ -175,13 +178,13 @@ export default function CheckoutScreen({ navigation, route }) {
         {/* Apply Coupon Section */}
         <View style={styles.couponSection}>
           <View style={styles.couponHeader}>
-            <MaterialCommunityIcons name="ticket-percent" size={20} color="#85E4FC" />
+            <MaterialCommunityIcons name="ticket-percent" size={20} color={theme.accent} />
             <Text style={styles.sectionTitle}>Apply Coupon</Text>
           </View>
           {appliedCoupon ? (
             <View style={styles.appliedCouponContainer}>
               <View style={styles.appliedCouponRow}>
-                <MaterialCommunityIcons name="check-circle" size={20} color="#85E4FC" />
+                <MaterialCommunityIcons name="check-circle" size={20} color={theme.accent} />
                 <Text style={styles.appliedCouponText}>{appliedCoupon} Applied</Text>
                 <Text style={styles.discountText}>-₹{discount.toFixed(2)}</Text>
               </View>
@@ -197,7 +200,7 @@ export default function CheckoutScreen({ navigation, route }) {
               <TextInput
                 style={styles.couponInput}
                 placeholder="Enter coupon code"
-                placeholderTextColor="#666666"
+                placeholderTextColor={theme.textSecondary}
                 value={couponCode}
                 onChangeText={setCouponCode}
                 autoCapitalize="characters"
@@ -258,10 +261,10 @@ export default function CheckoutScreen({ navigation, route }) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = theme => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#000000',
+    backgroundColor: theme.background,
   },
   scrollView: {
     flex: 1,
@@ -270,13 +273,13 @@ const styles = StyleSheet.create({
     paddingBottom: 120,
   },
   serviceDetailsSection: {
-    backgroundColor: '#1A1A1A',
+    backgroundColor: theme.cardBackground,
     marginHorizontal: 16,
     marginTop: 16,
     padding: 16,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#333333',
+    borderColor: theme.cardBorder,
   },
   serviceDetailRow: {
     flexDirection: 'row',
@@ -285,7 +288,7 @@ const styles = StyleSheet.create({
   },
   serviceDetailText: {
     fontSize: 14,
-    color: '#FFFFFF',
+    color: theme.textPrimary,
     marginLeft: 8,
   },
   itemsSection: {
@@ -295,14 +298,14 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#FFFFFF',
+    color: theme.textPrimary,
     marginBottom: 16,
   },
   itemsContainer: {
-    backgroundColor: '#1A1A1A',
+    backgroundColor: theme.cardBackground,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#333333',
+    borderColor: theme.cardBorder,
     padding: 12,
   },
   itemRow: {
@@ -310,7 +313,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#333333',
+    borderBottomColor: theme.cardBorder,
   },
   itemImage: {
     width: 60,
@@ -324,17 +327,17 @@ const styles = StyleSheet.create({
   itemTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#FFFFFF',
+    color: theme.textPrimary,
     marginBottom: 4,
   },
   itemQuantity: {
     fontSize: 12,
-    color: '#CCCCCC',
+    color: theme.textSecondary,
   },
   itemPrice: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#FFFFFF',
+    color: theme.textPrimary,
   },
   couponSection: {
     marginTop: 24,
@@ -347,10 +350,10 @@ const styles = StyleSheet.create({
   },
   couponInputContainer: {
     flexDirection: 'row',
-    backgroundColor: '#1A1A1A',
+    backgroundColor: theme.cardBackground,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#333333',
+    borderColor: theme.cardBorder,
     overflow: 'hidden',
   },
   couponInput: {
@@ -358,10 +361,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 14,
     fontSize: 14,
-    color: '#FFFFFF',
+    color: theme.textPrimary,
   },
   applyButton: {
-    backgroundColor: '#85E4FC',
+    backgroundColor: theme.accent,
     paddingHorizontal: 24,
     paddingVertical: 14,
     justifyContent: 'center',
@@ -372,10 +375,10 @@ const styles = StyleSheet.create({
     color: '#000000',
   },
   appliedCouponContainer: {
-    backgroundColor: '#1A1A1A',
+    backgroundColor: theme.cardBackground,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#85E4FC',
+    borderColor: theme.accent,
     padding: 16,
   },
   appliedCouponRow: {
@@ -386,13 +389,13 @@ const styles = StyleSheet.create({
   appliedCouponText: {
     flex: 1,
     fontSize: 14,
-    color: '#FFFFFF',
+    color: theme.textPrimary,
     marginLeft: 8,
     fontWeight: '600',
   },
   discountText: {
     fontSize: 14,
-    color: '#85E4FC',
+    color: theme.accent,
     fontWeight: '600',
   },
   removeCouponButton: {
@@ -401,7 +404,7 @@ const styles = StyleSheet.create({
   },
   removeCouponText: {
     fontSize: 12,
-    color: '#FF3B30',
+    color: theme.danger,
     fontWeight: '600',
   },
   paymentSummarySection: {
@@ -409,10 +412,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   summaryContainer: {
-    backgroundColor: '#1A1A1A',
+    backgroundColor: theme.cardBackground,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#333333',
+    borderColor: theme.cardBorder,
     padding: 16,
   },
   summaryRow: {
@@ -423,19 +426,19 @@ const styles = StyleSheet.create({
   },
   summaryLabel: {
     fontSize: 14,
-    color: '#CCCCCC',
+    color: theme.textSecondary,
   },
   summaryValue: {
     fontSize: 14,
-    color: '#FFFFFF',
+    color: theme.textPrimary,
     fontWeight: '600',
   },
   discountValue: {
-    color: '#85E4FC',
+    color: theme.accent,
   },
   totalRow: {
     borderTopWidth: 1,
-    borderTopColor: '#333333',
+    borderTopColor: theme.cardBorder,
     paddingTop: 12,
     marginTop: 4,
     marginBottom: 0,
@@ -443,21 +446,21 @@ const styles = StyleSheet.create({
   totalLabel: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#FFFFFF',
+    color: theme.textPrimary,
   },
   totalValue: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#85E4FC',
+    color: theme.accent,
   },
   payNowContainer: {
     position: 'absolute',
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: '#000000',
+    backgroundColor: theme.background,
     borderTopWidth: 1,
-    borderTopColor: '#333333',
+    borderTopColor: theme.cardBorder,
     paddingHorizontal: 16,
     paddingTop: 12,
     paddingBottom: 16,
@@ -470,16 +473,16 @@ const styles = StyleSheet.create({
   },
   amountLabel: {
     fontSize: 16,
-    color: '#CCCCCC',
+    color: theme.textSecondary,
   },
   amountValue: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#85E4FC',
+    color: theme.accent,
   },
   payNowButton: {
     flexDirection: 'row',
-    backgroundColor: '#85E4FC',
+    backgroundColor: theme.accent,
     paddingVertical: 16,
     borderRadius: 12,
     justifyContent: 'center',
@@ -496,14 +499,14 @@ const styles = StyleSheet.create({
     top: 100,
     left: 16,
     right: 16,
-    backgroundColor: '#1A1A1A',
+    backgroundColor: theme.cardBackground,
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 16,
     paddingVertical: 14,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#85E4FC',
+    borderColor: theme.accent,
     zIndex: 1000,
     shadowColor: '#000',
     shadowOffset: {
@@ -517,7 +520,7 @@ const styles = StyleSheet.create({
   toastText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#FFFFFF',
+    color: theme.textPrimary,
     marginLeft: 12,
   },
 });

@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useMemo, useRef } from 'react';
 import { View, Text, StyleSheet, Animated, TouchableOpacity, Dimensions } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import HomeScreen from '../screens/HomeScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import BookingsScreen from '../screens/BookingsScreen';
+import { useTheme } from '../theme/ThemeContext';
 
 // Try to use BlurView if available, otherwise use fallback
 let BlurView;
@@ -13,8 +14,8 @@ try {
   BlurView = require('expo-blur').BlurView;
 } catch (e) {
   // Fallback component that mimics blur effect
-    BlurView = ({ children, style, intensity, tint }) => (
-    <View style={[style, { backgroundColor: tint === 'dark' ? '#FFFFFF' : '#FFFFFF' }]}>
+  BlurView = ({ children, style, intensity, tint }) => (
+    <View style={[style, { backgroundColor: tint === 'dark' ? '#000000' : '#FFFFFF' }]}>
       {children}
     </View>
   );
@@ -39,6 +40,8 @@ function LiquidGlassTabBar({ state, descriptors, navigation }) {
   const insets = useSafeAreaInsets();
   const labelOpacity = useRef(new Animated.Value(0)).current;
   const labelWidth = useRef(new Animated.Value(0)).current;
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
 
   // Label widths for each tab
   const labelWidths = {
@@ -134,7 +137,7 @@ function LiquidGlassTabBar({ state, descriptors, navigation }) {
                     <MaterialCommunityIcons
                       name={iconName}
                       size={22}
-                      color="#8E8E93"
+                      color={theme.textSecondary}
                     />
                   )}
                 </View>
@@ -149,6 +152,7 @@ function LiquidGlassTabBar({ state, descriptors, navigation }) {
 
 export default function BottomTabNavigator() {
   const insets = useSafeAreaInsets();
+  const { theme } = useTheme();
   
   return (
     <Tab.Navigator
@@ -165,8 +169,8 @@ export default function BottomTabNavigator() {
           borderTopWidth: 0,
           elevation: 0,
         },
-        tabBarActiveTintColor: '#FFFFFF',
-        tabBarInactiveTintColor: '#8E8E93',
+        tabBarActiveTintColor: theme.textPrimary,
+        tabBarInactiveTintColor: theme.textSecondary,
       }}
       tabBar={(props) => <LiquidGlassTabBar {...props} />}
     >
@@ -204,7 +208,7 @@ export default function BottomTabNavigator() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = theme => StyleSheet.create({
   tabBarContainer: {
     position: 'absolute',
     left: 20,
@@ -216,7 +220,7 @@ const styles = StyleSheet.create({
   blurContainer: {
     borderRadius: 35,
     overflow: 'hidden',
-    backgroundColor: '#38383A',
+    backgroundColor: theme.cardBackground,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
@@ -240,9 +244,9 @@ const styles = StyleSheet.create({
     width: 45, // Smaller base width for tighter selector
     height: 50,
     borderRadius: 20, // Keep at 20 as requested
-    backgroundColor: 'rgba(255, 255, 255, 0.25)',
+    backgroundColor: theme.accentSoft,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.3)',
+    borderColor: theme.cardBorder,
     top: 10,
     zIndex: 1, // Behind icons but visible
   },
@@ -265,7 +269,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#444446',
+    backgroundColor: theme.accent,
     borderRadius: 25,
     paddingLeft: 25,
     paddingRight: 20,

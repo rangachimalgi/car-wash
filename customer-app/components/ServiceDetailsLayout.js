@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image, Dimensions } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -7,6 +7,7 @@ import ServiceDetailsBottomSheet from './ServiceDetailsBottomSheet';
 import ServiceCoverage from './ServiceCoverage';
 import AddOnServicesList from './AddOnServicesList';
 import PricingPackages, { AddToCartButton } from './PricingPackages';
+import { useTheme } from '../theme/ThemeContext';
 
 const { width, height } = Dimensions.get('window');
 const IMAGE_SECTION_HEIGHT = height * 0.65;
@@ -24,6 +25,8 @@ export default function ServiceDetailsLayout({
   const bottomSheetRef = useRef(null);
   const [selectedPackage, setSelectedPackage] = useState('oneTime');
   const [selectedAddOns, setSelectedAddOns] = useState([]); // Array of add-on IDs
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
 
   // Get data from API - all data comes from serviceData now
   const data = getServiceData ? getServiceData() : {};
@@ -77,11 +80,11 @@ export default function ServiceDetailsLayout({
             style={styles.headerButton}
             onPress={() => navigation.goBack()}
           >
-            <MaterialCommunityIcons name="chevron-left" size={24} color="#000000" />
+            <MaterialCommunityIcons name="chevron-left" size={24} color={theme.textPrimary} />
           </TouchableOpacity>
           <View style={styles.headerRight}>
             <TouchableOpacity style={styles.headerButton}>
-              <MaterialCommunityIcons name="dots-vertical" size={24} color="#000000" />
+              <MaterialCommunityIcons name="dots-vertical" size={24} color={theme.textPrimary} />
             </TouchableOpacity>
           </View>
         </View>
@@ -211,10 +214,10 @@ export default function ServiceDetailsLayout({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = theme => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#28282A',
+    backgroundColor: theme.background,
   },
   headerContainer: {
     backgroundColor: 'transparent',
@@ -232,7 +235,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   headerButton: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.cardBackground,
     borderRadius: 12,
     width: 40,
     height: 40,
@@ -278,13 +281,13 @@ const styles = StyleSheet.create({
   },
   specLabel: {
     fontSize: 14,
-    color: '#000000',
+    color: theme.textPrimary,
     marginBottom: 8,
   },
   specValue: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: '#000000',
+    color: theme.textPrimary,
   },
   serviceImage: {
     width: '100%',
@@ -295,12 +298,12 @@ const styles = StyleSheet.create({
     paddingBottom: 160,
   },
   addToCartFooter: {
-    backgroundColor: '#28282A',
+    backgroundColor: theme.cardBackground,
     paddingHorizontal: 20,
     paddingTop: 12,
     paddingBottom: 20,
     borderTopWidth: 1,
-    borderTopColor: '#333333',
+    borderTopColor: theme.cardBorder,
     shadowColor: '#000000',
     shadowOffset: {
       width: 0,
@@ -312,7 +315,7 @@ const styles = StyleSheet.create({
   },
   categoryText: {
     fontSize: 12,
-    color: '#FFFFFF',
+    color: theme.textSecondary,
     textTransform: 'uppercase',
     letterSpacing: 1,
     marginBottom: 8,
@@ -325,7 +328,7 @@ const styles = StyleSheet.create({
   },
   serviceDescription: {
     fontSize: 14,
-    color: '#FFFFFF',
+    color: theme.textSecondary,
     opacity: 0.85,
     marginBottom: 16,
     lineHeight: 20,
@@ -333,12 +336,12 @@ const styles = StyleSheet.create({
   serviceTitle: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#FFFFFF',
+    color: theme.textPrimary,
     flex: 1,
   },
   distanceText: {
     fontSize: 14,
-    color: '#FFFFFF',
+    color: theme.textSecondary,
     marginLeft: 12,
   },
   ratingRow: {
@@ -351,7 +354,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   viewButton: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.cardBackground,
     borderRadius: 12,
     paddingVertical: 14,
     paddingHorizontal: 24,
@@ -363,7 +366,7 @@ const styles = StyleSheet.create({
   viewButtonText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#000000',
+    color: theme.textPrimary,
   },
   priceContainer: {
     alignItems: 'flex-end',
@@ -371,11 +374,11 @@ const styles = StyleSheet.create({
   priceText: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: '#FFFFFF',
+    color: theme.textPrimary,
   },
   priceUnit: {
     fontSize: 12,
-    color: '#9E9E9E',
+    color: theme.textSecondary,
     textDecorationLine: 'underline',
     marginTop: 4,
   },

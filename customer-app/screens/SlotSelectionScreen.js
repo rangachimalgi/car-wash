@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import BackHeader from '../components/BackHeader';
+import { useTheme } from '../theme/ThemeContext';
 
 const { width } = Dimensions.get('window');
 
@@ -15,6 +16,8 @@ export default function SlotSelectionScreen({ navigation, route }) {
 
   const [selectedDate, setSelectedDate] = useState(null);
   const [selectedTimeSlot, setSelectedTimeSlot] = useState(null);
+  const { theme, isLightMode } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
 
   // Generate dates for the next 7 days
   const generateDates = () => {
@@ -79,7 +82,7 @@ export default function SlotSelectionScreen({ navigation, route }) {
 
   return (
     <View style={styles.container}>
-      <StatusBar style="light" />
+      <StatusBar style={isLightMode ? 'dark' : 'light'} />
       <BackHeader navigation={navigation} title="Select Slot" />
       <ScrollView 
         style={styles.scrollView}
@@ -89,7 +92,7 @@ export default function SlotSelectionScreen({ navigation, route }) {
         {/* Service at Section */}
         <View style={styles.serviceAtSection}>
           <View style={styles.locationHeader}>
-            <MaterialCommunityIcons name="map-marker" size={20} color="#85E4FC" />
+            <MaterialCommunityIcons name="map-marker" size={20} color={theme.accent} />
             <Text style={styles.serviceAtTitle}>Service at</Text>
           </View>
           <Text style={styles.addressText}>
@@ -185,21 +188,21 @@ export default function SlotSelectionScreen({ navigation, route }) {
           ]}>
             Add to Cart
           </Text>
-          <MaterialCommunityIcons 
-            name="arrow-right" 
-            size={20} 
-            color={(!selectedDate || !selectedTimeSlot) ? '#666666' : '#000000'} 
-          />
+              <MaterialCommunityIcons 
+                name="arrow-right" 
+                size={20} 
+                color={(!selectedDate || !selectedTimeSlot) ? theme.textSecondary : '#000000'} 
+              />
         </TouchableOpacity>
       </View>
     </View>
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = theme => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#000000',
+    backgroundColor: theme.background,
   },
   scrollView: {
     flex: 1,
@@ -208,13 +211,13 @@ const styles = StyleSheet.create({
     paddingBottom: 100,
   },
   serviceAtSection: {
-    backgroundColor: '#1A1A1A',
+    backgroundColor: theme.cardBackground,
     marginHorizontal: 16,
     marginTop: 16,
     padding: 16,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#333333',
+    borderColor: theme.cardBorder,
   },
   locationHeader: {
     flexDirection: 'row',
@@ -224,12 +227,12 @@ const styles = StyleSheet.create({
   serviceAtTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#FFFFFF',
+    color: theme.textPrimary,
     marginLeft: 8,
   },
   addressText: {
     fontSize: 14,
-    color: '#CCCCCC',
+    color: theme.textSecondary,
     lineHeight: 20,
     marginBottom: 12,
   },
@@ -238,7 +241,7 @@ const styles = StyleSheet.create({
   },
   changeAddressText: {
     fontSize: 14,
-    color: '#85E4FC',
+    color: theme.accent,
     fontWeight: '600',
   },
   dateSection: {
@@ -248,7 +251,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#FFFFFF',
+    color: theme.textPrimary,
     marginBottom: 16,
   },
   datesScrollView: {
@@ -260,22 +263,22 @@ const styles = StyleSheet.create({
   dateCard: {
     width: 70,
     height: 90,
-    backgroundColor: '#1A1A1A',
+    backgroundColor: theme.cardBackground,
     borderRadius: 12,
     marginRight: 12,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: '#333333',
+    borderColor: theme.cardBorder,
     paddingTop: 8,
   },
   dateCardSelected: {
-    backgroundColor: '#85E4FC',
-    borderColor: '#85E4FC',
+    backgroundColor: theme.accent,
+    borderColor: theme.accent,
   },
   dateDay: {
     fontSize: 12,
-    color: '#CCCCCC',
+    color: theme.textSecondary,
     marginBottom: 4,
   },
   dateDaySelected: {
@@ -284,7 +287,7 @@ const styles = StyleSheet.create({
   dateNumber: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#FFFFFF',
+    color: theme.textPrimary,
     marginBottom: 2,
   },
   dateNumberSelected: {
@@ -292,7 +295,7 @@ const styles = StyleSheet.create({
   },
   dateMonth: {
     fontSize: 11,
-    color: '#CCCCCC',
+    color: theme.textSecondary,
   },
   dateMonthSelected: {
     color: '#000000',
@@ -301,7 +304,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 4,
     right: 4,
-    backgroundColor: '#85E4FC',
+    backgroundColor: theme.accent,
     paddingHorizontal: 4,
     paddingVertical: 2,
     borderRadius: 4,
@@ -325,33 +328,33 @@ const styles = StyleSheet.create({
     marginHorizontal: 8,
     marginBottom: 12,
     paddingVertical: 14,
-    backgroundColor: '#1A1A1A',
+    backgroundColor: theme.cardBackground,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#333333',
+    borderColor: theme.cardBorder,
     alignItems: 'center',
     justifyContent: 'center',
   },
   timeSlotCardSelected: {
-    backgroundColor: '#85E4FC',
-    borderColor: '#85E4FC',
+    backgroundColor: theme.accent,
+    borderColor: theme.accent,
   },
   timeSlotText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#FFFFFF',
+    color: theme.textPrimary,
   },
   timeSlotTextSelected: {
     color: '#000000',
   },
   totalSection: {
-    backgroundColor: '#1A1A1A',
+    backgroundColor: theme.cardBackground,
     marginHorizontal: 16,
     marginTop: 24,
     padding: 16,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#333333',
+    borderColor: theme.cardBorder,
   },
   totalRow: {
     flexDirection: 'row',
@@ -361,31 +364,31 @@ const styles = StyleSheet.create({
   totalLabel: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#FFFFFF',
+    color: theme.textPrimary,
   },
   totalAmount: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#85E4FC',
+    color: theme.accent,
   },
   checkoutButtonContainer: {
     paddingHorizontal: 16,
     paddingBottom: 16,
-    backgroundColor: '#000000',
+    backgroundColor: theme.background,
     borderTopWidth: 1,
-    borderTopColor: '#333333',
+    borderTopColor: theme.cardBorder,
     paddingTop: 12,
   },
   checkoutButton: {
     flexDirection: 'row',
-    backgroundColor: '#85E4FC',
+    backgroundColor: theme.accent,
     paddingVertical: 16,
     borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
   },
   checkoutButtonDisabled: {
-    backgroundColor: '#1A1A1A',
+    backgroundColor: theme.cardBackground,
   },
   checkoutButtonText: {
     fontSize: 18,
@@ -394,6 +397,6 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   checkoutButtonTextDisabled: {
-    color: '#666666',
+    color: theme.textSecondary,
   },
 });

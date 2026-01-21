@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { useTheme } from '../theme/ThemeContext';
 
 export default function AddOnServiceItem({ 
   imageUri, 
@@ -11,6 +12,8 @@ export default function AddOnServiceItem({
   onToggle 
 }) {
   const [imageError, setImageError] = useState(false);
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
 
   return (
     <View style={[styles.container, isSelected && styles.containerSelected]}>
@@ -23,7 +26,7 @@ export default function AddOnServiceItem({
         />
       ) : (
         <View style={[styles.thumbnail, styles.placeholderImage]}>
-          <MaterialCommunityIcons name="image-outline" size={24} color="#666666" />
+          <MaterialCommunityIcons name="image-outline" size={24} color={theme.textSecondary} />
         </View>
       )}
       <View style={styles.content}>
@@ -43,20 +46,20 @@ export default function AddOnServiceItem({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = theme => StyleSheet.create({
   container: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#000000',
+    backgroundColor: theme.cardBackground,
     paddingVertical: 12,
     paddingHorizontal: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#333333',
+    borderBottomColor: theme.cardBorder,
   },
   containerSelected: {
-    backgroundColor: '#1A2A3A',
+    backgroundColor: theme.accentSoft,
     borderLeftWidth: 3,
-    borderLeftColor: '#85E4FC',
+    borderLeftColor: theme.accent,
   },
   thumbnail: {
     width: 60,
@@ -64,10 +67,10 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     marginRight: 12,
     borderWidth: 1,
-    borderColor: '#333333',
+    borderColor: theme.cardBorder,
   },
   placeholderImage: {
-    backgroundColor: '#1A1A1A',
+    backgroundColor: theme.accentSoft,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -77,16 +80,16 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#FFFFFF',
+    color: theme.textPrimary,
     marginBottom: 4,
   },
   price: {
     fontSize: 14,
     fontWeight: '500',
-    color: '#CCCCCC',
+    color: theme.textSecondary,
   },
   addButton: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.accent,
     paddingVertical: 10,
     paddingHorizontal: 24,
     borderRadius: 8,
@@ -95,12 +98,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   addButtonSelected: {
-    backgroundColor: '#FF3B30',
+    backgroundColor: theme.danger,
   },
   addButtonText: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#000000',
+    color: '#FFFFFF',
   },
   addButtonTextSelected: {
     color: '#FFFFFF',

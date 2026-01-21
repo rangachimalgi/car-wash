@@ -1,8 +1,12 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { useTheme } from '../theme/ThemeContext';
 
 export default function RecentServiceCard({ service, onReBook, onPress }) {
+  const { theme } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
+
   return (
     <TouchableOpacity 
       style={styles.card} 
@@ -32,7 +36,7 @@ export default function RecentServiceCard({ service, onReBook, onPress }) {
           <Text style={styles.serviceName}>{service.serviceName}</Text>
 
           <View style={styles.dateRow}>
-            <MaterialCommunityIcons name="calendar-clock" size={14} color="#9E9E9E" />
+            <MaterialCommunityIcons name="calendar-clock" size={14} color={theme.textSecondary} />
             <Text style={styles.dateText}>{service.date}</Text>
           </View>
 
@@ -58,13 +62,13 @@ export default function RecentServiceCard({ service, onReBook, onPress }) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = theme => StyleSheet.create({
   card: {
-    backgroundColor: '#1A1A1A',
+    backgroundColor: theme.cardBackground,
     borderRadius: 16,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: '#333333',
+    borderColor: theme.cardBorder,
     overflow: 'hidden',
   },
   content: {
@@ -78,7 +82,7 @@ const styles = StyleSheet.create({
   image: {
     width: '100%',
     height: '100%',
-    backgroundColor: '#2A2A2A',
+    backgroundColor: theme.accentSoft,
   },
   completedBadge: {
     position: 'absolute',
@@ -100,14 +104,14 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   serviceTypeContainer: {
-    backgroundColor: '#2A2A2A',
+    backgroundColor: theme.accentSoft,
     paddingHorizontal: 10,
     paddingVertical: 5,
     borderRadius: 6,
   },
   serviceTypeText: {
     fontSize: 11,
-    color: '#CCCCCC',
+    color: theme.textSecondary,
     fontWeight: '600',
     textTransform: 'uppercase',
   },
@@ -119,7 +123,7 @@ const styles = StyleSheet.create({
   serviceName: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#FFFFFF',
+    color: theme.textPrimary,
     marginBottom: 8,
   },
   dateRow: {
@@ -130,7 +134,7 @@ const styles = StyleSheet.create({
   },
   dateText: {
     fontSize: 13,
-    color: '#9E9E9E',
+    color: theme.textSecondary,
   },
   footerRow: {
     flexDirection: 'row',
@@ -138,22 +142,22 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
     paddingTop: 12,
     borderTopWidth: 1,
-    borderTopColor: '#333333',
+    borderTopColor: theme.cardBorder,
   },
   priceLabel: {
     fontSize: 11,
-    color: '#9E9E9E',
+    color: theme.textSecondary,
     marginBottom: 2,
   },
   priceText: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#FFFFFF',
+    color: theme.textPrimary,
   },
   rebookButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#85E4FC',
+    backgroundColor: theme.accent,
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderRadius: 8,

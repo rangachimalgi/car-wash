@@ -1,14 +1,26 @@
-import React, { useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, Dimensions, TouchableOpacity, Image } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import CustomHeader from '../components/CustomHeader';
+import { useTheme } from '../theme/ThemeContext';
 
 const { width } = Dimensions.get('window');
 const cardWidth = (width - 48) / 3; // 3 cards with padding
+const sliderImages = [
+  { uri: 'https://images.unsplash.com/photo-1502877338535-766e1452684a?w=1200&h=800&fit=crop&auto=format', key: 'special1' },
+  { uri: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=1200&h=800&fit=crop&auto=format', key: 'special2' },
+  { uri: 'https://images.unsplash.com/photo-1503376780353-7e6692767b70?w=1200&h=800&fit=crop&auto=format', key: 'special3' },
+  { uri: 'https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?w=1200&h=800&fit=crop&auto=format', key: 'special4' },
+];
+const sliderCardWidth = width;
 
 export default function HomeScreen({ navigation }) {
   const [imageErrors, setImageErrors] = useState({});
+  const sliderRef = useRef(null);
+  const [activeSlide, setActiveSlide] = useState(0);
+  const { theme, isLightMode } = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
 
   const handleImageError = (key) => {
     setImageErrors(prev => ({ ...prev, [key]: true }));
@@ -17,8 +29,8 @@ export default function HomeScreen({ navigation }) {
   const ServiceImage = ({ uri, style, imageKey }) => {
     if (imageErrors[imageKey]) {
       return (
-        <View style={[style, { backgroundColor: '#2A2A2A', alignItems: 'center', justifyContent: 'center' }]}>
-          <MaterialCommunityIcons name="image-outline" size={32} color="#666666" />
+        <View style={[style, { backgroundColor: theme.cardBackground, alignItems: 'center', justifyContent: 'center' }]}>
+          <MaterialCommunityIcons name="image-outline" size={32} color={theme.textSecondary} />
         </View>
       );
     }
@@ -32,9 +44,27 @@ export default function HomeScreen({ navigation }) {
     );
   };
 
+  const handleSliderScrollEnd = useCallback((event) => {
+    const nextIndex = Math.round(event.nativeEvent.contentOffset.x / sliderCardWidth);
+    setActiveSlide(nextIndex);
+  }, []);
+
+  useEffect(() => {
+    if (sliderImages.length <= 1) return;
+    const interval = setInterval(() => {
+      setActiveSlide(prev => {
+        const nextIndex = (prev + 1) % sliderImages.length;
+        sliderRef.current?.scrollTo({ x: nextIndex * sliderCardWidth, animated: true });
+        return nextIndex;
+      });
+    }, 3500);
+
+    return () => clearInterval(interval);
+  }, []);
+
   return (
     <View style={styles.container}>
-      <StatusBar style="light" />
+      <StatusBar style={isLightMode ? 'dark' : 'light'} />
       <CustomHeader navigation={navigation} />
       <ScrollView 
         style={styles.scrollView}
@@ -49,58 +79,39 @@ export default function HomeScreen({ navigation }) {
           </TouchableOpacity> */}
         </View>
 
-        {/* Special Offer Banner */}
+        {/* Woosh Special Slider */}
         <ScrollView 
           horizontal 
+          pagingEnabled
           showsHorizontalScrollIndicator={false}
-          style={styles.offerScrollView}
-          contentContainerStyle={styles.offerScrollContent}
+          style={styles.sliderScrollView}
+          contentContainerStyle={styles.sliderScrollContent}
+          decelerationRate="fast"
+          snapToInterval={sliderCardWidth}
+          onMomentumScrollEnd={handleSliderScrollEnd}
+          ref={sliderRef}
         >
-          <View style={styles.offerCard}>
-            <ServiceImage 
-              uri="https://images.unsplash.com/photo-1502877338535-766e1452684a?w=400&h=300&fit=crop&auto=format&blur=50"
-              style={styles.offerBackgroundImage}
-              imageKey="offer1"
-            />
-            <View style={styles.offerOverlay} />
-            <View style={styles.offerBadge}>
-              <Text style={styles.offerBadgeText}>Limited time!</Text>
+          {sliderImages.map(item => (
+            <View key={item.key} style={styles.sliderCard}>
+              <ServiceImage 
+                uri={item.uri}
+                style={styles.sliderImage}
+                imageKey={item.key}
+              />
             </View>
-            <View style={styles.offerContent}>
-              <Text style={styles.offerTitle}>Get Special Offer</Text>
-              <View style={styles.offerDiscountRow}>
-                <Text style={styles.offerUpTo}>Up to</Text>
-                <Text style={styles.offerPercentage}>40%</Text>
-              </View>
-              <Text style={styles.offerDescription}>All Washing Service Available | T&C Applied</Text>
-            </View>
-            <TouchableOpacity style={styles.claimButton}>
-              <Text style={styles.claimButtonText}>Claim</Text>
-            </TouchableOpacity>
-          </View>
-          <View style={styles.offerCard}>
-            <ServiceImage 
-              uri="https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&h=300&fit=crop&auto=format&blur=50"
-              style={styles.offerBackgroundImage}
-              imageKey="offer2"
-            />
-            <View style={styles.offerOverlay} />
-            <View style={styles.offerBadge}>
-              <Text style={styles.offerBadgeText}>Limited time!</Text>
-            </View>
-            <View style={styles.offerContent}>
-              <Text style={styles.offerTitle}>Get Special Offer</Text>
-              <View style={styles.offerDiscountRow}>
-                <Text style={styles.offerUpTo}>Up to</Text>
-                <Text style={styles.offerPercentage}>30%</Text>
-              </View>
-              <Text style={styles.offerDescription}>All Washing Service Available | T&C Applied</Text>
-            </View>
-            <TouchableOpacity style={styles.claimButton}>
-              <Text style={styles.claimButtonText}>Claim</Text>
-            </TouchableOpacity>
-          </View>
+          ))}
         </ScrollView>
+        <View style={styles.sliderDots}>
+          {sliderImages.map((item, index) => (
+            <View
+              key={`${item.key}-dot`}
+              style={[
+                styles.sliderDot,
+                index === activeSlide && styles.sliderDotActive,
+              ]}
+            />
+          ))}
+        </View>
 
         {/* Services Section */}
         <View style={styles.servicesSection}>
@@ -271,10 +282,10 @@ export default function HomeScreen({ navigation }) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = theme => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#000000',
+    backgroundColor: theme.background,
   },
   scrollView: {
     flex: 1,
@@ -293,103 +304,50 @@ const styles = StyleSheet.create({
   specialForYouTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#FFFFFF',
+    color: theme.textPrimary,
   },
   seeAllText: {
     fontSize: 14,
-    color: '#85E4FC',
+    color: theme.accent,
     fontWeight: '600',
   },
-  offerScrollView: {
+  sliderScrollView: {
     marginVertical: 10,
   },
-  offerScrollContent: {
-    paddingHorizontal: 16,
-    paddingRight: 32,
+  sliderScrollContent: {
+    paddingHorizontal: 0,
   },
-  offerCard: {
-    width: width - 32,
-    height: 180,
-    backgroundColor: '#1A1A1A',
-    borderRadius: 16,
-    marginRight: 16,
-    padding: 16,
+  sliderCard: {
+    width: width,
+    height: 200,
+    backgroundColor: theme.cardBackground,
+    borderRadius: 0,
+    marginRight: 0,
     overflow: 'hidden',
     position: 'relative',
   },
-  offerBackgroundImage: {
-    position: 'absolute',
+  sliderImage: {
     width: '100%',
     height: '100%',
-    opacity: 0.3,
   },
-  offerOverlay: {
-    position: 'absolute',
-    width: '100%',
-    height: '100%',
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-  },
-  offerBadge: {
-    position: 'absolute',
-    top: 12,
-    left: 12,
-    backgroundColor: '#FFFFFF',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
-    zIndex: 2,
-  },
-  offerBadgeText: {
-    fontSize: 10,
-    fontWeight: '600',
-    color: '#000000',
-  },
-  offerContent: {
-    marginTop: 32,
-    marginRight: 100,
-    zIndex: 2,
-    position: 'relative',
-  },
-  offerTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-    marginBottom: 8,
-  },
-  offerDiscountRow: {
+  sliderDots: {
     flexDirection: 'row',
-    alignItems: 'baseline',
-    marginBottom: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 8,
+    marginBottom: 4,
+    gap: 6,
   },
-  offerUpTo: {
-    fontSize: 14,
-    color: '#FFFFFF',
-    marginRight: 4,
+  sliderDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: theme.cardBorder,
   },
-  offerPercentage: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    color: '#85E4FC',
-  },
-  offerDescription: {
-    fontSize: 11,
-    color: '#CCCCCC',
-    lineHeight: 14,
-  },
-  claimButton: {
-    position: 'absolute',
-    right: 16,
-    bottom: 16,
-    backgroundColor: '#85E4FC',
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 20,
-    zIndex: 2,
-  },
-  claimButtonText: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    color: '#000000',
+  sliderDotActive: {
+    width: 18,
+    borderRadius: 6,
+    backgroundColor: theme.accent,
   },
   servicesSection: {
     paddingHorizontal: 16,
@@ -405,7 +363,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#FFFFFF',
+    color: theme.textPrimary,
   },
   servicesScrollView: {
     marginHorizontal: -16,
@@ -423,15 +381,15 @@ const styles = StyleSheet.create({
     height: 80,
     borderRadius: 40,
     borderWidth: 1,
-    borderColor: '#333333',
-    backgroundColor: '#121212',
+    borderColor: theme.cardBorder,
+    backgroundColor: theme.cardBackground,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 8,
   },
   serviceIconLabel: {
     fontSize: 12,
-    color: '#FFFFFF',
+    color: theme.textPrimary,
     textAlign: 'center',
   },
   mainServicesSection: {
@@ -451,10 +409,10 @@ const styles = StyleSheet.create({
   mainServiceCard: {
     width: '100%',
     height: 120,
-    backgroundColor: '#1A1A1A',
+    backgroundColor: theme.cardBackground,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: '#333333',
+    borderColor: theme.cardBorder,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
@@ -473,7 +431,7 @@ const styles = StyleSheet.create({
   mainServiceName: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: theme.textPrimary,
     textAlign: 'center',
   },
   popularSection: {
@@ -490,7 +448,7 @@ const styles = StyleSheet.create({
   providerCard: {
     width: 200,
     height: 160,
-    backgroundColor: '#1A1A1A',
+    backgroundColor: theme.cardBackground,
     borderRadius: 16,
     marginRight: 16,
     overflow: 'hidden',
@@ -502,7 +460,7 @@ const styles = StyleSheet.create({
     left: 12,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#000000',
+    backgroundColor: theme.cardBorder,
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 12,
@@ -511,7 +469,7 @@ const styles = StyleSheet.create({
   providerRating: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#FFFFFF',
+    color: theme.textPrimary,
     marginLeft: 4,
   },
   providerBookmark: {
@@ -532,7 +490,7 @@ const styles = StyleSheet.create({
   whyChooseTitle: {
     fontSize: 22,
     fontWeight: 'bold',
-    color: '#FFFFFF',
+    color: theme.textPrimary,
     marginBottom: 16,
   },
   whyChooseScrollView: {

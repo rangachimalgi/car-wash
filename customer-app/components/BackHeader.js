@@ -2,9 +2,12 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTheme } from '../theme/ThemeContext';
 
 export default function BackHeader({ navigation, title }) {
   const insets = useSafeAreaInsets();
+  const { theme } = useTheme();
+  const styles = createStyles(theme);
 
   return (
     <View style={[styles.headerContainer, { paddingTop: insets.top }]}>
@@ -13,7 +16,7 @@ export default function BackHeader({ navigation, title }) {
           style={styles.backButton}
           onPress={() => navigation.goBack()}
         >
-          <MaterialCommunityIcons name="arrow-left" size={24} color="#FFFFFF" />
+          <MaterialCommunityIcons name="arrow-left" size={24} color={theme.textPrimary} />
         </TouchableOpacity>
         {title && (
           <Text style={styles.headerTitle}>{title}</Text>
@@ -23,13 +26,13 @@ export default function BackHeader({ navigation, title }) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = theme => StyleSheet.create({
   headerContainer: {
-    backgroundColor: '#000000',
+    backgroundColor: theme.headerBackground,
     paddingHorizontal: 16,
     paddingBottom: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#333333',
+    borderBottomColor: theme.cardBorder,
   },
   headerContent: {
     flexDirection: 'row',
@@ -43,7 +46,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#FFFFFF',
+    color: theme.textPrimary,
     marginLeft: 8,
   },
 });
