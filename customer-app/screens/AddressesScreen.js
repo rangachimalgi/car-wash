@@ -112,7 +112,7 @@ export default function AddressesScreen({ navigation, route }) {
           activeOpacity={0.8}
         >
           <View style={styles.currentLocationIconContainer}>
-            <MaterialCommunityIcons name="crosshairs-gps" size={24} color="#31C5FF" />
+            <MaterialCommunityIcons name="crosshairs-gps" size={24} color="#2CD4FB" />
           </View>
           <View style={styles.currentLocationContent}>
             <Text style={styles.currentLocationTitle}>Use Current Location</Text>
@@ -126,7 +126,7 @@ export default function AddressesScreen({ navigation, route }) {
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Saved Addresses</Text>
             <TouchableOpacity onPress={handleAddNewAddress}>
-              <MaterialCommunityIcons name="plus-circle" size={24} color="#31C5FF" />
+              <MaterialCommunityIcons name="plus-circle" size={24} color="#2CD4FB" />
             </TouchableOpacity>
           </View>
 
@@ -156,7 +156,7 @@ export default function AddressesScreen({ navigation, route }) {
                       <MaterialCommunityIcons 
                         name={address.type === 'Home' ? 'home' : address.type === 'Work' ? 'briefcase' : 'map-marker'} 
                         size={20} 
-                        color="#31C5FF" 
+                        color="#2CD4FB" 
                       />
                       <Text style={styles.addressType}>{address.type}</Text>
                       {address.isDefault && (
@@ -304,7 +304,7 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   addAddressButton: {
-    backgroundColor: '#31C5FF',
+    backgroundColor: '#2CD4FB',
     borderRadius: 12,
     paddingVertical: 14,
     paddingHorizontal: 24,
@@ -341,7 +341,7 @@ const styles = StyleSheet.create({
   addressType: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#31C5FF',
+    color: '#2CD4FB',
   },
   defaultBadge: {
     backgroundColor: 'rgba(49, 197, 255, 0.15)',
@@ -352,7 +352,7 @@ const styles = StyleSheet.create({
   defaultBadgeText: {
     fontSize: 10,
     fontWeight: '600',
-    color: '#31C5FF',
+    color: '#2CD4FB',
   },
   addressActions: {
     flexDirection: 'row',

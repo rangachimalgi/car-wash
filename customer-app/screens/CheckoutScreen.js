@@ -121,7 +121,7 @@ export default function CheckoutScreen({ navigation, route }) {
       {/* Toast Notification */}
       {showToast && (
         <View style={styles.toastContainer}>
-          <MaterialCommunityIcons name="check-circle" size={24} color="#31C5FF" />
+          <MaterialCommunityIcons name="check-circle" size={24} color="#2CD4FB" />
           <Text style={styles.toastText}>Service booked</Text>
         </View>
       )}
@@ -134,13 +134,13 @@ export default function CheckoutScreen({ navigation, route }) {
         {selectedDate && selectedTimeSlot && (
           <View style={styles.serviceDetailsSection}>
             <View style={styles.serviceDetailRow}>
-              <MaterialCommunityIcons name="calendar" size={20} color="#31C5FF" />
+              <MaterialCommunityIcons name="calendar" size={20} color="#2CD4FB" />
               <Text style={styles.serviceDetailText}>
                 {formatDate(selectedDate)}
               </Text>
             </View>
             <View style={styles.serviceDetailRow}>
-              <MaterialCommunityIcons name="clock-outline" size={20} color="#31C5FF" />
+              <MaterialCommunityIcons name="clock-outline" size={20} color="#2CD4FB" />
               <Text style={styles.serviceDetailText}>
                 {selectedTimeSlot.time}
               </Text>
@@ -172,13 +172,13 @@ export default function CheckoutScreen({ navigation, route }) {
         {/* Apply Coupon Section */}
         <View style={styles.couponSection}>
           <View style={styles.couponHeader}>
-            <MaterialCommunityIcons name="ticket-percent" size={20} color="#31C5FF" />
+            <MaterialCommunityIcons name="ticket-percent" size={20} color="#2CD4FB" />
             <Text style={styles.sectionTitle}>Apply Coupon</Text>
           </View>
           {appliedCoupon ? (
             <View style={styles.appliedCouponContainer}>
               <View style={styles.appliedCouponRow}>
-                <MaterialCommunityIcons name="check-circle" size={20} color="#31C5FF" />
+                <MaterialCommunityIcons name="check-circle" size={20} color="#2CD4FB" />
                 <Text style={styles.appliedCouponText}>{appliedCoupon} Applied</Text>
                 <Text style={styles.discountText}>-₹{discount.toFixed(2)}</Text>
               </View>
@@ -358,7 +358,7 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
   },
   applyButton: {
-    backgroundColor: '#31C5FF',
+    backgroundColor: '#2CD4FB',
     paddingHorizontal: 24,
     paddingVertical: 14,
     justifyContent: 'center',
@@ -372,7 +372,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#1A1A1A',
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#31C5FF',
+    borderColor: '#2CD4FB',
     padding: 16,
   },
   appliedCouponRow: {
@@ -389,7 +389,7 @@ const styles = StyleSheet.create({
   },
   discountText: {
     fontSize: 14,
-    color: '#31C5FF',
+    color: '#2CD4FB',
     fontWeight: '600',
   },
   removeCouponButton: {
@@ -428,7 +428,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   discountValue: {
-    color: '#31C5FF',
+    color: '#2CD4FB',
   },
   totalRow: {
     borderTopWidth: 1,
@@ -445,7 +445,7 @@ const styles = StyleSheet.create({
   totalValue: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#31C5FF',
+    color: '#2CD4FB',
   },
   payNowContainer: {
     position: 'absolute',
@@ -472,11 +472,11 @@ const styles = StyleSheet.create({
   amountValue: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#31C5FF',
+    color: '#2CD4FB',
   },
   payNowButton: {
     flexDirection: 'row',
-    backgroundColor: '#31C5FF',
+    backgroundColor: '#2CD4FB',
     paddingVertical: 16,
     borderRadius: 12,
     justifyContent: 'center',
@@ -500,7 +500,7 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#31C5FF',
+    borderColor: '#2CD4FB',
     zIndex: 1000,
     shadowColor: '#000',
     shadowOffset: {

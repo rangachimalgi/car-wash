@@ -59,7 +59,7 @@ export default function BikeWashScreen({ navigation }) {
         <StatusBar style="light" />
         <BackHeader navigation={navigation} title="Bike Wash" />
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#31C5FF" />
+          <ActivityIndicator size="large" color="#2CD4FB" />
           <Text style={styles.loadingText}>Loading services...</Text>
         </View>
       </View>
@@ -95,7 +95,7 @@ export default function BikeWashScreen({ navigation }) {
           <RefreshControl
             refreshing={loading}
             onRefresh={fetchServices}
-            tintColor="#31C5FF"
+            tintColor="#2CD4FB"
           />
         }
       >
@@ -189,7 +189,7 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   retryButton: {
-    backgroundColor: '#31C5FF',
+    backgroundColor: '#2CD4FB',
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 8,

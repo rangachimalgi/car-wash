@@ -56,7 +56,7 @@ const styles = StyleSheet.create({
   containerSelected: {
     backgroundColor: '#1A2A3A',
     borderLeftWidth: 3,
-    borderLeftColor: '#31C5FF',
+    borderLeftColor: '#2CD4FB',
   },
   thumbnail: {
     width: 60,

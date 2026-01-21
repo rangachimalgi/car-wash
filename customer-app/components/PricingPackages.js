@@ -91,7 +91,7 @@ export default function PricingPackages({ oneTimePrice = 299, serviceTitle = 'Se
         </View>
         {isSelected && (
           <View style={styles.selectedIndicator}>
-            <MaterialCommunityIcons name="check-circle" size={20} color="#31C5FF" />
+            <MaterialCommunityIcons name="check-circle" size={20} color="#2CD4FB" />
           </View>
         )}
       </TouchableOpacity>
@@ -112,7 +112,7 @@ export default function PricingPackages({ oneTimePrice = 299, serviceTitle = 'Se
             <Text style={styles.oneTimePrice}>₹{oneTimePrice}</Text>
           </View>
           {selectedPackage === 'oneTime' ? (
-            <MaterialCommunityIcons name="check-circle" size={24} color="#31C5FF" />
+            <MaterialCommunityIcons name="check-circle" size={24} color="#2CD4FB" />
           ) : (
             <View style={styles.circlePlaceholder} />
           )}
@@ -264,7 +264,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   oneTimeSectionSelected: {
-    borderColor: '#31C5FF',
+    borderColor: '#2CD4FB',
   },
   circlePlaceholder: {
     width: 24,
@@ -318,7 +318,7 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   packageItemSelected: {
-    borderColor: '#31C5FF',
+    borderColor: '#2CD4FB',
     backgroundColor: '#1A2A3A',
   },
   selectedIndicator: {
@@ -337,7 +337,7 @@ const styles = StyleSheet.create({
   },
   packageDiscount: {
     fontSize: 12,
-    color: '#31C5FF',
+    color: '#2CD4FB',
   },
   packageRight: {
     alignItems: 'flex-end',
@@ -345,7 +345,7 @@ const styles = StyleSheet.create({
   packagePerWash: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#31C5FF',
+    color: '#2CD4FB',
     marginBottom: 4,
   },
   packageTotal: {
@@ -369,7 +369,7 @@ const styles = StyleSheet.create({
   addToCartPrice: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#31C5FF',
+    color: '#2CD4FB',
     marginBottom: 4,
   },
   addToCartDuration: {

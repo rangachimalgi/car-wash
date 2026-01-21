@@ -118,25 +118,25 @@ export default function HomeScreen({ navigation }) {
           >
             <TouchableOpacity style={styles.serviceIconContainer} activeOpacity={0.7}>
               <View style={styles.serviceIconCircle}>
-                <MaterialCommunityIcons name="car-wash" size={32} color="#31C5FF" />
+                <MaterialCommunityIcons name="car-wash" size={32} color="#21D2FA" />
               </View>
               <Text style={styles.serviceIconLabel}>Exterior C...</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.serviceIconContainer} activeOpacity={0.7}>
               <View style={styles.serviceIconCircle}>
-                <MaterialCommunityIcons name="vacuum" size={32} color="#31C5FF" />
+                <MaterialCommunityIcons name="vacuum" size={32} color="#2CD4FB" />
               </View>
               <Text style={styles.serviceIconLabel}>Vacuum C...</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.serviceIconContainer} activeOpacity={0.7}>
               <View style={styles.serviceIconCircle}>
-                <MaterialCommunityIcons name="car-seat" size={32} color="#31C5FF" />
+                <MaterialCommunityIcons name="car-seat" size={32} color="#2CD4FB" />
               </View>
               <Text style={styles.serviceIconLabel}>Interior C...</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.serviceIconContainer} activeOpacity={0.7}>
               <View style={styles.serviceIconCircle}>
-                <MaterialCommunityIcons name="car-cog" size={32} color="#31C5FF" />
+                <MaterialCommunityIcons name="car-cog" size={32} color="#2CD4FB" />
               </View>
               <Text style={styles.serviceIconLabel}>Engine Ba...</Text>
             </TouchableOpacity>
@@ -197,7 +197,7 @@ export default function HomeScreen({ navigation }) {
                 <Text style={styles.providerRating}>4.8</Text>
               </View>
               <TouchableOpacity style={styles.providerBookmark}>
-                <MaterialCommunityIcons name="bookmark-outline" size={20} color="#31C5FF" />
+                <MaterialCommunityIcons name="bookmark-outline" size={20} color="#2CD4FB" />
               </TouchableOpacity>
               <ServiceImage 
                 uri="https://images.unsplash.com/photo-1502877338535-766e1452684a?w=300&h=200&fit=crop"
@@ -211,7 +211,7 @@ export default function HomeScreen({ navigation }) {
                 <Text style={styles.providerRating}>4.8</Text>
               </View>
               <TouchableOpacity style={styles.providerBookmark}>
-                <MaterialCommunityIcons name="bookmark-outline" size={20} color="#31C5FF" />
+                <MaterialCommunityIcons name="bookmark-outline" size={20} color="#2CD4FB" />
               </TouchableOpacity>
               <ServiceImage 
                 uri="https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=300&h=200&fit=crop"
@@ -297,7 +297,7 @@ const styles = StyleSheet.create({
   },
   seeAllText: {
     fontSize: 14,
-    color: '#31C5FF',
+    color: '#2CD4FB',
     fontWeight: '600',
   },
   offerScrollView: {
@@ -369,7 +369,7 @@ const styles = StyleSheet.create({
   offerPercentage: {
     fontSize: 32,
     fontWeight: 'bold',
-    color: '#31C5FF',
+    color: '#2CD4FB',
   },
   offerDescription: {
     fontSize: 11,
@@ -380,7 +380,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     right: 16,
     bottom: 16,
-    backgroundColor: '#31C5FF',
+    backgroundColor: '#2CD4FB',
     paddingHorizontal: 20,
     paddingVertical: 10,
     borderRadius: 20,
@@ -423,7 +423,7 @@ const styles = StyleSheet.create({
     height: 80,
     borderRadius: 40,
     borderWidth: 2,
-    borderColor: '#31C5FF',
+    borderColor: '#2CD4FB',
     backgroundColor: '#1A1A1A',
     justifyContent: 'center',
     alignItems: 'center',

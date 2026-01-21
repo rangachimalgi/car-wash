@@ -153,7 +153,7 @@ const styles = StyleSheet.create({
   rebookButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#31C5FF',
+    backgroundColor: '#2CD4FB',
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderRadius: 8,
