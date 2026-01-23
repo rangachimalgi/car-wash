@@ -8,31 +8,21 @@ import {
   TouchableOpacity,
   KeyboardAvoidingView,
   Platform,
-  Alert,
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-const lightTheme = {
-  background: '#F5F6F8',
-  cardBackground: '#FFFFFF',
-  cardBorder: '#E2E8F0',
-  textPrimary: '#1A1A1A',
-  textSecondary: '#6B7280',
-  accent: '#2F8CF4',
-  accentSoft: 'rgba(47, 140, 244, 0.15)',
-  danger: '#FF5252',
-};
-
-export default function LoginScreen() {
+export default function LoginScreen({ onLogin }) {
   const insets = useSafeAreaInsets();
-  const styles = useMemo(() => createStyles(lightTheme), []);
+  const styles = useMemo(() => createStyles(), []);
   const [employeeId, setEmployeeId] = useState('');
   const [password, setPassword] = useState('');
 
   const handleSubmit = () => {
-    Alert.alert('Submitted', 'Login submitted (no validation yet).');
+    if (onLogin) {
+      onLogin({ employeeId, password });
+    }
   };
 
   return (
@@ -51,7 +41,7 @@ export default function LoginScreen() {
       >
         <View style={styles.headerSection}>
           <View style={styles.logoContainer}>
-            <MaterialCommunityIcons name="car-wash" size={64} color={lightTheme.accent} />
+            <MaterialCommunityIcons name="car-wash" size={64} color="#2F8CF4" />
           </View>
           <Text style={styles.welcomeText}>Welcome Woosher !</Text>
           <Text style={styles.subtitleText}>
@@ -66,13 +56,13 @@ export default function LoginScreen() {
               <MaterialCommunityIcons
                 name="badge-account-outline"
                 size={20}
-                color={lightTheme.textSecondary}
+                color="#6B7280"
                 style={styles.inputIcon}
               />
               <TextInput
                 style={styles.input}
                 placeholder="Enter your employee ID"
-                placeholderTextColor={lightTheme.textSecondary}
+                placeholderTextColor="#6B7280"
                 value={employeeId}
                 onChangeText={setEmployeeId}
                 autoCapitalize="none"
@@ -86,13 +76,13 @@ export default function LoginScreen() {
               <MaterialCommunityIcons
                 name="lock-outline"
                 size={20}
-                color={lightTheme.textSecondary}
+                color="#6B7280"
                 style={styles.inputIcon}
               />
               <TextInput
                 style={styles.input}
                 placeholder="Enter your password"
-                placeholderTextColor={lightTheme.textSecondary}
+                placeholderTextColor="#6B7280"
                 value={password}
                 onChangeText={setPassword}
                 secureTextEntry
@@ -114,11 +104,11 @@ export default function LoginScreen() {
   );
 }
 
-const createStyles = theme =>
+const createStyles = () =>
   StyleSheet.create({
     container: {
       flex: 1,
-      backgroundColor: theme.background,
+      backgroundColor: '#F5F6F8',
     },
     scrollContent: {
       flexGrow: 1,
@@ -132,7 +122,7 @@ const createStyles = theme =>
       width: 120,
       height: 120,
       borderRadius: 60,
-      backgroundColor: theme.accentSoft,
+      backgroundColor: 'rgba(47, 140, 244, 0.15)',
       alignItems: 'center',
       justifyContent: 'center',
       marginBottom: 24,
@@ -140,12 +130,12 @@ const createStyles = theme =>
     welcomeText: {
       fontSize: 32,
       fontWeight: 'bold',
-      color: theme.textPrimary,
+      color: '#1A1A1A',
       marginBottom: 8,
     },
     subtitleText: {
       fontSize: 16,
-      color: theme.textSecondary,
+      color: '#6B7280',
       textAlign: 'center',
     },
     formSection: {
@@ -157,16 +147,16 @@ const createStyles = theme =>
     label: {
       fontSize: 14,
       fontWeight: '600',
-      color: theme.textPrimary,
+      color: '#1A1A1A',
       marginBottom: 8,
     },
     inputWrapper: {
       flexDirection: 'row',
       alignItems: 'center',
-      backgroundColor: theme.cardBackground,
+      backgroundColor: '#FFFFFF',
       borderRadius: 12,
       borderWidth: 1,
-      borderColor: theme.cardBorder,
+      borderColor: '#E2E8F0',
       paddingHorizontal: 16,
       minHeight: 56,
     },
@@ -176,11 +166,11 @@ const createStyles = theme =>
     input: {
       flex: 1,
       fontSize: 16,
-      color: theme.textPrimary,
+      color: '#1A1A1A',
       paddingVertical: 16,
     },
     primaryButton: {
-      backgroundColor: theme.accent,
+      backgroundColor: '#2F8CF4',
       borderRadius: 12,
       paddingVertical: 16,
       flexDirection: 'row',

@@ -1,10 +1,24 @@
+import React, { useState } from 'react';
+import { NavigationContainer } from '@react-navigation/native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import LoginScreen from './screens/LoginScreen';
+import AppNavigator from './navigators/AppNavigator';
+import AuthNavigator from './navigators/AuthNavigator';
 
 export default function App() {
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+
   return (
-    <SafeAreaProvider>
-      <LoginScreen />
-    </SafeAreaProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <SafeAreaProvider>
+        <NavigationContainer>
+          {isLoggedIn ? (
+            <AppNavigator />
+          ) : (
+            <AuthNavigator onLogin={() => setIsLoggedIn(true)} />
+          )}
+        </NavigationContainer>
+      </SafeAreaProvider>
+    </GestureHandlerRootView>
   );
 }
