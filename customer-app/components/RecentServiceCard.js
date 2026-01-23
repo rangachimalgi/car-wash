@@ -39,6 +39,12 @@ export default function RecentServiceCard({ service, onReBook, onPress }) {
             <MaterialCommunityIcons name="calendar-clock" size={14} color={theme.textSecondary} />
             <Text style={styles.dateText}>{service.date}</Text>
           </View>
+          {service.time ? (
+            <View style={styles.timeRow}>
+              <MaterialCommunityIcons name="clock-time-four" size={14} color={theme.textSecondary} />
+              <Text style={styles.timeText}>{service.time}</Text>
+            </View>
+          ) : null}
 
           <View style={styles.footerRow}>
             <View>
@@ -130,9 +136,19 @@ const createStyles = theme => StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    marginBottom: 12,
+    marginBottom: 8,
   },
   dateText: {
+    fontSize: 13,
+    color: theme.textSecondary,
+  },
+  timeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 12,
+  },
+  timeText: {
     fontSize: 13,
     color: theme.textSecondary,
   },

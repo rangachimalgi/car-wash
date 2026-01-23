@@ -1264,6 +1264,23 @@ function App() {
                         <span className="detail-value">{new Date(order.createdAt).toLocaleString()}</span>
                       </div>
                     </div>
+                    <div className="order-slot-list">
+                      <span className="detail-label">Slots:</span>
+                      {(order.items || []).map((item, index) => {
+                        const slotDate = item?.scheduledDate
+                          ? new Date(item.scheduledDate).toLocaleDateString()
+                          : '—';
+                        const slotTime = item?.scheduledTimeSlot || '—';
+                        const serviceName = item?.service?.name || 'Service';
+                        return (
+                          <div key={`${order._id}-slot-${index}`} className="order-slot-item">
+                            <span className="order-slot-service">{serviceName}</span>
+                            <span className="order-slot-separator">•</span>
+                            <span className="order-slot-datetime">{slotDate} • {slotTime}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
                     <div className="order-card-actions">
                       <button
                         type="button"

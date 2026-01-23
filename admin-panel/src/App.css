@@ -542,6 +542,34 @@
   border-top: 1px solid #e0e0e0;
 }
 
+.order-slot-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin-bottom: 1rem;
+}
+
+.order-slot-item {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  font-size: 0.85rem;
+  color: #4a4a4a;
+}
+
+.order-slot-service {
+  font-weight: 600;
+  color: #1a1a1a;
+}
+
+.order-slot-separator {
+  color: #9a9a9a;
+}
+
+.order-slot-datetime {
+  color: #4a4a4a;
+}
+
 .order-card-actions {
   display: flex;
   justify-content: flex-end;

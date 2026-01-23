@@ -46,19 +46,31 @@ export default function CartScreen({ navigation, route }) {
     }
   }, [cartItems, cartLoaded]);
 
+  const getSlotKey = (item) => {
+    const timeSlot = item?.selectedTimeSlot?.time || item?.selectedTimeSlot || '';
+    return `${item?.selectedDate || ''}|${timeSlot}`;
+  };
+
+  const isSameCartLine = (existingItem, incomingItem) => {
+    const sameService = existingItem?.serviceId && incomingItem?.serviceId
+      ? existingItem.serviceId === incomingItem.serviceId
+      : existingItem?.title === incomingItem?.title;
+    return sameService && getSlotKey(existingItem) === getSlotKey(incomingItem);
+  };
+
   // Handle adding items from navigation params
   useEffect(() => {
     if (route?.params?.addItem) {
       const newItem = route.params.addItem;
       setCartItems(prevItems => {
-        // Check if item already exists, if so update quantity
-        const existingIndex = prevItems.findIndex(item => item.title === newItem.title);
+        // Merge only if same service AND same slot
+        const existingIndex = prevItems.findIndex(item => isSameCartLine(item, newItem));
         if (existingIndex >= 0) {
           const updated = [...prevItems];
           updated[existingIndex].quantity += 1;
           return updated;
         }
-        // Add new item
+        // Add new item as a separate line for a different slot
         return [...prevItems, newItem];
       });
       // Clear the route params to prevent re-adding on re-render
