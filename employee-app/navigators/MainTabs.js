@@ -19,16 +19,25 @@ const renderIcon = ({ route, color, size }) => (
   <MaterialCommunityIcons name={route.icon} size={size} color={color} />
 );
 
-const renderScene = BottomNavigation.SceneMap({
-  home: HomeScreen,
-  attendance: AttendanceScreen,
-  jobs: JobQueueScreen,
-  earnings: EarningsHistoryScreen,
-  profile: ProfileScreen,
-});
-
-export default function MainTabs() {
+export default function MainTabs({ onLogout }) {
   const [index, setIndex] = useState(0);
+
+  const renderScene = ({ route }) => {
+    switch (route.key) {
+      case 'home':
+        return <HomeScreen />;
+      case 'attendance':
+        return <AttendanceScreen />;
+      case 'jobs':
+        return <JobQueueScreen />;
+      case 'earnings':
+        return <EarningsHistoryScreen />;
+      case 'profile':
+        return <ProfileScreen onLogout={onLogout} />;
+      default:
+        return null;
+    }
+  };
 
   return (
     <BottomNavigation

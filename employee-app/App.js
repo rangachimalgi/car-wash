@@ -15,7 +15,7 @@ export default function App() {
         <PaperProvider>
           <NavigationContainer>
             {isLoggedIn ? (
-              <AppNavigator />
+              <AppNavigator onLogout={() => setIsLoggedIn(false)} />
             ) : (
               <AuthNavigator onLogin={() => setIsLoggedIn(true)} />
             )}
