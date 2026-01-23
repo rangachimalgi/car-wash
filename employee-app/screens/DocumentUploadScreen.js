@@ -37,7 +37,7 @@ export default function DocumentUploadScreen({ navigation }) {
 
       <TouchableOpacity
         style={styles.primaryButton}
-        onPress={() => navigation.navigate('Home')}
+        onPress={() => navigation.navigate('MainTabs')}
       >
         <Text style={styles.primaryButtonText}>Continue</Text>
       </TouchableOpacity>

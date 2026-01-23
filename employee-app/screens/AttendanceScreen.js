@@ -2,12 +2,12 @@ import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 
-export default function HomeScreen() {
+export default function AttendanceScreen() {
   return (
     <View style={styles.container}>
       <StatusBar style="dark" />
-      <Text style={styles.title}>Employee Home</Text>
-      <Text style={styles.subtitle}>You are logged in.</Text>
+      <Text style={styles.title}>Attendance</Text>
+      <Text style={styles.subtitle}>Coming soon</Text>
     </View>
   );
 }
@@ -21,13 +21,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
   title: {
-    fontSize: 28,
+    fontSize: 24,
     fontWeight: '700',
     color: '#1A1A1A',
-    marginBottom: 8,
+    marginBottom: 6,
   },
   subtitle: {
-    fontSize: 16,
+    fontSize: 14,
     color: '#6B7280',
   },
 });

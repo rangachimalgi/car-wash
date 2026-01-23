@@ -1,7 +1,7 @@
 import React from 'react';
 import { createStackNavigator } from '@react-navigation/stack';
-import HomeScreen from '../screens/HomeScreen';
 import DocumentUploadScreen from '../screens/DocumentUploadScreen';
+import MainTabs from './MainTabs';
 
 const Stack = createStackNavigator();
 
@@ -12,7 +12,7 @@ export default function AppNavigator() {
       initialRouteName="DocumentUpload"
     >
       <Stack.Screen name="DocumentUpload" component={DocumentUploadScreen} />
-      <Stack.Screen name="Home" component={HomeScreen} />
+      <Stack.Screen name="MainTabs" component={MainTabs} />
     </Stack.Navigator>
   );
 }
