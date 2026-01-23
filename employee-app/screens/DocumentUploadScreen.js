@@ -1,14 +1,16 @@
 import React from 'react';
 import { Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function DocumentUploadScreen({ navigation }) {
+  const insets = useSafeAreaInsets();
   const handleUpload = label => {
     Alert.alert('Upload', `${label} upload clicked (no upload yet).`);
   };
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { paddingTop: 24 + insets.top }]}>
       <StatusBar style="dark" />
       <Text style={styles.title}>Upload Documents</Text>
       <Text style={styles.subtitle}>Please upload your Aadhaar and PAN card</Text>
@@ -50,7 +52,6 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#F5F6F8',
     paddingHorizontal: 20,
-    paddingTop: 32,
   },
   title: {
     fontSize: 28,
