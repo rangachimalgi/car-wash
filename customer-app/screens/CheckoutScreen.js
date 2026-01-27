@@ -253,7 +253,7 @@ export default function CheckoutScreen({ navigation, route }) {
           style={styles.payNowButton}
           onPress={handlePayNow}
         >
-          <Text style={styles.payNowButtonText}>Pay Now</Text>
+          <Text style={styles.payNowButtonText}>Book Now</Text>
           <MaterialCommunityIcons name="arrow-right" size={20} color="#000000" />
         </TouchableOpacity>
       </View>
