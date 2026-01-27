@@ -26,7 +26,7 @@ export default function MainTabs({ onLogout, employeeId }) {
   const renderScene = ({ route }) => {
     switch (route.key) {
       case 'home':
-        return <HomeScreen onOpenAttendance={openAttendance} />;
+        return <HomeScreen onOpenAttendance={openAttendance} employeeId={employeeId} />;
       case 'attendance':
         return <AttendanceScreen />;
       case 'jobs':

@@ -1,21 +1,49 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { API_BASE_URL } from '../config/api';
 
-export default function HomeScreen({ onOpenAttendance }) {
+export default function HomeScreen({ onOpenAttendance, employeeId }) {
   const insets = useSafeAreaInsets();
+  const [incomingJob, setIncomingJob] = useState(null);
+  const [loadingJob, setLoadingJob] = useState(false);
   const attendance = {
     date: 'Today',
     status: 'Not marked',
     time: '09:30 AM',
   };
-  const job = {
-    id: 'JQ-1025',
-    service: 'Premium Wash',
-    customer: 'Kiran S',
-    time: 'Today, 4:30 PM',
+
+  const fetchIncomingJob = async () => {
+    if (!employeeId) return;
+    setLoadingJob(true);
+    try {
+      const res = await fetch(`${API_BASE_URL}/jobs/incoming?employeeId=${employeeId}`);
+      const data = await res.json();
+      const first = data?.data?.[0];
+      if (!first) {
+        setIncomingJob(null);
+      } else {
+        const firstItem = first.items?.[0];
+        setIncomingJob({
+          id: first._id,
+          service: firstItem?.service?.name || 'Service',
+          customer: first.customer?.name || 'Customer',
+          time: firstItem?.scheduledTimeSlot || 'Time slot',
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching incoming job:', error);
+      setIncomingJob(null);
+    } finally {
+      setLoadingJob(false);
+    }
   };
+
+  useEffect(() => {
+    fetchIncomingJob();
+  }, [employeeId]);
+
   return (
     <ScrollView
       style={styles.container}
@@ -41,17 +69,28 @@ export default function HomeScreen({ onOpenAttendance }) {
 
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>New Job</Text>
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>{job.service}</Text>
-          <Text style={styles.cardMeta}>{job.customer}</Text>
-          <Text style={styles.cardMeta}>{job.time}</Text>
-          <View style={styles.row}>
-            <Text style={styles.cardHint}>Job ID {job.id}</Text>
-            <TouchableOpacity style={styles.secondaryButton}>
-              <Text style={styles.secondaryButtonText}>View Job</Text>
+        {incomingJob ? (
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>{incomingJob.service}</Text>
+            <Text style={styles.cardMeta}>{incomingJob.customer}</Text>
+            <Text style={styles.cardMeta}>{incomingJob.time}</Text>
+            <View style={styles.row}>
+              <Text style={styles.cardHint}>Job ID {incomingJob.id}</Text>
+              <TouchableOpacity style={styles.secondaryButton}>
+                <Text style={styles.secondaryButtonText}>View Job</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        ) : (
+          <View style={styles.card}>
+            <Text style={styles.cardMeta}>
+              {loadingJob ? 'Loading jobs...' : 'No new jobs right now.'}
+            </Text>
+            <TouchableOpacity style={styles.secondaryButton} onPress={fetchIncomingJob}>
+              <Text style={styles.secondaryButtonText}>Refresh</Text>
             </TouchableOpacity>
           </View>
-        </View>
+        )}
       </View>
     </ScrollView>
   );
