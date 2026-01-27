@@ -1,66 +1,132 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { API_BASE_URL } from '../config/api';
 
-export default function JobQueueScreen() {
+export default function JobQueueScreen({ employeeId }) {
   const insets = useSafeAreaInsets();
   const styles = useMemo(() => createStyles(), []);
-  const [incomingJob, setIncomingJob] = useState({
-    id: 'JQ-1025',
-    service: 'Premium Wash',
-    customer: 'Kiran S',
-    address: 'HSR Layout, Bengaluru',
-    time: 'Today, 4:30 PM',
-    price: '₹499',
-  });
-  const [queue, setQueue] = useState([
-    { id: 'Q-201', service: 'Interior Cleaning', time: 'Today, 5:30 PM' },
-    { id: 'Q-202', service: 'Foam Wash', time: 'Tomorrow, 9:00 AM' },
-  ]);
-  const [history, setHistory] = useState([
-    { id: 'H-101', service: 'Basic Wash', date: 'Jan 22, 2026', status: 'Completed' },
-    { id: 'H-102', service: 'Detailing', date: 'Jan 20, 2026', status: 'Completed' },
-  ]);
+  const [incomingJobs, setIncomingJobs] = useState([]);
+  const [queue, setQueue] = useState([]);
+  const [history, setHistory] = useState([]);
+  const [loading, setLoading] = useState(false);
 
-  const handleAccept = () => {
-    if (!incomingJob) return;
-    setQueue(prev => [{ id: incomingJob.id, service: incomingJob.service, time: incomingJob.time }, ...prev]);
-    setIncomingJob(null);
+  const fetchJobs = async () => {
+    if (!employeeId) return;
+    setLoading(true);
+    try {
+      const [incomingRes, queueRes, historyRes] = await Promise.all([
+        fetch(`${API_BASE_URL}/jobs/incoming?employeeId=${employeeId}`),
+        fetch(`${API_BASE_URL}/jobs/queue?employeeId=${employeeId}`),
+        fetch(`${API_BASE_URL}/jobs/history?employeeId=${employeeId}`),
+      ]);
+      const incomingData = await incomingRes.json();
+      const queueData = await queueRes.json();
+      const historyData = await historyRes.json();
+      setIncomingJobs(incomingData.data || []);
+      setQueue(queueData.data || []);
+      setHistory(historyData.data || []);
+    } catch (error) {
+      console.error('Error fetching jobs:', error);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleDecline = () => {
-    setIncomingJob(null);
+  useEffect(() => {
+    fetchJobs();
+  }, [employeeId]);
+
+  const handleAccept = async (orderId) => {
+    try {
+      await fetch(`${API_BASE_URL}/jobs/${orderId}/accept`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ employeeId }),
+      });
+      fetchJobs();
+    } catch (error) {
+      console.error('Error accepting job:', error);
+    }
+  };
+
+  const handleDecline = async (orderId) => {
+    try {
+      await fetch(`${API_BASE_URL}/jobs/${orderId}/decline`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ employeeId }),
+      });
+      fetchJobs();
+    } catch (error) {
+      console.error('Error declining job:', error);
+    }
+  };
+
+  const mapOrderToCard = (order) => {
+    const firstItem = order?.items?.[0];
+    return {
+      id: order?._id,
+      service: firstItem?.service?.name || 'Service',
+      customer: order?.customer?.name || 'Customer',
+      address: order?.customer?.address || 'Address',
+      time: firstItem?.scheduledTimeSlot || 'Time slot',
+      price: `₹${order?.totalAmount ?? 0}`,
+    };
   };
 
   return (
     <View style={[styles.container, { paddingTop: 24 + insets.top }]}>
       <StatusBar style="dark" />
-      <Text style={styles.title}>Job Queue</Text>
+      <View style={styles.titleRow}>
+        <Text style={styles.title}>Job Queue</Text>
+        <TouchableOpacity style={styles.refreshButton} onPress={fetchJobs}>
+          <Text style={styles.refreshButtonText}>{loading ? 'Refreshing...' : 'Refresh'}</Text>
+        </TouchableOpacity>
+      </View>
 
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>New Job</Text>
-        {incomingJob ? (
-          <View style={styles.card}>
-            <Text style={styles.cardTitle}>{incomingJob.service}</Text>
-            <Text style={styles.cardMeta}>{incomingJob.customer}</Text>
-            <Text style={styles.cardMeta}>{incomingJob.address}</Text>
-            <View style={styles.row}>
-              <Text style={styles.cardMeta}>{incomingJob.time}</Text>
-              <Text style={styles.priceText}>{incomingJob.price}</Text>
-            </View>
-            <View style={styles.actionRow}>
-              <TouchableOpacity style={styles.declineButton} onPress={handleDecline}>
-                <Text style={styles.declineText}>Decline</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.acceptButton} onPress={handleAccept}>
-                <Text style={styles.acceptText}>Accept</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
+        {incomingJobs.length > 0 ? (
+          <FlatList
+            data={incomingJobs}
+            keyExtractor={item => item._id}
+            contentContainerStyle={styles.listContent}
+            renderItem={({ item }) => {
+              const card = mapOrderToCard(item);
+              return (
+                <View style={styles.card}>
+                  <Text style={styles.cardTitle}>{card.service}</Text>
+                  <Text style={styles.cardMeta}>{card.customer}</Text>
+                  <Text style={styles.cardMeta}>{card.address}</Text>
+                  <View style={styles.row}>
+                    <Text style={styles.cardMeta}>{card.time}</Text>
+                    <Text style={styles.priceText}>{card.price}</Text>
+                  </View>
+                  <View style={styles.actionRow}>
+                    <TouchableOpacity
+                      style={styles.declineButton}
+                      onPress={() => handleDecline(card.id)}
+                    >
+                      <Text style={styles.declineText}>Decline</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={styles.acceptButton}
+                      onPress={() => handleAccept(card.id)}
+                    >
+                      <Text style={styles.acceptText}>Accept</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              );
+            }}
+          />
         ) : (
           <View style={styles.emptyCard}>
-            <Text style={styles.emptyText}>No new jobs right now.</Text>
+            <Text style={styles.emptyText}>
+              {loading ? 'Loading jobs...' : 'No new jobs right now.'}
+            </Text>
           </View>
         )}
       </View>
@@ -69,17 +135,20 @@ export default function JobQueueScreen() {
         <Text style={styles.sectionTitle}>Queue</Text>
         <FlatList
           data={queue}
-          keyExtractor={item => item.id}
+          keyExtractor={item => item._id || item.id}
           contentContainerStyle={styles.listContent}
-          renderItem={({ item }) => (
-            <View style={styles.queueItem}>
-              <View>
-                <Text style={styles.queueTitle}>{item.service}</Text>
-                <Text style={styles.queueTime}>{item.time}</Text>
+          renderItem={({ item }) => {
+            const card = mapOrderToCard(item);
+            return (
+              <View style={styles.queueItem}>
+                <View>
+                  <Text style={styles.queueTitle}>{card.service}</Text>
+                  <Text style={styles.queueTime}>{card.time}</Text>
+                </View>
+                <Text style={styles.queueId}>{card.id?.slice(-6)}</Text>
               </View>
-              <Text style={styles.queueId}>{item.id}</Text>
-            </View>
-          )}
+            );
+          }}
           ListEmptyComponent={<Text style={styles.emptyText}>No jobs in queue.</Text>}
         />
       </View>
@@ -88,17 +157,20 @@ export default function JobQueueScreen() {
         <Text style={styles.sectionTitle}>History</Text>
         <FlatList
           data={history}
-          keyExtractor={item => item.id}
+          keyExtractor={item => item._id || item.id}
           contentContainerStyle={styles.listContent}
-          renderItem={({ item }) => (
-            <View style={styles.historyItem}>
-              <View>
-                <Text style={styles.queueTitle}>{item.service}</Text>
-                <Text style={styles.queueTime}>{item.date}</Text>
+          renderItem={({ item }) => {
+            const card = mapOrderToCard(item);
+            return (
+              <View style={styles.historyItem}>
+                <View>
+                  <Text style={styles.queueTitle}>{card.service}</Text>
+                  <Text style={styles.queueTime}>{card.time}</Text>
+                </View>
+                <Text style={styles.historyStatus}>Completed</Text>
               </View>
-              <Text style={styles.historyStatus}>{item.status}</Text>
-            </View>
-          )}
+            );
+          }}
           ListEmptyComponent={<Text style={styles.emptyText}>No history yet.</Text>}
         />
       </View>
@@ -118,6 +190,23 @@ const createStyles = () =>
       fontWeight: '700',
       color: '#1A1A1A',
       marginBottom: 16,
+    },
+    titleRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: 8,
+    },
+    refreshButton: {
+      backgroundColor: '#EEF2FF',
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      borderRadius: 10,
+    },
+    refreshButtonText: {
+      color: '#2F5CF4',
+      fontWeight: '700',
+      fontSize: 12,
     },
     section: {
       marginBottom: 20,

@@ -29,11 +29,15 @@ app.get('/', (req, res) => {
 import serviceRoutes from './routes/serviceRoutes.js';
 import orderRoutes from './routes/orderRoutes.js';
 import authRoutes from './routes/authRoutes.js';
+import jobRoutes from './routes/jobRoutes.js';
+import employeeRoutes from './routes/employeeRoutes.js';
 import { errorHandler } from './middleware/errorHandler.js';
 
 app.use('/api/services', serviceRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/auth', authRoutes);
+app.use('/api/jobs', jobRoutes);
+app.use('/api/employees', employeeRoutes);
 // app.use('/api/auth', authRoutes);
 // app.use('/api/bookings', bookingRoutes);
 

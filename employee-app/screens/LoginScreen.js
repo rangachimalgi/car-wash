@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import {
+  Alert,
   View,
   Text,
   StyleSheet,
@@ -12,16 +13,40 @@ import {
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { API_BASE_URL } from '../config/api';
 
 export default function LoginScreen({ onLogin }) {
   const insets = useSafeAreaInsets();
   const styles = useMemo(() => createStyles(), []);
   const [employeeId, setEmployeeId] = useState('');
   const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = () => {
-    if (onLogin) {
-      onLogin({ employeeId, password });
+  const handleSubmit = async () => {
+    if (!employeeId.trim() || !password.trim()) {
+      Alert.alert('Missing details', 'Please enter employee ID and password.');
+      return;
+    }
+    setLoading(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/employees/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ employeeId: employeeId.trim(), password }),
+      });
+      const data = await response.json();
+      if (!response.ok || !data.success) {
+        Alert.alert('Login failed', data.message || 'Invalid credentials');
+        return;
+      }
+      if (onLogin) {
+        onLogin({ employeeId: data.data.employeeId });
+      }
+    } catch (error) {
+      Alert.alert('Login failed', 'Unable to login right now.');
+      console.error('Employee login error:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -94,8 +119,11 @@ export default function LoginScreen({ onLogin }) {
             style={styles.primaryButton}
             onPress={handleSubmit}
             activeOpacity={0.8}
+            disabled={loading}
           >
-            <Text style={styles.primaryButtonText}>Login</Text>
+            <Text style={styles.primaryButtonText}>
+              {loading ? 'Logging in...' : 'Login'}
+            </Text>
             <MaterialCommunityIcons name="arrow-right" size={20} color="#FFFFFF" />
           </TouchableOpacity>
         </View>

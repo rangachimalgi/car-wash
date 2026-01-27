@@ -8,6 +8,7 @@ import AuthNavigator from './navigators/AuthNavigator';
 
 export default function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [employeeId, setEmployeeId] = useState('');
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
@@ -15,9 +16,20 @@ export default function App() {
         <PaperProvider>
           <NavigationContainer>
             {isLoggedIn ? (
-              <AppNavigator onLogout={() => setIsLoggedIn(false)} />
+              <AppNavigator
+                employeeId={employeeId}
+                onLogout={() => {
+                  setIsLoggedIn(false);
+                  setEmployeeId('');
+                }}
+              />
             ) : (
-              <AuthNavigator onLogin={() => setIsLoggedIn(true)} />
+              <AuthNavigator
+                onLogin={({ employeeId: id }) => {
+                  setEmployeeId(id || 'EMP-1024');
+                  setIsLoggedIn(true);
+                }}
+              />
             )}
           </NavigationContainer>
         </PaperProvider>

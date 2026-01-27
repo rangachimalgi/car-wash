@@ -1,7 +1,9 @@
 import Order from '../models/Order.js';
 import Service from '../models/Service.js';
+import Employee from '../models/Employee.js';
 
 const TAX_RATE = 0.18;
+let lastAssignedIndex = -1;
 
 const getPackagePrice = (service, packageType, packageTimes) => {
   if (!packageType || packageType === 'OneTime') {
@@ -18,7 +20,7 @@ const getPackagePrice = (service, packageType, packageTimes) => {
 // @access  Public (will add auth later)
 export const createOrder = async (req, res) => {
   try {
-    const { items, customer } = req.body;
+    const { items, customer, employeeIds } = req.body;
 
     if (!items || !Array.isArray(items) || items.length === 0) {
       return res.status(400).json({
@@ -72,6 +74,27 @@ export const createOrder = async (req, res) => {
     const tax = Number((subtotal * TAX_RATE).toFixed(2));
     const totalAmount = Number((subtotal + tax).toFixed(2));
 
+    const normalizedEmployeeIds = Array.isArray(employeeIds)
+      ? employeeIds.filter(Boolean)
+      : [];
+
+    let assignmentIds = normalizedEmployeeIds;
+    if (assignmentIds.length === 0) {
+      const employees = await Employee.find({ isActive: true })
+        .sort({ employeeId: 1 })
+        .select('employeeId');
+      if (employees.length > 0) {
+        lastAssignedIndex = (lastAssignedIndex + 1) % employees.length;
+        assignmentIds = [employees[lastAssignedIndex].employeeId];
+      }
+    }
+
+    const assignments = assignmentIds.map(employeeId => ({
+      employeeId,
+      status: 'pending',
+      assignedAt: new Date(),
+    }));
+
     const order = await Order.create({
       items: hydratedItems,
       subtotal,
@@ -82,6 +105,7 @@ export const createOrder = async (req, res) => {
         phone: customer?.phone || '',
         address: customer?.address || '',
       },
+      assignments,
     });
 
     res.status(201).json({
@@ -148,10 +172,22 @@ export const updateOrderStatus = async (req, res) => {
       });
     }
 
+    const update = { status };
+
+    if (status === 'Completed') {
+      update['assignments.$[accepted].status'] = 'completed';
+      update['assignments.$[accepted].completedAt'] = new Date();
+    }
+
     const order = await Order.findByIdAndUpdate(
       req.params.id,
-      { status },
-      { new: true }
+      update,
+      {
+        new: true,
+        arrayFilters: status === 'Completed'
+          ? [{ 'accepted.status': 'accepted' }]
+          : undefined,
+      }
     )
       .populate('items.service', 'name category')
       .populate('items.addOns', 'name basePrice');
