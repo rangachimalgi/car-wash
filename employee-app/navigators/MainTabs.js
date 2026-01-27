@@ -21,11 +21,12 @@ const renderIcon = ({ route, color, size }) => (
 
 export default function MainTabs({ onLogout }) {
   const [index, setIndex] = useState(0);
+  const openAttendance = () => setIndex(1);
 
   const renderScene = ({ route }) => {
     switch (route.key) {
       case 'home':
-        return <HomeScreen />;
+        return <HomeScreen onOpenAttendance={openAttendance} />;
       case 'attendance':
         return <AttendanceScreen />;
       case 'jobs':

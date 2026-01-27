@@ -8,13 +8,13 @@ import { Platform } from 'react-native';
 
 // Your computer's IP address
 // Find it with: ipconfig getifaddr en0 (Mac) or ipconfig (Windows)
-const COMPUTER_IP = '192.168.1.22';
+const COMPUTER_IP = '192.168.29.174';
 
 // Determine the correct base URL based on platform
 const getBaseURL = () => {
   if (!__DEV__) {
     // Production
-    return 'https://your-production-api.com/api';
+    return 'https://car-wash-vbry.onrender.com/api';
   }
 
   // Development - Platform specific

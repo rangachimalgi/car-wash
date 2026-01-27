@@ -3,7 +3,7 @@ import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-nati
 import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-export default function HomeScreen() {
+export default function HomeScreen({ onOpenAttendance }) {
   const insets = useSafeAreaInsets();
   const attendance = {
     date: 'Today',
@@ -33,7 +33,7 @@ export default function HomeScreen() {
             <Text style={styles.badge}>{attendance.status}</Text>
           </View>
           <Text style={styles.cardMeta}>Last check-in: {attendance.time}</Text>
-          <TouchableOpacity style={styles.primaryButton}>
+          <TouchableOpacity style={styles.primaryButton} onPress={onOpenAttendance}>
             <Text style={styles.primaryButtonText}>Mark Attendance</Text>
           </TouchableOpacity>
         </View>

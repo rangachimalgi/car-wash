@@ -24,17 +24,13 @@ export default function AttendanceScreen() {
     minute: '2-digit',
   });
 
-  const handleCheckIn = () => {
-    setStatus('checked_in');
-  };
-
-  const handleCheckOut = () => {
-    setStatus('checked_out');
+  const handleMarkAttendance = () => {
+    setStatus('completed');
     const newEntry = {
       id: String(Date.now()),
       date: today.toLocaleDateString('en-IN', { month: 'short', day: 'numeric', year: 'numeric' }),
-      checkIn: '09:30 AM',
-      checkOut: timeLabel,
+      checkIn: timeLabel,
+      checkOut: '—',
     };
     setHistory(prev => [newEntry, ...prev]);
   };
@@ -51,27 +47,21 @@ export default function AttendanceScreen() {
           <View
             style={[
               styles.statusDot,
-              status === 'checked_in' && styles.statusDotActive,
-              status === 'checked_out' && styles.statusDotDone,
+              status === 'completed' && styles.statusDotDone,
             ]}
           />
-          <Text style={styles.statusText}>
-            {status === 'not_marked' && 'Not marked'}
-            {status === 'checked_in' && 'Checked in'}
-            {status === 'checked_out' && 'Checked out'}
-          </Text>
+            <Text style={styles.statusText}>
+              {status === 'not_marked' && 'Not marked'}
+              {status === 'completed' && 'Attendance completed'}
+            </Text>
         </View>
         {status === 'not_marked' ? (
-          <TouchableOpacity style={styles.primaryButton} onPress={handleCheckIn}>
+          <TouchableOpacity style={styles.primaryButton} onPress={handleMarkAttendance}>
             <Text style={styles.primaryButtonText}>Mark Attendance</Text>
-          </TouchableOpacity>
-        ) : status === 'checked_in' ? (
-          <TouchableOpacity style={styles.secondaryButton} onPress={handleCheckOut}>
-            <Text style={styles.secondaryButtonText}>Check Out</Text>
           </TouchableOpacity>
         ) : (
           <View style={styles.doneBadge}>
-            <Text style={styles.doneBadgeText}>Attendance complete</Text>
+            <Text style={styles.doneBadgeText}>Attendance completed</Text>
           </View>
         )}
       </View>
@@ -165,17 +155,6 @@ const createStyles = () =>
     },
     primaryButtonText: {
       color: '#FFFFFF',
-      fontWeight: '700',
-      fontSize: 14,
-    },
-    secondaryButton: {
-      backgroundColor: '#EEF2FF',
-      borderRadius: 12,
-      paddingVertical: 14,
-      alignItems: 'center',
-    },
-    secondaryButtonText: {
-      color: '#2F5CF4',
       fontWeight: '700',
       fontSize: 14,
     },

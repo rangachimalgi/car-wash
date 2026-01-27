@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react'
 import './App.css'
 
 // API configuration
-const API_BASE_URL = 'http://localhost:8000/api'
+const API_BASE_URL = 'https://car-wash-vbry.onrender.com/api'
 
 function App() {
   const [activeTab, setActiveTab] = useState('services') // 'services', 'addons', 'coverage', 'orders'
