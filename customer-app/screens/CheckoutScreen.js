@@ -89,13 +89,17 @@ export default function CheckoutScreen({ navigation, route }) {
         };
       });
 
-      const storedAddress = await AsyncStorage.getItem('currentAddress');
+      const [storedAddress, storedName, storedPhone] = await Promise.all([
+        AsyncStorage.getItem('currentAddress'),
+        AsyncStorage.getItem('authName'),
+        AsyncStorage.getItem('authPhone'),
+      ]);
       console.log('Creating order payload:', itemsPayload);
       const response = await createOrder({
         items: itemsPayload,
         customer: {
-          name: '',
-          phone: '',
+          name: storedName || '',
+          phone: storedPhone || '',
           address: storedAddress || '',
         },
       });

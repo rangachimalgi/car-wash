@@ -1,6 +1,7 @@
 import Order from '../models/Order.js';
 import Service from '../models/Service.js';
 import Employee from '../models/Employee.js';
+import User from '../models/User.js';
 
 const TAX_RATE = 0.18;
 let lastAssignedIndex = -1;
@@ -108,6 +109,20 @@ export const createOrder = async (req, res) => {
       assignmentStatus: assignments.length > 0 ? 'pending' : 'declined',
       assignments,
     });
+
+    if (customer?.phone) {
+      await User.findOneAndUpdate(
+        { phone: customer.phone },
+        {
+          $set: {
+            name: customer?.name || '',
+            address: customer?.address || '',
+          },
+          $setOnInsert: { phone: customer.phone },
+        },
+        { new: true, upsert: true }
+      );
+    }
 
     res.status(201).json({
       success: true,
