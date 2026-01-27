@@ -105,6 +105,7 @@ export const createOrder = async (req, res) => {
         phone: customer?.phone || '',
         address: customer?.address || '',
       },
+      assignmentStatus: assignments.length > 0 ? 'pending' : 'declined',
       assignments,
     });
 
@@ -177,6 +178,7 @@ export const updateOrderStatus = async (req, res) => {
     if (status === 'Completed') {
       update['assignments.$[accepted].status'] = 'completed';
       update['assignments.$[accepted].completedAt'] = new Date();
+      update.assignmentStatus = 'completed';
     }
 
     const order = await Order.findByIdAndUpdate(

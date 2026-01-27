@@ -17,24 +17,7 @@ export default function ProfileScreen({ navigation }) {
     name: 'John Doe',
     phone: '',
     walletBalance: '₹2,500',
-    addresses: [
-      {
-        id: '1',
-        type: 'Home',
-        address: '123 Main Street, Apartment 4B',
-        city: 'Mumbai',
-        pincode: '400001',
-        isDefault: true,
-      },
-      {
-        id: '2',
-        type: 'Work',
-        address: '456 Business Park, Floor 5',
-        city: 'Mumbai',
-        pincode: '400002',
-        isDefault: false,
-      },
-    ],
+    addresses: [],
     vehicles: [
       {
         id: '1',
@@ -180,30 +163,34 @@ export default function ProfileScreen({ navigation }) {
             </TouchableOpacity>
           </View>
           
-          {userData.addresses.map((address) => (
-            <TouchableOpacity key={address.id} style={styles.addressCard} activeOpacity={0.7}>
-              <View style={styles.addressHeader}>
-                <View style={styles.addressTypeBadge}>
-                  <MaterialCommunityIcons 
-                    name={address.type === 'Home' ? 'home' : 'briefcase'} 
-                    size={16} 
-                    color={theme.accent} 
-                  />
-                  <Text style={styles.addressTypeText}>{address.type}</Text>
-                  {address.isDefault && (
-                    <View style={styles.defaultBadge}>
-                      <Text style={styles.defaultBadgeText}>Default</Text>
-                    </View>
-                  )}
+          {userData.addresses.length === 0 ? (
+            <Text style={styles.emptyText}>No saved addresses yet.</Text>
+          ) : (
+            userData.addresses.map((address) => (
+              <TouchableOpacity key={address.id} style={styles.addressCard} activeOpacity={0.7}>
+                <View style={styles.addressHeader}>
+                  <View style={styles.addressTypeBadge}>
+                    <MaterialCommunityIcons 
+                      name={address.type === 'Home' ? 'home' : 'briefcase'} 
+                      size={16} 
+                      color={theme.accent} 
+                    />
+                    <Text style={styles.addressTypeText}>{address.type}</Text>
+                    {address.isDefault && (
+                      <View style={styles.defaultBadge}>
+                        <Text style={styles.defaultBadgeText}>Default</Text>
+                      </View>
+                    )}
+                  </View>
+                  <TouchableOpacity>
+                    <MaterialCommunityIcons name="pencil" size={18} color={theme.textSecondary} />
+                  </TouchableOpacity>
                 </View>
-                <TouchableOpacity>
-                  <MaterialCommunityIcons name="pencil" size={18} color={theme.textSecondary} />
-                </TouchableOpacity>
-              </View>
-              <Text style={styles.addressText}>{address.address}</Text>
-              <Text style={styles.addressCity}>{address.city} - {address.pincode}</Text>
-            </TouchableOpacity>
-          ))}
+                <Text style={styles.addressText}>{address.address}</Text>
+                <Text style={styles.addressCity}>{address.city} - {address.pincode}</Text>
+              </TouchableOpacity>
+            ))
+          )}
         </View>
 
         {/* My Vehicles Section */}
@@ -513,6 +500,11 @@ const createStyles = theme => StyleSheet.create({
   addressCity: {
     fontSize: 13,
     color: theme.textSecondary,
+  },
+  emptyText: {
+    fontSize: 13,
+    color: theme.textSecondary,
+    marginTop: 4,
   },
   vehicleCard: {
     backgroundColor: theme.cardBackground,

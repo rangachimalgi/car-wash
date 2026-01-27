@@ -1264,6 +1264,30 @@ function App() {
                         <span className="detail-value">{new Date(order.createdAt).toLocaleString()}</span>
                       </div>
                     </div>
+                    <div className="order-card-details">
+                      <div className="detail-item">
+                        <span className="detail-label">Customer:</span>
+                        <span className="detail-value">{order.customer?.name || '—'}</span>
+                      </div>
+                      <div className="detail-item">
+                        <span className="detail-label">Phone:</span>
+                        <span className="detail-value">{order.customer?.phone || '—'}</span>
+                      </div>
+                      <div className="detail-item">
+                        <span className="detail-label">Address:</span>
+                        <span className="detail-value">{order.customer?.address || '—'}</span>
+                      </div>
+                    </div>
+                    <div className="order-card-details">
+                      <div className="detail-item">
+                        <span className="detail-label">Assigned Emp:</span>
+                        <span className="detail-value">{order.assignedEmployeeId || '—'}</span>
+                      </div>
+                      <div className="detail-item">
+                        <span className="detail-label">Assign Status:</span>
+                        <span className="detail-value">{order.assignmentStatus || '—'}</span>
+                      </div>
+                    </div>
                     <div className="order-slot-list">
                       <span className="detail-label">Slots:</span>
                       {(order.items || []).map((item, index) => {

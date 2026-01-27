@@ -69,6 +69,17 @@ const orderSchema = new mongoose.Schema({
     phone: { type: String, default: '' },
     address: { type: String, default: '' },
   },
+  assignmentStatus: {
+    type: String,
+    enum: ['pending', 'accepted', 'declined', 'completed'],
+    default: 'pending',
+    index: true,
+  },
+  assignedEmployeeId: {
+    type: String,
+    default: '',
+    index: true,
+  },
   assignments: [{
     employeeId: { type: String, required: true },
     status: {

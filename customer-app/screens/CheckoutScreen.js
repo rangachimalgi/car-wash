@@ -89,13 +89,14 @@ export default function CheckoutScreen({ navigation, route }) {
         };
       });
 
+      const storedAddress = await AsyncStorage.getItem('currentAddress');
       console.log('Creating order payload:', itemsPayload);
       const response = await createOrder({
         items: itemsPayload,
         customer: {
           name: '',
           phone: '',
-          address: '',
+          address: storedAddress || '',
         },
       });
       console.log('Order created:', response);

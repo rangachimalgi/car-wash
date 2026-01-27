@@ -1,8 +1,10 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import BackHeader from '../components/BackHeader';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Location from 'expo-location';
 import { useTheme } from '../theme/ThemeContext';
 
 const { width } = Dimensions.get('window');
@@ -16,8 +18,42 @@ export default function SlotSelectionScreen({ navigation, route }) {
 
   const [selectedDate, setSelectedDate] = useState(null);
   const [selectedTimeSlot, setSelectedTimeSlot] = useState(null);
+  const [locationAddress, setLocationAddress] = useState('');
+  const [locationError, setLocationError] = useState('');
+  const [locationLoading, setLocationLoading] = useState(false);
   const { theme, isLightMode } = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
+
+  useEffect(() => {
+    const loadSavedAddress = async () => {
+      try {
+        const saved = await AsyncStorage.getItem('currentAddress');
+        if (saved) {
+          setLocationAddress(saved);
+          return;
+        }
+        const savedAddresses = await AsyncStorage.getItem('savedAddresses');
+        if (savedAddresses) {
+          const parsed = JSON.parse(savedAddresses);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            const defaultAddress = parsed.find(addr => addr.isDefault) || parsed[0];
+            const fullAddress = [
+              defaultAddress.address,
+              defaultAddress.area,
+              defaultAddress.city,
+              defaultAddress.pincode,
+            ]
+              .filter(Boolean)
+              .join(', ');
+            setLocationAddress(fullAddress);
+          }
+        }
+      } catch (error) {
+        console.warn('Failed to load saved address:', error);
+      }
+    };
+    loadSavedAddress();
+  }, []);
 
   // Generate dates for the next 7 days
   const generateDates = () => {
@@ -80,6 +116,47 @@ export default function SlotSelectionScreen({ navigation, route }) {
     });
   };
 
+  const handleUseCurrentLocation = async () => {
+    setLocationLoading(true);
+    setLocationError('');
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        setLocationError('Location permission denied');
+        return;
+      }
+
+      const position = await Location.getCurrentPositionAsync({});
+      const [place] = await Location.reverseGeocodeAsync({
+        latitude: position.coords.latitude,
+        longitude: position.coords.longitude,
+      });
+
+      let address = '';
+      if (place) {
+        const parts = [
+          place.name,
+          place.street,
+          place.subLocality,
+          place.city,
+          place.region,
+          place.postalCode,
+        ].filter(Boolean);
+        address = parts.join(', ');
+      } else {
+        address = `${position.coords.latitude.toFixed(5)}, ${position.coords.longitude.toFixed(5)}`;
+      }
+
+      setLocationAddress(address);
+      await AsyncStorage.setItem('currentAddress', address);
+    } catch (error) {
+      console.error('Error getting location:', error);
+      setLocationError('Unable to get current location');
+    } finally {
+      setLocationLoading(false);
+    }
+  };
+
   return (
     <View style={styles.container}>
       <StatusBar style={isLightMode ? 'dark' : 'light'} />
@@ -96,11 +173,15 @@ export default function SlotSelectionScreen({ navigation, route }) {
             <Text style={styles.serviceAtTitle}>Service at</Text>
           </View>
           <Text style={styles.addressText}>
-            123 Main Street, Apartment 4B{'\n'}
-            Downtown, City 12345
+            {locationAddress || 'Location not set'}
           </Text>
-          <TouchableOpacity style={styles.changeAddressButton}>
-            <Text style={styles.changeAddressText}>Change Address</Text>
+          {locationError ? (
+            <Text style={styles.locationError}>{locationError}</Text>
+          ) : null}
+          <TouchableOpacity style={styles.changeAddressButton} onPress={handleUseCurrentLocation}>
+            <Text style={styles.changeAddressText}>
+              {locationLoading ? 'Getting location...' : 'Use Current Location'}
+            </Text>
           </TouchableOpacity>
         </View>
 
@@ -235,6 +316,11 @@ const createStyles = theme => StyleSheet.create({
     color: theme.textSecondary,
     lineHeight: 20,
     marginBottom: 12,
+  },
+  locationError: {
+    fontSize: 12,
+    color: theme.danger || '#FF5252',
+    marginBottom: 8,
   },
   changeAddressButton: {
     alignSelf: 'flex-start',

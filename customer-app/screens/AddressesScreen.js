@@ -1,48 +1,86 @@
-import React, { useMemo, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput } from 'react-native';
+import React, { useEffect, useMemo, useState } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import BackHeader from '../components/BackHeader';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Location from 'expo-location';
 import { useTheme } from '../theme/ThemeContext';
 
 export default function AddressesScreen({ navigation, route }) {
   const [searchQuery, setSearchQuery] = useState('');
   const { theme, isLightMode } = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
-  const [savedAddresses, setSavedAddresses] = useState([
-    {
-      id: '1',
-      type: 'Home',
-      address: '123 Main Street, Apartment 4B',
-      area: 'Downtown',
-      city: 'Mumbai',
-      pincode: '400001',
-      isDefault: true,
-    },
-    {
-      id: '2',
-      type: 'Work',
-      address: '456 Business Park, Floor 5',
-      area: 'Andheri',
-      city: 'Mumbai',
-      pincode: '400053',
-      isDefault: false,
-    },
-    {
-      id: '3',
-      type: 'Other',
-      address: '789 Residential Complex, Block C',
-      area: 'Bandra',
-      city: 'Mumbai',
-      pincode: '400050',
-      isDefault: false,
-    },
-  ]);
+  const [savedAddresses, setSavedAddresses] = useState([]);
+  const [isAdding, setIsAdding] = useState(false);
+  const [form, setForm] = useState({
+    type: 'Home',
+    address: '',
+    area: '',
+    city: '',
+    pincode: '',
+  });
 
-  const handleUseCurrentLocation = () => {
-    // TODO: Implement current location functionality
-    console.log('Use current location');
-    // This would typically use react-native-geolocation or expo-location
+  useEffect(() => {
+    const loadAddresses = async () => {
+      try {
+        const stored = await AsyncStorage.getItem('savedAddresses');
+        if (stored) {
+          setSavedAddresses(JSON.parse(stored));
+        }
+      } catch (error) {
+        console.warn('Failed to load addresses:', error);
+      }
+    };
+    loadAddresses();
+  }, []);
+
+  const persistAddresses = async (addresses) => {
+    setSavedAddresses(addresses);
+    await AsyncStorage.setItem('savedAddresses', JSON.stringify(addresses));
+  };
+
+  const handleUseCurrentLocation = async () => {
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission denied', 'Location permission is required.');
+        return;
+      }
+      const position = await Location.getCurrentPositionAsync({});
+      const [place] = await Location.reverseGeocodeAsync({
+        latitude: position.coords.latitude,
+        longitude: position.coords.longitude,
+      });
+
+      const parts = [
+        place?.name,
+        place?.street,
+        place?.subLocality,
+        place?.city,
+        place?.region,
+        place?.postalCode,
+      ].filter(Boolean);
+      const addressText = parts.join(', ') || `${position.coords.latitude}, ${position.coords.longitude}`;
+
+      const newAddress = {
+        id: String(Date.now()),
+        type: 'Current',
+        address: addressText,
+        area: place?.subLocality || '',
+        city: place?.city || '',
+        pincode: place?.postalCode || '',
+        isDefault: savedAddresses.length === 0,
+      };
+
+      const updated = [newAddress, ...savedAddresses];
+      await persistAddresses(updated);
+      await AsyncStorage.setItem('currentAddress', addressText);
+      handleSelectAddress(newAddress);
+    } catch (error) {
+      console.error('Use current location error:', error);
+      Alert.alert('Location error', 'Unable to get current location.');
+    }
   };
 
   const handleSelectAddress = (address) => {
@@ -51,24 +89,50 @@ export default function AddressesScreen({ navigation, route }) {
       route.params.onSelectAddress(address);
       navigation.goBack();
     }
+    const fullAddress = [address.address, address.area, address.city, address.pincode]
+      .filter(Boolean)
+      .join(', ');
+    AsyncStorage.setItem('currentAddress', fullAddress).catch(error => {
+      console.warn('Failed to store current address:', error);
+    });
+    navigation.goBack();
   };
 
   const handleAddNewAddress = () => {
-    // TODO: Navigate to add address screen
-    console.log('Add new address');
+    setIsAdding(true);
   };
 
   const handleDeleteAddress = (id) => {
-    setSavedAddresses(addresses => addresses.filter(addr => addr.id !== id));
+    const updated = savedAddresses.filter(addr => addr.id !== id);
+    persistAddresses(updated).catch(error => console.warn('Delete address failed:', error));
   };
 
   const handleSetDefault = (id) => {
-    setSavedAddresses(addresses =>
-      addresses.map(addr => ({
+    const updated = savedAddresses.map(addr => ({
         ...addr,
         isDefault: addr.id === id,
-      }))
-    );
+      }));
+    persistAddresses(updated).catch(error => console.warn('Set default failed:', error));
+  };
+
+  const handleSaveAddress = async () => {
+    if (!form.address.trim()) {
+      Alert.alert('Missing address', 'Please enter an address.');
+      return;
+    }
+    const newAddress = {
+      id: String(Date.now()),
+      type: form.type,
+      address: form.address.trim(),
+      area: form.area.trim(),
+      city: form.city.trim(),
+      pincode: form.pincode.trim(),
+      isDefault: savedAddresses.length === 0,
+    };
+    const updated = [newAddress, ...savedAddresses];
+    await persistAddresses(updated);
+    setIsAdding(false);
+    setForm({ type: 'Home', address: '', area: '', city: '', pincode: '' });
   };
 
   return (
@@ -123,6 +187,64 @@ export default function AddressesScreen({ navigation, route }) {
           </View>
           <MaterialCommunityIcons name="chevron-right" size={24} color={theme.textSecondary} />
         </TouchableOpacity>
+
+        {isAdding && (
+          <View style={styles.addForm}>
+            <Text style={styles.addFormTitle}>Add Address</Text>
+            <View style={styles.typeRow}>
+              {['Home', 'Work', 'Other'].map(type => (
+                <TouchableOpacity
+                  key={type}
+                  style={[styles.typeChip, form.type === type && styles.typeChipActive]}
+                  onPress={() => setForm(prev => ({ ...prev, type }))}
+                >
+                  <Text style={[styles.typeChipText, form.type === type && styles.typeChipTextActive]}>
+                    {type}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+            <TextInput
+              style={styles.input}
+              placeholder="Address"
+              placeholderTextColor={theme.textSecondary}
+              value={form.address}
+              onChangeText={(text) => setForm(prev => ({ ...prev, address: text }))}
+            />
+            <TextInput
+              style={styles.input}
+              placeholder="Area"
+              placeholderTextColor={theme.textSecondary}
+              value={form.area}
+              onChangeText={(text) => setForm(prev => ({ ...prev, area: text }))}
+            />
+            <View style={styles.formRow}>
+              <TextInput
+                style={[styles.input, styles.halfInput]}
+                placeholder="City"
+                placeholderTextColor={theme.textSecondary}
+                value={form.city}
+                onChangeText={(text) => setForm(prev => ({ ...prev, city: text }))}
+              />
+              <TextInput
+                style={[styles.input, styles.halfInput]}
+                placeholder="Pincode"
+                placeholderTextColor={theme.textSecondary}
+                value={form.pincode}
+                onChangeText={(text) => setForm(prev => ({ ...prev, pincode: text }))}
+                keyboardType="number-pad"
+              />
+            </View>
+            <View style={styles.formActions}>
+              <TouchableOpacity style={styles.cancelButton} onPress={() => setIsAdding(false)}>
+                <Text style={styles.cancelButtonText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.saveButton} onPress={handleSaveAddress}>
+                <Text style={styles.saveButtonText}>Save</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
 
         {/* Saved Addresses Section */}
         <View style={styles.savedAddressesSection}>
@@ -373,5 +495,86 @@ const createStyles = theme => StyleSheet.create({
   addressDetails: {
     fontSize: 14,
     color: theme.textSecondary,
+  },
+  addForm: {
+    backgroundColor: theme.cardBackground,
+    borderRadius: 12,
+    padding: 16,
+    marginHorizontal: 16,
+    marginBottom: 24,
+    borderWidth: 1,
+    borderColor: theme.cardBorder,
+  },
+  addFormTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: theme.textPrimary,
+    marginBottom: 12,
+  },
+  typeRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 12,
+  },
+  typeChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: theme.cardBorder,
+  },
+  typeChipActive: {
+    backgroundColor: theme.accent,
+    borderColor: theme.accent,
+  },
+  typeChipText: {
+    fontSize: 12,
+    color: theme.textSecondary,
+    fontWeight: '600',
+  },
+  typeChipTextActive: {
+    color: '#000000',
+  },
+  input: {
+    backgroundColor: theme.background,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: theme.cardBorder,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 14,
+    color: theme.textPrimary,
+    marginBottom: 10,
+  },
+  formRow: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  halfInput: {
+    flex: 1,
+  },
+  formActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: 12,
+    marginTop: 4,
+  },
+  cancelButton: {
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+  },
+  cancelButtonText: {
+    color: theme.textSecondary,
+    fontWeight: '600',
+  },
+  saveButton: {
+    backgroundColor: theme.accent,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 10,
+  },
+  saveButtonText: {
+    color: '#000000',
+    fontWeight: '700',
   },
 });

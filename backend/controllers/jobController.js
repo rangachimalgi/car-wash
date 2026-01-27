@@ -97,6 +97,8 @@ export const acceptJob = async (req, res) => {
       }
       return a;
     });
+    order.assignmentStatus = 'accepted';
+    order.assignedEmployeeId = employeeId;
     await order.save();
 
     res.status(200).json({ success: true, data: order });
@@ -126,6 +128,12 @@ export const declineJob = async (req, res) => {
 
     assignment.status = 'declined';
     assignment.declinedAt = new Date();
+    const hasPending = order.assignments.some(a => a.status === 'pending');
+    const hasAccepted = order.assignments.some(a => a.status === 'accepted');
+    if (!hasPending && !hasAccepted) {
+      order.assignmentStatus = 'declined';
+      order.assignedEmployeeId = '';
+    }
     await order.save();
 
     res.status(200).json({ success: true, data: order });
