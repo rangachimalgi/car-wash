@@ -48,7 +48,11 @@ export default function CustomHeader({ navigation }) {
               color={colors.text} 
             />
           </TouchableOpacity>
-          <TouchableOpacity activeOpacity={0.7} style={styles.iconButton}>
+          <TouchableOpacity
+            activeOpacity={0.7}
+            style={styles.iconButton}
+            onPress={() => navigation?.navigate('VehicleDetails')}
+          >
             <MaterialCommunityIcons 
               name="car" 
               size={24} 

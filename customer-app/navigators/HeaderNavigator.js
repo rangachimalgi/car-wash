@@ -11,6 +11,7 @@ import CheckoutScreen from '../screens/CheckoutScreen';
 import LoginScreen from '../screens/LoginScreen';
 import RegisterScreen from '../screens/RegisterScreen';
 import AddressesScreen from '../screens/AddressesScreen';
+import VehicleDetailsScreen from '../screens/VehicleDetailsScreen';
 
 const Stack = createStackNavigator();
 
@@ -81,6 +82,11 @@ export default function HeaderNavigator() {
       <Stack.Screen 
         name="Addresses" 
         component={AddressesScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="VehicleDetails"
+        component={VehicleDetailsScreen}
         options={{ headerShown: false }}
       />
     </Stack.Navigator>

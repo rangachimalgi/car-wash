@@ -37,7 +37,9 @@ export default function JobDetailScreen({ route, navigation }) {
   const address = job?.customer?.address || 'Address not provided';
   const customerName = job?.customer?.name || 'Customer';
   const customerPhone = job?.customer?.phone || 'Phone not provided';
-  const vehicle = item?.vehicleType || 'Not provided';
+  const vehicle = [job?.customer?.vehicleType, job?.customer?.vehicleModel]
+    .filter(Boolean)
+    .join(' ') || 'Not provided';
 
   return (
     <View style={[styles.container, { paddingTop: 24 + insets.top }]}>

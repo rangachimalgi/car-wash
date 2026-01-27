@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Alert, Switch } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import CustomHeader from '../components/CustomHeader';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTheme } from '../theme/ThemeContext';
+import { useFocusEffect } from '@react-navigation/native';
 
 export default function ProfileScreen({ navigation }) {
   const insets = useSafeAreaInsets();
@@ -18,27 +19,10 @@ export default function ProfileScreen({ navigation }) {
     phone: '',
     walletBalance: '₹2,500',
     addresses: [],
-    vehicles: [
-      {
-        id: '1',
-        type: 'Car',
-        brand: 'Honda',
-        model: 'City',
-        year: '2020',
-        plateNumber: 'MH-01-AB-1234',
-        isDefault: true,
-      },
-      {
-        id: '2',
-        type: 'Bike',
-        brand: 'Yamaha',
-        model: 'R15',
-        year: '2021',
-        plateNumber: 'MH-01-CD-5678',
-        isDefault: false,
-      },
-    ],
+    vehicles: [],
   });
+  const [vehicleType, setVehicleType] = useState('SUV');
+  const [vehicleModel, setVehicleModel] = useState('');
 
   useEffect(() => {
     const loadProfile = async () => {
@@ -52,12 +36,41 @@ export default function ProfileScreen({ navigation }) {
           name: storedName || prev.name,
           phone: storedPhone || prev.phone,
         }));
+        if (storedPhone) {
+          const [storedVehicleType, storedVehicleModel] = await Promise.all([
+            AsyncStorage.getItem(`userVehicleType:${storedPhone}`),
+            AsyncStorage.getItem(`userVehicleModel:${storedPhone}`),
+          ]);
+          if (storedVehicleType) setVehicleType(storedVehicleType);
+          if (storedVehicleModel) setVehicleModel(storedVehicleModel);
+        }
       } catch (error) {
         console.error('Error loading profile:', error);
       }
     };
     loadProfile();
   }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      const refreshVehicle = async () => {
+        try {
+          const storedPhone = await AsyncStorage.getItem('authPhone');
+          if (!storedPhone) return;
+          const [storedVehicleType, storedVehicleModel] = await Promise.all([
+            AsyncStorage.getItem(`userVehicleType:${storedPhone}`),
+            AsyncStorage.getItem(`userVehicleModel:${storedPhone}`),
+          ]);
+          setVehicleType(storedVehicleType || 'SUV');
+          setVehicleModel(storedVehicleModel || '');
+        } catch (error) {
+          console.warn('Failed to refresh vehicle:', error);
+        }
+      };
+      refreshVehicle();
+    }, [])
+  );
+
 
   return (
     <View style={styles.container}>
@@ -193,43 +206,38 @@ export default function ProfileScreen({ navigation }) {
           )}
         </View>
 
-        {/* My Vehicles Section */}
+        {/* My Vehicle Section */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <MaterialCommunityIcons name="car" size={24} color={theme.accent} />
-            <Text style={styles.sectionTitle}>My Vehicles</Text>
-            <TouchableOpacity style={styles.addButton}>
-              <MaterialCommunityIcons name="plus" size={20} color={theme.accent} />
+            <Text style={styles.sectionTitle}>My Vehicle</Text>
+            <TouchableOpacity style={styles.addButton} onPress={() => navigation.navigate('VehicleDetails')}>
+              <MaterialCommunityIcons name="pencil" size={20} color={theme.accent} />
             </TouchableOpacity>
           </View>
-          
-          {userData.vehicles.map((vehicle) => (
-            <TouchableOpacity key={vehicle.id} style={styles.vehicleCard} activeOpacity={0.7}>
-              <View style={styles.vehicleHeader}>
-                <View style={styles.vehicleIconContainer}>
-                  <MaterialCommunityIcons 
-                    name={vehicle.type === 'Car' ? 'car' : 'motorbike'} 
-                    size={32} 
-                    color={theme.accent} 
-                  />
-                </View>
-                <View style={styles.vehicleInfo}>
-                  <View style={styles.vehicleTitleRow}>
-                    <Text style={styles.vehicleName}>{vehicle.brand} {vehicle.model}</Text>
-                    {vehicle.isDefault && (
-                      <View style={styles.defaultBadge}>
-                        <Text style={styles.defaultBadgeText}>Default</Text>
-                      </View>
-                    )}
-                  </View>
-                  <Text style={styles.vehicleDetails}>{vehicle.year} • {vehicle.plateNumber}</Text>
-                </View>
-                <TouchableOpacity>
-                  <MaterialCommunityIcons name="pencil" size={18} color={theme.textSecondary} />
-                </TouchableOpacity>
+          <View style={styles.vehicleCard}>
+            <View style={styles.vehicleHeader}>
+              <View style={styles.vehicleIconContainer}>
+                <MaterialCommunityIcons name="car" size={32} color={theme.accent} />
               </View>
+              <View style={styles.vehicleInfo}>
+                <View style={styles.vehicleTitleRow}>
+                  <Text style={styles.vehicleName}>
+                    {vehicleType ? `${vehicleType}` : 'Vehicle not set'}
+                  </Text>
+                </View>
+                <Text style={styles.vehicleDetails}>
+                  {vehicleModel || 'Add your vehicle model'}
+                </Text>
+              </View>
+            </View>
+            <TouchableOpacity
+              style={styles.saveVehicleButton}
+              onPress={() => navigation.navigate('VehicleDetails')}
+            >
+              <Text style={styles.saveVehicleText}>Edit Vehicle</Text>
             </TouchableOpacity>
-          ))}
+          </View>
         </View>
 
         {/* Appearance Section */}
@@ -544,6 +552,58 @@ const createStyles = theme => StyleSheet.create({
   vehicleDetails: {
     fontSize: 13,
     color: theme.textSecondary,
+  },
+  inputLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: theme.textSecondary,
+    marginBottom: 8,
+  },
+  typeRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 12,
+  },
+  typeChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: theme.cardBorder,
+  },
+  typeChipActive: {
+    backgroundColor: theme.accent,
+    borderColor: theme.accent,
+  },
+  typeChipText: {
+    fontSize: 12,
+    color: theme.textSecondary,
+    fontWeight: '600',
+  },
+  typeChipTextActive: {
+    color: '#000000',
+  },
+  input: {
+    backgroundColor: theme.background,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: theme.cardBorder,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 14,
+    color: theme.textPrimary,
+    marginBottom: 12,
+  },
+  saveVehicleButton: {
+    backgroundColor: theme.accent,
+    borderRadius: 12,
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
+  saveVehicleText: {
+    color: '#000000',
+    fontWeight: '700',
+    fontSize: 14,
   },
   settingCard: {
     backgroundColor: theme.cardBackground,

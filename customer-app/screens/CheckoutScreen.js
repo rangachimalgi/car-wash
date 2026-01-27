@@ -94,6 +94,12 @@ export default function CheckoutScreen({ navigation, route }) {
         AsyncStorage.getItem('authName'),
         AsyncStorage.getItem('authPhone'),
       ]);
+      const [storedVehicleType, storedVehicleModel] = storedPhone
+        ? await Promise.all([
+            AsyncStorage.getItem(`userVehicleType:${storedPhone}`),
+            AsyncStorage.getItem(`userVehicleModel:${storedPhone}`),
+          ])
+        : ['', ''];
       console.log('Creating order payload:', itemsPayload);
       const response = await createOrder({
         items: itemsPayload,
@@ -101,6 +107,8 @@ export default function CheckoutScreen({ navigation, route }) {
           name: storedName || '',
           phone: storedPhone || '',
           address: storedAddress || '',
+          vehicleType: storedVehicleType || '',
+          vehicleModel: storedVehicleModel || '',
         },
       });
       console.log('Order created:', response);

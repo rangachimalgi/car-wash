@@ -68,6 +68,8 @@ const orderSchema = new mongoose.Schema({
     name: { type: String, default: '' },
     phone: { type: String, default: '' },
     address: { type: String, default: '' },
+    vehicleType: { type: String, default: '' },
+    vehicleModel: { type: String, default: '' },
   },
   assignmentStatus: {
     type: String,

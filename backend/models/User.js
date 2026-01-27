@@ -17,6 +17,16 @@ const userSchema = new mongoose.Schema({
     default: '',
     trim: true,
   },
+  vehicleType: {
+    type: String,
+    default: '',
+    trim: true,
+  },
+  vehicleModel: {
+    type: String,
+    default: '',
+    trim: true,
+  },
   isActive: {
     type: Boolean,
     default: true,

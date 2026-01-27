@@ -105,6 +105,8 @@ export const createOrder = async (req, res) => {
         name: customer?.name || '',
         phone: customer?.phone || '',
         address: customer?.address || '',
+        vehicleType: customer?.vehicleType || '',
+        vehicleModel: customer?.vehicleModel || '',
       },
       assignmentStatus: assignments.length > 0 ? 'pending' : 'declined',
       assignments,

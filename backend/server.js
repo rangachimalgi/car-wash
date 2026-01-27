@@ -31,6 +31,7 @@ import orderRoutes from './routes/orderRoutes.js';
 import authRoutes from './routes/authRoutes.js';
 import jobRoutes from './routes/jobRoutes.js';
 import employeeRoutes from './routes/employeeRoutes.js';
+import userRoutes from './routes/userRoutes.js';
 import { errorHandler } from './middleware/errorHandler.js';
 
 app.use('/api/services', serviceRoutes);
@@ -38,6 +39,7 @@ app.use('/api/orders', orderRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/jobs', jobRoutes);
 app.use('/api/employees', employeeRoutes);
+app.use('/api/users', userRoutes);
 // app.use('/api/auth', authRoutes);
 // app.use('/api/bookings', bookingRoutes);
 
