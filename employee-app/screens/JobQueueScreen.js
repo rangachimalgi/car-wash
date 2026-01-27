@@ -1,7 +1,8 @@
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useMemo, useState, useEffect, useCallback } from 'react';
 import { FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useFocusEffect } from '@react-navigation/native';
 import { API_BASE_URL } from '../config/api';
 
 export default function JobQueueScreen({ employeeId, navigation }) {
@@ -37,6 +38,12 @@ export default function JobQueueScreen({ employeeId, navigation }) {
   useEffect(() => {
     fetchJobs();
   }, [employeeId]);
+
+  useFocusEffect(
+    useCallback(() => {
+      fetchJobs();
+    }, [employeeId])
+  );
 
   const handleAccept = async (orderId) => {
     try {
@@ -152,6 +159,12 @@ export default function JobQueueScreen({ employeeId, navigation }) {
                     onPress={() => navigation?.navigate('JobDetail', { orderId: card.id })}
                   >
                     <Text style={styles.viewButtonText}>View Job</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.startButton}
+                    onPress={() => navigation?.navigate('StartService', { orderId: card.id })}
+                  >
+                    <Text style={styles.startButtonText}>Start Service</Text>
                   </TouchableOpacity>
                 </View>
               </View>
@@ -345,6 +358,17 @@ const createStyles = () =>
     },
     viewButtonText: {
       color: '#2F5CF4',
+      fontWeight: '700',
+      fontSize: 11,
+    },
+    startButton: {
+      backgroundColor: '#22C55E',
+      borderRadius: 8,
+      paddingHorizontal: 10,
+      paddingVertical: 6,
+    },
+    startButtonText: {
+      color: '#FFFFFF',
       fontWeight: '700',
       fontSize: 11,
     },
