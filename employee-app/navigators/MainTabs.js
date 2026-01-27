@@ -19,7 +19,7 @@ const renderIcon = ({ route, color, size }) => (
   <MaterialCommunityIcons name={route.icon} size={size} color={color} />
 );
 
-export default function MainTabs({ onLogout, employeeId }) {
+export default function MainTabs({ onLogout, employeeId, navigation }) {
   const [index, setIndex] = useState(0);
   const openAttendance = () => setIndex(1);
 
@@ -30,7 +30,7 @@ export default function MainTabs({ onLogout, employeeId }) {
       case 'attendance':
         return <AttendanceScreen />;
       case 'jobs':
-        return <JobQueueScreen employeeId={employeeId} />;
+        return <JobQueueScreen employeeId={employeeId} navigation={navigation} />;
       case 'earnings':
         return <EarningsHistoryScreen />;
       case 'profile':

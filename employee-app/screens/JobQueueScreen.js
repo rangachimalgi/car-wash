@@ -4,7 +4,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { API_BASE_URL } from '../config/api';
 
-export default function JobQueueScreen({ employeeId }) {
+export default function JobQueueScreen({ employeeId, navigation }) {
   const insets = useSafeAreaInsets();
   const styles = useMemo(() => createStyles(), []);
   const [incomingJobs, setIncomingJobs] = useState([]);
@@ -145,7 +145,15 @@ export default function JobQueueScreen({ employeeId }) {
                   <Text style={styles.queueTitle}>{card.service}</Text>
                   <Text style={styles.queueTime}>{card.time}</Text>
                 </View>
-                <Text style={styles.queueId}>{card.id?.slice(-6)}</Text>
+                <View style={styles.queueActions}>
+                  <Text style={styles.queueId}>{card.id?.slice(-6)}</Text>
+                  <TouchableOpacity
+                    style={styles.viewButton}
+                    onPress={() => navigation?.navigate('JobDetail', { orderId: card.id })}
+                  >
+                    <Text style={styles.viewButtonText}>View Job</Text>
+                  </TouchableOpacity>
+                </View>
               </View>
             );
           }}
@@ -300,6 +308,10 @@ const createStyles = () =>
       justifyContent: 'space-between',
       alignItems: 'center',
     },
+    queueActions: {
+      alignItems: 'flex-end',
+      gap: 8,
+    },
     historyItem: {
       backgroundColor: '#FFFFFF',
       borderRadius: 12,
@@ -324,6 +336,17 @@ const createStyles = () =>
       fontSize: 11,
       color: '#6B7280',
       fontWeight: '600',
+    },
+    viewButton: {
+      backgroundColor: '#EEF2FF',
+      borderRadius: 8,
+      paddingHorizontal: 10,
+      paddingVertical: 6,
+    },
+    viewButtonText: {
+      color: '#2F5CF4',
+      fontWeight: '700',
+      fontSize: 11,
     },
     historyStatus: {
       fontSize: 12,
