@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -8,7 +8,24 @@ export default function StartServiceScreen({ navigation, route }) {
   const insets = useSafeAreaInsets();
   const [paymentReceived, setPaymentReceived] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [amount, setAmount] = useState(null);
   const orderId = route?.params?.orderId;
+
+  useEffect(() => {
+    const loadAmount = async () => {
+      if (!orderId) return;
+      try {
+        const res = await fetch(`${API_BASE_URL}/orders/${orderId}`);
+        const data = await res.json();
+        if (res.ok && data?.data?.totalAmount != null) {
+          setAmount(data.data.totalAmount);
+        }
+      } catch (error) {
+        console.error('Error loading order amount:', error);
+      }
+    };
+    loadAmount();
+  }, [orderId]);
 
   const handleSubmit = async () => {
     if (!orderId) {
@@ -63,7 +80,9 @@ export default function StartServiceScreen({ navigation, route }) {
         onPress={() => setPaymentReceived(true)}
       >
         <Text style={styles.paymentButtonText}>
-          {paymentReceived ? 'Payment Received' : 'Get Payment'}
+          {paymentReceived
+            ? 'Payment Received'
+            : `Get Payment${amount != null ? ` ₹${amount}` : ''}`}
         </Text>
       </TouchableOpacity>
 
