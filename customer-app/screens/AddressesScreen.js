@@ -76,6 +76,8 @@ export default function AddressesScreen({ navigation, route }) {
       const updated = [newAddress, ...savedAddresses];
       await persistAddresses(updated);
       await AsyncStorage.setItem('currentAddress', addressText);
+      await AsyncStorage.setItem('currentLat', String(position.coords.latitude));
+      await AsyncStorage.setItem('currentLng', String(position.coords.longitude));
       handleSelectAddress(newAddress);
     } catch (error) {
       console.error('Use current location error:', error);
@@ -95,6 +97,8 @@ export default function AddressesScreen({ navigation, route }) {
     AsyncStorage.setItem('currentAddress', fullAddress).catch(error => {
       console.warn('Failed to store current address:', error);
     });
+    AsyncStorage.removeItem('currentLat').catch(() => {});
+    AsyncStorage.removeItem('currentLng').catch(() => {});
     navigation.goBack();
   };
 

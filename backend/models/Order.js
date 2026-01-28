@@ -70,6 +70,8 @@ const orderSchema = new mongoose.Schema({
     address: { type: String, default: '' },
     vehicleType: { type: String, default: '' },
     vehicleModel: { type: String, default: '' },
+    latitude: { type: Number },
+    longitude: { type: Number },
   },
   assignmentStatus: {
     type: String,

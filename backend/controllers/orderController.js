@@ -107,6 +107,8 @@ export const createOrder = async (req, res) => {
         address: customer?.address || '',
         vehicleType: customer?.vehicleType || '',
         vehicleModel: customer?.vehicleModel || '',
+        latitude: typeof customer?.latitude === 'number' ? customer.latitude : undefined,
+        longitude: typeof customer?.longitude === 'number' ? customer.longitude : undefined,
       },
       assignmentStatus: assignments.length > 0 ? 'pending' : 'declined',
       assignments,

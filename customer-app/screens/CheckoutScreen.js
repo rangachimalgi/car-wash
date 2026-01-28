@@ -89,10 +89,12 @@ export default function CheckoutScreen({ navigation, route }) {
         };
       });
 
-      const [storedAddress, storedName, storedPhone] = await Promise.all([
+      const [storedAddress, storedName, storedPhone, storedLat, storedLng] = await Promise.all([
         AsyncStorage.getItem('currentAddress'),
         AsyncStorage.getItem('authName'),
         AsyncStorage.getItem('authPhone'),
+        AsyncStorage.getItem('currentLat'),
+        AsyncStorage.getItem('currentLng'),
       ]);
       const [storedVehicleType, storedVehicleModel] = storedPhone
         ? await Promise.all([
@@ -109,6 +111,8 @@ export default function CheckoutScreen({ navigation, route }) {
           address: storedAddress || '',
           vehicleType: storedVehicleType || '',
           vehicleModel: storedVehicleModel || '',
+          latitude: storedLat ? Number(storedLat) : undefined,
+          longitude: storedLng ? Number(storedLng) : undefined,
         },
       });
       console.log('Order created:', response);

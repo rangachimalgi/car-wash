@@ -149,6 +149,8 @@ export default function SlotSelectionScreen({ navigation, route }) {
 
       setLocationAddress(address);
       await AsyncStorage.setItem('currentAddress', address);
+      await AsyncStorage.setItem('currentLat', String(position.coords.latitude));
+      await AsyncStorage.setItem('currentLng', String(position.coords.longitude));
     } catch (error) {
       console.error('Error getting location:', error);
       setLocationError('Unable to get current location');

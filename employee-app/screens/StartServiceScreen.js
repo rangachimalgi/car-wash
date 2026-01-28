@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, Linking, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { API_BASE_URL } from '../config/api';
@@ -9,6 +9,8 @@ export default function StartServiceScreen({ navigation, route }) {
   const [paymentReceived, setPaymentReceived] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [amount, setAmount] = useState(null);
+  const [address, setAddress] = useState('');
+  const [coords, setCoords] = useState(null);
   const orderId = route?.params?.orderId;
 
   useEffect(() => {
@@ -17,8 +19,18 @@ export default function StartServiceScreen({ navigation, route }) {
       try {
         const res = await fetch(`${API_BASE_URL}/orders/${orderId}`);
         const data = await res.json();
-        if (res.ok && data?.data?.totalAmount != null) {
-          setAmount(data.data.totalAmount);
+        if (res.ok && data?.data) {
+          if (data.data.totalAmount != null) {
+            setAmount(data.data.totalAmount);
+          }
+          setAddress(data.data.customer?.address || '');
+          const lat = data.data.customer?.latitude;
+          const lng = data.data.customer?.longitude;
+          if (typeof lat === 'number' && typeof lng === 'number') {
+            setCoords({ lat, lng });
+          } else {
+            setCoords(null);
+          }
         }
       } catch (error) {
         console.error('Error loading order amount:', error);
@@ -26,6 +38,29 @@ export default function StartServiceScreen({ navigation, route }) {
     };
     loadAmount();
   }, [orderId]);
+
+  const handleOpenMaps = async () => {
+    if (!coords && !address) {
+      Alert.alert('No location', 'Customer location not available.');
+      return;
+    }
+    const destination = coords ? `${coords.lat},${coords.lng}` : encodeURIComponent(address);
+    const httpUrl = Platform.OS === 'ios'
+      ? `http://maps.apple.com/?daddr=${destination}`
+      : `https://www.google.com/maps/dir/?api=1&destination=${destination}`;
+    try {
+      await Linking.openURL(httpUrl);
+    } catch (error) {
+      const geoUrl = coords
+        ? `geo:${coords.lat},${coords.lng}?q=${coords.lat},${coords.lng}`
+        : `geo:0,0?q=${destination}`;
+      try {
+        await Linking.openURL(geoUrl);
+      } catch (geoError) {
+        Alert.alert('Maps unavailable', 'Unable to open maps on this device.');
+      }
+    }
+  };
 
   const handleSubmit = async () => {
     if (!orderId) {
@@ -58,6 +93,14 @@ export default function StartServiceScreen({ navigation, route }) {
     <View style={[styles.container, { paddingTop: 24 + insets.top }]}>
       <StatusBar style="dark" />
       <Text style={styles.title}>Start Service</Text>
+
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Customer Location</Text>
+        <Text style={styles.sectionHint}>{address || 'Address not available'}</Text>
+        <TouchableOpacity style={styles.locationButton} onPress={handleOpenMaps}>
+          <Text style={styles.locationButtonText}>Open in Maps</Text>
+        </TouchableOpacity>
+      </View>
 
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Before Photos</Text>
@@ -95,6 +138,8 @@ export default function StartServiceScreen({ navigation, route }) {
           {submitting ? 'Submitting...' : 'Submit'}
         </Text>
       </TouchableOpacity>
+
+      
     </View>
   );
 }
@@ -168,5 +213,16 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontWeight: '700',
     fontSize: 14,
+  },
+  locationButton: {
+    backgroundColor: '#1F2937',
+    borderRadius: 10,
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
+  locationButtonText: {
+    color: '#FFFFFF',
+    fontWeight: '700',
+    fontSize: 12,
   },
 });
