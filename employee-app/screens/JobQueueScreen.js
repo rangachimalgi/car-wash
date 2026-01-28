@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useEffect, useCallback } from 'react';
-import { FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
@@ -84,7 +84,11 @@ export default function JobQueueScreen({ employeeId, navigation }) {
   };
 
   return (
-    <View style={[styles.container, { paddingTop: 24 + insets.top }]}>
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={[styles.scrollContent, { paddingTop: 24 + insets.top }]}
+      showsVerticalScrollIndicator={false}
+    >
       <StatusBar style="dark" />
       <View style={styles.titleRow}>
         <Text style={styles.title}>Job Queue</Text>
@@ -96,14 +100,11 @@ export default function JobQueueScreen({ employeeId, navigation }) {
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>New Job</Text>
         {incomingJobs.length > 0 ? (
-          <FlatList
-            data={incomingJobs}
-            keyExtractor={item => item._id}
-            contentContainerStyle={styles.listContent}
-            renderItem={({ item }) => {
+          <View style={styles.listContent}>
+            {incomingJobs.map((item) => {
               const card = mapOrderToCard(item);
               return (
-                <View style={styles.card}>
+                <View key={item._id} style={styles.card}>
                   <Text style={styles.cardTitle}>{card.service}</Text>
                   <Text style={styles.cardMeta}>{card.customer}</Text>
                   <Text style={styles.cardMeta}>{card.address}</Text>
@@ -119,6 +120,12 @@ export default function JobQueueScreen({ employeeId, navigation }) {
                       <Text style={styles.declineText}>Decline</Text>
                     </TouchableOpacity>
                     <TouchableOpacity
+                      style={styles.viewButtonAlt}
+                      onPress={() => navigation?.navigate('JobDetail', { orderId: card.id })}
+                    >
+                      <Text style={styles.viewButtonAltText}>View Job</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
                       style={styles.acceptButton}
                       onPress={() => handleAccept(card.id)}
                     >
@@ -127,8 +134,8 @@ export default function JobQueueScreen({ employeeId, navigation }) {
                   </View>
                 </View>
               );
-            }}
-          />
+            })}
+          </View>
         ) : (
           <View style={styles.emptyCard}>
             <Text style={styles.emptyText}>
@@ -140,62 +147,62 @@ export default function JobQueueScreen({ employeeId, navigation }) {
 
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Queue</Text>
-        <FlatList
-          data={queue}
-          keyExtractor={item => item._id || item.id}
-          contentContainerStyle={styles.listContent}
-          renderItem={({ item }) => {
-            const card = mapOrderToCard(item);
-            return (
-              <View style={styles.queueItem}>
-                <View>
-                  <Text style={styles.queueTitle}>{card.service}</Text>
-                  <Text style={styles.queueTime}>{card.time}</Text>
+        {queue.length === 0 ? (
+          <Text style={styles.emptyText}>No jobs in queue.</Text>
+        ) : (
+          <View style={styles.listContent}>
+            {queue.map((item) => {
+              const card = mapOrderToCard(item);
+              return (
+                <View key={item._id || item.id} style={styles.queueItem}>
+                  <View>
+                    <Text style={styles.queueTitle}>{card.service}</Text>
+                    <Text style={styles.queueTime}>{card.time}</Text>
+                  </View>
+                  <View style={styles.queueActions}>
+                    <Text style={styles.queueId}>{card.id?.slice(-6)}</Text>
+                    <TouchableOpacity
+                      style={styles.viewButton}
+                      onPress={() => navigation?.navigate('JobDetail', { orderId: card.id })}
+                    >
+                      <Text style={styles.viewButtonText}>View Job</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={styles.startButton}
+                      onPress={() => navigation?.navigate('StartService', { orderId: card.id })}
+                    >
+                      <Text style={styles.startButtonText}>Start Service</Text>
+                    </TouchableOpacity>
+                  </View>
                 </View>
-                <View style={styles.queueActions}>
-                  <Text style={styles.queueId}>{card.id?.slice(-6)}</Text>
-                  <TouchableOpacity
-                    style={styles.viewButton}
-                    onPress={() => navigation?.navigate('JobDetail', { orderId: card.id })}
-                  >
-                    <Text style={styles.viewButtonText}>View Job</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={styles.startButton}
-                    onPress={() => navigation?.navigate('StartService', { orderId: card.id })}
-                  >
-                    <Text style={styles.startButtonText}>Start Service</Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-            );
-          }}
-          ListEmptyComponent={<Text style={styles.emptyText}>No jobs in queue.</Text>}
-        />
+              );
+            })}
+          </View>
+        )}
       </View>
 
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>History</Text>
-        <FlatList
-          data={history}
-          keyExtractor={item => item._id || item.id}
-          contentContainerStyle={styles.listContent}
-          renderItem={({ item }) => {
-            const card = mapOrderToCard(item);
-            return (
-              <View style={styles.historyItem}>
-                <View>
-                  <Text style={styles.queueTitle}>{card.service}</Text>
-                  <Text style={styles.queueTime}>{card.time}</Text>
+        {history.length === 0 ? (
+          <Text style={styles.emptyText}>No history yet.</Text>
+        ) : (
+          <View style={styles.listContent}>
+            {history.map((item) => {
+              const card = mapOrderToCard(item);
+              return (
+                <View key={item._id || item.id} style={styles.historyItem}>
+                  <View>
+                    <Text style={styles.queueTitle}>{card.service}</Text>
+                    <Text style={styles.queueTime}>{card.time}</Text>
+                  </View>
+                  <Text style={styles.historyStatus}>Completed</Text>
                 </View>
-                <Text style={styles.historyStatus}>Completed</Text>
-              </View>
-            );
-          }}
-          ListEmptyComponent={<Text style={styles.emptyText}>No history yet.</Text>}
-        />
+              );
+            })}
+          </View>
+        )}
       </View>
-    </View>
+    </ScrollView>
   );
 }
 
@@ -205,6 +212,9 @@ const createStyles = () =>
       flex: 1,
       backgroundColor: '#F5F6F8',
       paddingHorizontal: 20,
+    },
+    scrollContent: {
+      paddingBottom: 24,
     },
     title: {
       fontSize: 24,
@@ -305,6 +315,18 @@ const createStyles = () =>
     },
     acceptText: {
       color: '#FFFFFF',
+      fontWeight: '700',
+      fontSize: 13,
+    },
+    viewButtonAlt: {
+      flex: 1,
+      backgroundColor: '#EEF2FF',
+      borderRadius: 12,
+      paddingVertical: 12,
+      alignItems: 'center',
+    },
+    viewButtonAltText: {
+      color: '#2F5CF4',
       fontWeight: '700',
       fontSize: 13,
     },
