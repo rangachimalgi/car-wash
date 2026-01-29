@@ -2,7 +2,14 @@ import React, { useEffect, useState } from 'react';
 import { Alert, Linking, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import * as Location from 'expo-location';
 import { API_BASE_URL } from '../config/api';
+import {
+  clearActiveOrderId,
+  saveActiveOrderId,
+  startBackgroundLocationUpdates,
+  stopBackgroundLocationUpdates,
+} from '../locationTask';
 
 export default function StartServiceScreen({ navigation, route }) {
   const insets = useSafeAreaInsets();
@@ -31,12 +38,85 @@ export default function StartServiceScreen({ navigation, route }) {
           } else {
             setCoords(null);
           }
+
+          const currentStatus = data.data.status;
+          if (!['In Progress', 'Completed', 'Cancelled'].includes(currentStatus)) {
+            try {
+              await fetch(`${API_BASE_URL}/orders/${orderId}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ status: 'In Progress' }),
+              });
+            } catch (error) {
+              console.error('Error marking service in progress:', error);
+            }
+          }
         }
       } catch (error) {
         console.error('Error loading order amount:', error);
       }
     };
     loadAmount();
+  }, [orderId]);
+
+  useEffect(() => {
+    let intervalId;
+    const startLocationUpdates = async () => {
+      if (!orderId) return;
+      try {
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (status !== 'granted') {
+          console.warn('Location permission not granted');
+          return;
+        }
+
+        const sendLocation = async () => {
+          try {
+            const position = await Location.getCurrentPositionAsync({
+              accuracy: Location.Accuracy.Balanced,
+            });
+            const { latitude, longitude } = position.coords || {};
+            if (typeof latitude !== 'number' || typeof longitude !== 'number') return;
+            await fetch(`${API_BASE_URL}/orders/${orderId}/employee-location`, {
+              method: 'PATCH',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ latitude, longitude }),
+            });
+          } catch (error) {
+            console.error('Error updating live location:', error);
+          }
+        };
+
+        await sendLocation();
+        intervalId = setInterval(sendLocation, 20000);
+      } catch (error) {
+        console.error('Error requesting location permission:', error);
+      }
+    };
+
+    startLocationUpdates();
+    return () => {
+      if (intervalId) clearInterval(intervalId);
+    };
+  }, [orderId]);
+
+  useEffect(() => {
+    const startBackgroundTracking = async () => {
+      if (!orderId) return;
+      try {
+        const { status } = await Location.requestBackgroundPermissionsAsync();
+        if (status !== 'granted') {
+          console.warn('Background location permission not granted');
+          return;
+        }
+        await saveActiveOrderId(orderId);
+        await startBackgroundLocationUpdates();
+      } catch (error) {
+        console.error('Error starting background tracking:', error);
+      }
+    };
+
+    startBackgroundTracking();
   }, [orderId]);
 
   const handleOpenMaps = async () => {
@@ -79,6 +159,8 @@ export default function StartServiceScreen({ navigation, route }) {
         Alert.alert('Submit failed', data.message || 'Unable to submit right now.');
         return;
       }
+      await stopBackgroundLocationUpdates();
+      await clearActiveOrderId();
       Alert.alert('Submitted', 'Service marked as completed.');
       navigation.goBack();
     } catch (error) {

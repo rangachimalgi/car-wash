@@ -46,3 +46,18 @@ export const updateOrderStatus = async (orderId, status) => {
     throw error;
   }
 };
+
+/**
+ * Get order by id
+ * @param {String} orderId
+ * @returns {Promise}
+ */
+export const getOrderById = async (orderId) => {
+  try {
+    const response = await api.get(`/orders/${orderId}`);
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching order:', error);
+    throw error;
+  }
+};

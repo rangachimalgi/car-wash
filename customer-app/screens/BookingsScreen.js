@@ -61,6 +61,8 @@ export default function BookingsScreen({ navigation }) {
       address: order.customer?.address || 'Address not set',
       price: `₹${order.totalAmount?.toFixed(2)}`,
       image: getServiceImage(category),
+      status: order.status,
+      employeeLocation: order.employeeLocation,
     };
   };
 
@@ -85,7 +87,7 @@ export default function BookingsScreen({ navigation }) {
       const response = await getOrders();
       if (response.success) {
         const orders = response.data || [];
-        const upcomingStatuses = ['Pending', 'Paid', 'Scheduled'];
+        const upcomingStatuses = ['Pending', 'Paid', 'Scheduled', 'In Progress'];
         const recentStatuses = ['Completed', 'Cancelled'];
 
         setUpcomingWashes(orders.filter(order => upcomingStatuses.includes(order.status)).map(mapOrderToUpcoming));
@@ -111,6 +113,10 @@ export default function BookingsScreen({ navigation }) {
     } catch (error) {
       console.error('Failed to mark delivered:', error);
     }
+  };
+
+  const handleViewLocation = (wash) => {
+    navigation.navigate('EmployeeLiveLocation', { orderId: wash.id });
   };
 
   return (
@@ -140,6 +146,7 @@ export default function BookingsScreen({ navigation }) {
                 key={wash.id} 
                 wash={wash}
                 onDelivered={handleDelivered}
+                onViewLocation={handleViewLocation}
                 onPress={() => {
                   // Handle card press if needed
                   console.log('View wash:', wash);

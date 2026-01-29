@@ -60,7 +60,7 @@ const orderSchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ['Pending', 'Paid', 'Scheduled', 'Completed', 'Cancelled'],
+    enum: ['Pending', 'Paid', 'Scheduled', 'In Progress', 'Completed', 'Cancelled'],
     default: 'Pending',
     index: true,
   },
@@ -96,6 +96,11 @@ const orderSchema = new mongoose.Schema({
     declinedAt: { type: Date },
     completedAt: { type: Date },
   }],
+  employeeLocation: {
+    latitude: { type: Number },
+    longitude: { type: Number },
+    updatedAt: { type: Date },
+  },
 }, {
   timestamps: true,
 });

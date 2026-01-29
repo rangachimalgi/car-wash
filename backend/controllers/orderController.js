@@ -183,7 +183,7 @@ export const getOrders = async (req, res) => {
 export const updateOrderStatus = async (req, res) => {
   try {
     const { status } = req.body;
-    const validStatuses = ['Pending', 'Paid', 'Scheduled', 'Completed', 'Cancelled'];
+    const validStatuses = ['Pending', 'Paid', 'Scheduled', 'In Progress', 'Completed', 'Cancelled'];
 
     if (!status || !validStatuses.includes(status)) {
       return res.status(400).json({
@@ -229,6 +229,52 @@ export const updateOrderStatus = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error updating order status',
+      error: error.message,
+    });
+  }
+};
+
+// @desc    Update employee live location for an order
+// @route   PATCH /api/orders/:id/employee-location
+// @access  Employee (auth later)
+export const updateEmployeeLocation = async (req, res) => {
+  try {
+    const { latitude, longitude } = req.body;
+    if (typeof latitude !== 'number' || typeof longitude !== 'number') {
+      return res.status(400).json({
+        success: false,
+        message: 'Latitude and longitude are required',
+      });
+    }
+
+    const update = {
+      employeeLocation: {
+        latitude,
+        longitude,
+        updatedAt: new Date(),
+      },
+    };
+
+    const order = await Order.findByIdAndUpdate(req.params.id, update, { new: true })
+      .populate('items.service', 'name category')
+      .populate('items.addOns', 'name basePrice');
+
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message: 'Order not found',
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: order,
+    });
+  } catch (error) {
+    console.error('Error updating employee location:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error updating employee location',
       error: error.message,
     });
   }

@@ -1,10 +1,11 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert } from 'react-native';
+import { ActivityIndicator, Alert, Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import BackHeader from '../components/BackHeader';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Location from 'expo-location';
+import { WebView } from 'react-native-webview';
 import { useTheme } from '../theme/ThemeContext';
 
 export default function AddressesScreen({ navigation, route }) {
@@ -13,6 +14,10 @@ export default function AddressesScreen({ navigation, route }) {
   const styles = useMemo(() => createStyles(theme), [theme]);
   const [savedAddresses, setSavedAddresses] = useState([]);
   const [isAdding, setIsAdding] = useState(false);
+  const [isPicking, setIsPicking] = useState(false);
+  const [pickedCoords, setPickedCoords] = useState(null);
+  const [pickedAddress, setPickedAddress] = useState('');
+  const [resolvingAddress, setResolvingAddress] = useState(false);
   const [form, setForm] = useState({
     type: 'Home',
     address: '',
@@ -70,14 +75,13 @@ export default function AddressesScreen({ navigation, route }) {
         area: place?.subLocality || '',
         city: place?.city || '',
         pincode: place?.postalCode || '',
+        latitude: position.coords.latitude,
+        longitude: position.coords.longitude,
         isDefault: savedAddresses.length === 0,
       };
 
       const updated = [newAddress, ...savedAddresses];
       await persistAddresses(updated);
-      await AsyncStorage.setItem('currentAddress', addressText);
-      await AsyncStorage.setItem('currentLat', String(position.coords.latitude));
-      await AsyncStorage.setItem('currentLng', String(position.coords.longitude));
       handleSelectAddress(newAddress);
     } catch (error) {
       console.error('Use current location error:', error);
@@ -97,8 +101,14 @@ export default function AddressesScreen({ navigation, route }) {
     AsyncStorage.setItem('currentAddress', fullAddress).catch(error => {
       console.warn('Failed to store current address:', error);
     });
-    AsyncStorage.removeItem('currentLat').catch(() => {});
-    AsyncStorage.removeItem('currentLng').catch(() => {});
+    const hasCoords = typeof address.latitude === 'number' && typeof address.longitude === 'number';
+    if (hasCoords) {
+      AsyncStorage.setItem('currentLat', String(address.latitude)).catch(() => {});
+      AsyncStorage.setItem('currentLng', String(address.longitude)).catch(() => {});
+    } else {
+      AsyncStorage.removeItem('currentLat').catch(() => {});
+      AsyncStorage.removeItem('currentLng').catch(() => {});
+    }
     navigation.goBack();
   };
 
@@ -137,6 +147,69 @@ export default function AddressesScreen({ navigation, route }) {
     await persistAddresses(updated);
     setIsAdding(false);
     setForm({ type: 'Home', address: '', area: '', city: '', pincode: '' });
+  };
+
+  const handleOpenMapPicker = () => {
+    setPickedCoords(null);
+    setPickedAddress('');
+    setIsPicking(true);
+  };
+
+  const resolvePickedAddress = async (coords) => {
+    try {
+      setResolvingAddress(true);
+      const [place] = await Location.reverseGeocodeAsync(coords);
+      const parts = [
+        place?.name,
+        place?.street,
+        place?.subLocality,
+        place?.city,
+        place?.region,
+        place?.postalCode,
+      ].filter(Boolean);
+      const addressText = parts.join(', ') || `${coords.latitude}, ${coords.longitude}`;
+      setPickedAddress(addressText);
+    } catch (error) {
+      console.warn('Reverse geocode failed:', error);
+      setPickedAddress(`${coords.latitude}, ${coords.longitude}`);
+    } finally {
+      setResolvingAddress(false);
+    }
+  };
+
+  const handleMapMessage = (event) => {
+    try {
+      const payload = JSON.parse(event.nativeEvent.data);
+      if (payload?.latitude && payload?.longitude) {
+        const coords = { latitude: payload.latitude, longitude: payload.longitude };
+        setPickedCoords(coords);
+        resolvePickedAddress(coords);
+      }
+    } catch (error) {
+      console.warn('Invalid map message:', error);
+    }
+  };
+
+  const handleConfirmPickedAddress = async () => {
+    if (!pickedCoords) {
+      Alert.alert('Pick a location', 'Tap on the map to choose a location.');
+      return;
+    }
+    const newAddress = {
+      id: String(Date.now()),
+      type: 'Map',
+      address: pickedAddress || `${pickedCoords.latitude}, ${pickedCoords.longitude}`,
+      area: '',
+      city: '',
+      pincode: '',
+      latitude: pickedCoords.latitude,
+      longitude: pickedCoords.longitude,
+      isDefault: savedAddresses.length === 0,
+    };
+    const updated = [newAddress, ...savedAddresses];
+    await persistAddresses(updated);
+    setIsPicking(false);
+    handleSelectAddress(newAddress);
   };
 
   return (
@@ -188,6 +261,22 @@ export default function AddressesScreen({ navigation, route }) {
           <View style={styles.currentLocationContent}>
             <Text style={styles.currentLocationTitle}>Use Current Location</Text>
             <Text style={styles.currentLocationSubtitle}>Get your current location automatically</Text>
+          </View>
+          <MaterialCommunityIcons name="chevron-right" size={24} color={theme.textSecondary} />
+        </TouchableOpacity>
+
+        {/* Map Picker Option */}
+        <TouchableOpacity
+          style={styles.currentLocationCard}
+          onPress={handleOpenMapPicker}
+          activeOpacity={0.8}
+        >
+          <View style={styles.currentLocationIconContainer}>
+            <MaterialCommunityIcons name="map-marker-radius" size={24} color={theme.accent} />
+          </View>
+          <View style={styles.currentLocationContent}>
+            <Text style={styles.currentLocationTitle}>Choose on Map</Text>
+            <Text style={styles.currentLocationSubtitle}>Pick an exact spot from the map</Text>
           </View>
           <MaterialCommunityIcons name="chevron-right" size={24} color={theme.textSecondary} />
         </TouchableOpacity>
@@ -324,9 +413,87 @@ export default function AddressesScreen({ navigation, route }) {
           )}
         </View>
       </ScrollView>
+
+      <Modal visible={isPicking} animationType="slide" onRequestClose={() => setIsPicking(false)}>
+        <View style={styles.modalContainer}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>Pick Location</Text>
+            <TouchableOpacity onPress={() => setIsPicking(false)}>
+              <MaterialCommunityIcons name="close" size={22} color={theme.textSecondary} />
+            </TouchableOpacity>
+          </View>
+          <View style={styles.mapWrapper}>
+            <WebView
+              originWhitelist={['*']}
+              source={{ html: mapHtml }}
+              javaScriptEnabled
+              domStorageEnabled
+              onMessage={handleMapMessage}
+            />
+          </View>
+          <View style={styles.modalFooter}>
+            {resolvingAddress ? (
+              <View style={styles.resolvingRow}>
+                <ActivityIndicator size="small" color={theme.accent} />
+                <Text style={styles.resolvingText}>Finding address…</Text>
+              </View>
+            ) : (
+              <Text style={styles.selectedText} numberOfLines={2}>
+                {pickedAddress || 'Tap on the map to select a location'}
+              </Text>
+            )}
+            <TouchableOpacity style={styles.confirmButton} onPress={handleConfirmPickedAddress}>
+              <Text style={styles.confirmButtonText}>Use This Location</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
+
+const mapHtml = `
+  <!DOCTYPE html>
+  <html>
+    <head>
+      <meta charset="utf-8" />
+      <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no" />
+      <link
+        rel="stylesheet"
+        href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+        integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+        crossorigin=""
+      />
+      <style>
+        html, body, #map { height: 100%; margin: 0; padding: 0; }
+      </style>
+    </head>
+    <body>
+      <div id="map"></div>
+      <script
+        src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+        crossorigin=""
+      ></script>
+      <script>
+        const map = L.map('map').setView([12.9716, 77.5946], 14);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          maxZoom: 19,
+        }).addTo(map);
+        let marker = null;
+        map.on('click', function(e) {
+          const { lat, lng } = e.latlng;
+          if (!marker) {
+            marker = L.marker([lat, lng]).addTo(map);
+          } else {
+            marker.setLatLng([lat, lng]);
+          }
+          window.ReactNativeWebView.postMessage(JSON.stringify({ latitude: lat, longitude: lng }));
+        });
+      </script>
+    </body>
+  </html>
+`;
 
 const createStyles = theme => StyleSheet.create({
   container: {
@@ -578,6 +745,56 @@ const createStyles = theme => StyleSheet.create({
     borderRadius: 10,
   },
   saveButtonText: {
+    color: '#000000',
+    fontWeight: '700',
+  },
+  modalContainer: {
+    flex: 1,
+    backgroundColor: theme.background,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.cardBorder,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: theme.textPrimary,
+  },
+  mapWrapper: {
+    flex: 1,
+  },
+  modalFooter: {
+    padding: 16,
+    borderTopWidth: 1,
+    borderTopColor: theme.cardBorder,
+    gap: 12,
+  },
+  resolvingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  resolvingText: {
+    fontSize: 14,
+    color: theme.textSecondary,
+  },
+  selectedText: {
+    fontSize: 14,
+    color: theme.textPrimary,
+  },
+  confirmButton: {
+    backgroundColor: theme.accent,
+    borderRadius: 10,
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
+  confirmButtonText: {
     color: '#000000',
     fontWeight: '700',
   },

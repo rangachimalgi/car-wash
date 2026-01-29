@@ -26,6 +26,11 @@
       },
       "edgeToEdgeEnabled": false,
       "package": "com.anonymous.customerapp",
+      "config": {
+        "googleMaps": {
+          "apiKey": "REPLACE_WITH_GOOGLE_MAPS_API_KEY"
+        }
+      },
       "permissions": ["ACCESS_COARSE_LOCATION", "ACCESS_FINE_LOCATION"]
     },
     "web": {
