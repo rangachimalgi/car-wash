@@ -19,12 +19,17 @@ export default function StartServiceScreen({ navigation, route }) {
   const [address, setAddress] = useState('');
   const [coords, setCoords] = useState(null);
   const orderId = route?.params?.orderId;
+  const employeeId = route?.params?.employeeId;
 
   useEffect(() => {
     const loadAmount = async () => {
       if (!orderId) return;
       try {
-        const res = await fetch(`${API_BASE_URL}/orders/${orderId}`);
+        // Include employeeId in query if available
+        const url = employeeId 
+          ? `${API_BASE_URL}/orders/${orderId}?employeeId=${employeeId}`
+          : `${API_BASE_URL}/orders/${orderId}`;
+        const res = await fetch(url);
         const data = await res.json();
         if (res.ok && data?.data) {
           if (data.data.totalAmount != null) {
@@ -42,11 +47,19 @@ export default function StartServiceScreen({ navigation, route }) {
           const currentStatus = data.data.status;
           if (!['In Progress', 'Completed', 'Cancelled'].includes(currentStatus)) {
             try {
-              await fetch(`${API_BASE_URL}/orders/${orderId}`, {
+              // Include employeeId in query for employee access
+              const url = employeeId 
+                ? `${API_BASE_URL}/orders/${orderId}?employeeId=${employeeId}`
+                : `${API_BASE_URL}/orders/${orderId}`;
+              const updateRes = await fetch(url, {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ status: 'In Progress' }),
               });
+              const updateData = await updateRes.json();
+              if (!updateRes.ok || !updateData.success) {
+                console.error('Error marking service in progress:', updateData.message);
+              }
             } catch (error) {
               console.error('Error marking service in progress:', error);
             }
@@ -77,7 +90,11 @@ export default function StartServiceScreen({ navigation, route }) {
             });
             const { latitude, longitude } = position.coords || {};
             if (typeof latitude !== 'number' || typeof longitude !== 'number') return;
-            await fetch(`${API_BASE_URL}/orders/${orderId}/employee-location`, {
+            // Include employeeId in query for employee access
+            const url = employeeId 
+              ? `${API_BASE_URL}/orders/${orderId}/employee-location?employeeId=${employeeId}`
+              : `${API_BASE_URL}/orders/${orderId}/employee-location`;
+            await fetch(url, {
               method: 'PATCH',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ latitude, longitude }),
@@ -109,7 +126,7 @@ export default function StartServiceScreen({ navigation, route }) {
           console.warn('Background location permission not granted');
           return;
         }
-        await saveActiveOrderId(orderId);
+        await saveActiveOrderId(orderId, employeeId);
         await startBackgroundLocationUpdates();
       } catch (error) {
         console.error('Error starting background tracking:', error);
@@ -149,7 +166,11 @@ export default function StartServiceScreen({ navigation, route }) {
     }
     setSubmitting(true);
     try {
-      const res = await fetch(`${API_BASE_URL}/orders/${orderId}`, {
+      // Include employeeId in query for employee access
+      const url = employeeId 
+        ? `${API_BASE_URL}/orders/${orderId}?employeeId=${employeeId}`
+        : `${API_BASE_URL}/orders/${orderId}`;
+      const res = await fetch(url, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: 'Completed' }),

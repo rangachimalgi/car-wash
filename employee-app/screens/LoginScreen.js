@@ -13,6 +13,7 @@ import {
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_BASE_URL } from '../config/api';
 
 export default function LoginScreen({ onLogin }) {
@@ -39,6 +40,14 @@ export default function LoginScreen({ onLogin }) {
         Alert.alert('Login failed', data.message || 'Invalid credentials');
         return;
       }
+      
+      // Save token and employee data
+      if (data.token) {
+        await AsyncStorage.setItem('employeeAuthToken', data.token);
+        await AsyncStorage.setItem('employeeId', data.data.employeeId);
+        await AsyncStorage.setItem('employeeName', data.data.name || '');
+      }
+      
       if (onLogin) {
         onLogin({ employeeId: data.data.employeeId });
       }

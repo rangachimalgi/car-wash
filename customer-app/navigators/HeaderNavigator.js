@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { createStackNavigator } from '@react-navigation/stack';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import BottomTabNavigator from './BottomTabNavigator';
 import CarWashScreen from '../screens/CarWashScreen';
 import CarWashDetailsScreen from '../screens/CarWashDetailsScreen';
@@ -17,9 +18,32 @@ import EmployeeLiveLocationScreen from '../screens/EmployeeLiveLocationScreen';
 const Stack = createStackNavigator();
 
 export default function HeaderNavigator() {
+  const [initialRoute, setInitialRoute] = useState('Login');
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        const token = await AsyncStorage.getItem('authToken');
+        if (token) {
+          setInitialRoute('MainTabs');
+        }
+      } catch (error) {
+        console.error('Error checking auth:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    checkAuth();
+  }, []);
+
+  if (isLoading) {
+    return null; // Or a loading screen
+  }
+
   return (
     <Stack.Navigator
-      initialRouteName="Login"
+      initialRouteName={initialRoute}
       screenOptions={{
         headerStyle: {
           backgroundColor: '#007AFF',

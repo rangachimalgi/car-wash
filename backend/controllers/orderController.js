@@ -18,10 +18,11 @@ const getPackagePrice = (service, packageType, packageTimes) => {
 
 // @desc    Create new order (one-wash for now)
 // @route   POST /api/orders
-// @access  Public (will add auth later)
+// @access  Protected
 export const createOrder = async (req, res) => {
   try {
     const { items, customer, employeeIds } = req.body;
+    const userId = req.user._id; // From auth middleware
 
     if (!items || !Array.isArray(items) || items.length === 0) {
       return res.status(400).json({
@@ -97,6 +98,7 @@ export const createOrder = async (req, res) => {
     }));
 
     const order = await Order.create({
+      user: userId,
       items: hydratedItems,
       subtotal,
       tax,
@@ -142,13 +144,14 @@ export const createOrder = async (req, res) => {
   }
 };
 
-// @desc    Get all orders
+// @desc    Get all orders for the logged-in user
 // @route   GET /api/orders
-// @access  Admin (will add auth later)
+// @access  Protected
 export const getOrders = async (req, res) => {
   try {
     const { status } = req.query;
-    const query = {};
+    const userId = req.user._id; // From auth middleware
+    const query = { user: userId }; // Filter by user
 
     if (status) {
       const statuses = status.split(',').map(s => s.trim()).filter(Boolean);
@@ -179,10 +182,13 @@ export const getOrders = async (req, res) => {
 
 // @desc    Update order status
 // @route   PATCH /api/orders/:id
-// @access  Admin/Customer (will add auth later)
+// @access  Protected (or employeeId query param for employees)
 export const updateOrderStatus = async (req, res) => {
   try {
     const { status } = req.body;
+    const orderId = req.params.id;
+    const employeeId = req.query.employeeId; // For employee access
+    const userId = req.user?._id; // From auth middleware (may be undefined for employees)
     const validStatuses = ['Pending', 'Paid', 'Scheduled', 'In Progress', 'Completed', 'Cancelled'];
 
     if (!status || !validStatuses.includes(status)) {
@@ -200,8 +206,25 @@ export const updateOrderStatus = async (req, res) => {
       update.assignmentStatus = 'completed';
     }
 
-    const order = await Order.findByIdAndUpdate(
-      req.params.id,
+    let query;
+    if (employeeId) {
+      // Employee access: check if order is assigned to this employee
+      query = {
+        _id: orderId,
+        assignments: { $elemMatch: { employeeId } },
+      };
+    } else if (userId) {
+      // Customer access: check if order belongs to this user
+      query = { _id: orderId, user: userId };
+    } else {
+      return res.status(401).json({
+        success: false,
+        message: 'Authentication required',
+      });
+    }
+
+    const order = await Order.findOneAndUpdate(
+      query,
       update,
       {
         new: true,
@@ -216,7 +239,7 @@ export const updateOrderStatus = async (req, res) => {
     if (!order) {
       return res.status(404).json({
         success: false,
-        message: 'Order not found',
+        message: 'Order not found or you do not have access to this order',
       });
     }
 
@@ -236,10 +259,14 @@ export const updateOrderStatus = async (req, res) => {
 
 // @desc    Update employee live location for an order
 // @route   PATCH /api/orders/:id/employee-location
-// @access  Employee (auth later)
+// @access  Employee (employeeId query param) or Protected
 export const updateEmployeeLocation = async (req, res) => {
   try {
     const { latitude, longitude } = req.body;
+    const orderId = req.params.id;
+    const employeeId = req.query.employeeId; // For employee access
+    const userId = req.user?._id; // From auth middleware (may be undefined for employees)
+
     if (typeof latitude !== 'number' || typeof longitude !== 'number') {
       return res.status(400).json({
         success: false,
@@ -255,7 +282,24 @@ export const updateEmployeeLocation = async (req, res) => {
       },
     };
 
-    const order = await Order.findByIdAndUpdate(req.params.id, update, { new: true })
+    let query;
+    if (employeeId) {
+      // Employee access: check if order is assigned to this employee
+      query = {
+        _id: orderId,
+        assignments: { $elemMatch: { employeeId } },
+      };
+    } else if (userId) {
+      // Customer access: check if order belongs to this user (for admin/customer viewing)
+      query = { _id: orderId, user: userId };
+    } else {
+      return res.status(401).json({
+        success: false,
+        message: 'Authentication required',
+      });
+    }
+
+    const order = await Order.findOneAndUpdate(query, update, { new: true })
       .populate('items.service', 'name category')
       .populate('items.addOns', 'name basePrice');
 
@@ -282,17 +326,39 @@ export const updateEmployeeLocation = async (req, res) => {
 
 // @desc    Get single order by ID
 // @route   GET /api/orders/:id
-// @access  Admin (will add auth later)
+// @access  Protected (or employeeId query param for employees)
 export const getOrderById = async (req, res) => {
   try {
-    const order = await Order.findById(req.params.id)
-      .populate('items.service', 'name category')
-      .populate('items.addOns', 'name basePrice');
+    const orderId = req.params.id;
+    const employeeId = req.query.employeeId; // For employee access
+    const userId = req.user?._id; // From auth middleware (may be undefined for employees)
+
+    let order;
+    
+    if (employeeId) {
+      // Employee access: check if order is assigned to this employee
+      order = await Order.findOne({
+        _id: orderId,
+        assignments: { $elemMatch: { employeeId } },
+      })
+        .populate('items.service', 'name category')
+        .populate('items.addOns', 'name basePrice');
+    } else if (userId) {
+      // Customer access: check if order belongs to this user
+      order = await Order.findOne({ _id: orderId, user: userId })
+        .populate('items.service', 'name category')
+        .populate('items.addOns', 'name basePrice');
+    } else {
+      return res.status(401).json({
+        success: false,
+        message: 'Authentication required',
+      });
+    }
 
     if (!order) {
       return res.status(404).json({
         success: false,
-        message: 'Order not found',
+        message: 'Order not found or you do not have access to this order',
       });
     }
 

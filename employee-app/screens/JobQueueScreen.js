@@ -121,7 +121,7 @@ export default function JobQueueScreen({ employeeId, navigation }) {
                     </TouchableOpacity>
                     <TouchableOpacity
                       style={styles.viewButtonAlt}
-                      onPress={() => navigation?.navigate('JobDetail', { orderId: card.id })}
+                      onPress={() => navigation?.navigate('JobDetail', { orderId: card.id, employeeId })}
                     >
                       <Text style={styles.viewButtonAltText}>View Job</Text>
                     </TouchableOpacity>
@@ -163,13 +163,13 @@ export default function JobQueueScreen({ employeeId, navigation }) {
                     <Text style={styles.queueId}>{card.id?.slice(-6)}</Text>
                     <TouchableOpacity
                       style={styles.viewButton}
-                      onPress={() => navigation?.navigate('JobDetail', { orderId: card.id })}
+                      onPress={() => navigation?.navigate('JobDetail', { orderId: card.id, employeeId })}
                     >
                       <Text style={styles.viewButtonText}>View Job</Text>
                     </TouchableOpacity>
                     <TouchableOpacity
                       style={styles.startButton}
-                      onPress={() => navigation?.navigate('StartService', { orderId: card.id })}
+                      onPress={() => navigation?.navigate('StartService', { orderId: card.id, employeeId })}
                     >
                       <Text style={styles.startButtonText}>Start Service</Text>
                     </TouchableOpacity>

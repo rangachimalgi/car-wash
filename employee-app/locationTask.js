@@ -5,6 +5,7 @@ import { API_BASE_URL } from './config/api';
 
 export const LOCATION_TASK_NAME = 'employee-live-location';
 const ACTIVE_ORDER_ID_KEY = 'activeOrderId';
+const ACTIVE_EMPLOYEE_ID_KEY = 'activeEmployeeId';
 
 TaskManager.defineTask(LOCATION_TASK_NAME, async ({ data, error }) => {
   if (error) {
@@ -20,9 +21,16 @@ TaskManager.defineTask(LOCATION_TASK_NAME, async ({ data, error }) => {
   if (typeof latitude !== 'number' || typeof longitude !== 'number') return;
 
   try {
-    const orderId = await AsyncStorage.getItem(ACTIVE_ORDER_ID_KEY);
+    const [orderId, employeeId] = await Promise.all([
+      AsyncStorage.getItem(ACTIVE_ORDER_ID_KEY),
+      AsyncStorage.getItem(ACTIVE_EMPLOYEE_ID_KEY),
+    ]);
     if (!orderId) return;
-    await fetch(`${API_BASE_URL}/orders/${orderId}/employee-location`, {
+    // Include employeeId in query for employee access
+    const url = employeeId 
+      ? `${API_BASE_URL}/orders/${orderId}/employee-location?employeeId=${employeeId}`
+      : `${API_BASE_URL}/orders/${orderId}/employee-location`;
+    await fetch(url, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ latitude, longitude }),
@@ -32,13 +40,16 @@ TaskManager.defineTask(LOCATION_TASK_NAME, async ({ data, error }) => {
   }
 });
 
-export const saveActiveOrderId = async (orderId) => {
+export const saveActiveOrderId = async (orderId, employeeId) => {
   if (!orderId) return;
   await AsyncStorage.setItem(ACTIVE_ORDER_ID_KEY, orderId);
+  if (employeeId) {
+    await AsyncStorage.setItem(ACTIVE_EMPLOYEE_ID_KEY, employeeId);
+  }
 };
 
 export const clearActiveOrderId = async () => {
-  await AsyncStorage.removeItem(ACTIVE_ORDER_ID_KEY);
+  await AsyncStorage.multiRemove([ACTIVE_ORDER_ID_KEY, ACTIVE_EMPLOYEE_ID_KEY]);
 };
 
 export const startBackgroundLocationUpdates = async () => {

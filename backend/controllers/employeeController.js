@@ -1,4 +1,5 @@
 import bcrypt from 'bcryptjs';
+import jwt from 'jsonwebtoken';
 import Employee from '../models/Employee.js';
 
 // @desc    Employee login
@@ -31,8 +32,17 @@ export const loginEmployee = async (req, res) => {
       });
     }
 
+    // Generate JWT token (30 days expiration, same as customer)
+    const token = jwt.sign(
+      { employeeId: employee.employeeId, employeeDbId: employee._id },
+      process.env.JWT_SECRET || 'dev_secret',
+      { expiresIn: '30d' }
+    );
+
     res.status(200).json({
       success: true,
+      message: 'Login successful',
+      token,
       data: {
         employeeId: employee.employeeId,
         name: employee.name,

@@ -11,13 +11,18 @@ export default function JobDetailScreen({ route, navigation }) {
   const [job, setJob] = useState(null);
 
   const orderId = route?.params?.orderId;
+  const employeeId = route?.params?.employeeId;
 
   useEffect(() => {
     const loadJob = async () => {
       if (!orderId) return;
       setLoading(true);
       try {
-        const res = await fetch(`${API_BASE_URL}/orders/${orderId}`);
+        // Include employeeId in query if available
+        const url = employeeId 
+          ? `${API_BASE_URL}/orders/${orderId}?employeeId=${employeeId}`
+          : `${API_BASE_URL}/orders/${orderId}`;
+        const res = await fetch(url);
         const data = await res.json();
         setJob(data?.data || null);
       } catch (error) {
@@ -28,7 +33,7 @@ export default function JobDetailScreen({ route, navigation }) {
       }
     };
     loadJob();
-  }, [orderId]);
+  }, [orderId, employeeId]);
 
   const item = job?.items?.[0];
   const serviceName = item?.service?.name || 'Service';

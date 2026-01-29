@@ -277,10 +277,22 @@ export default function ProfileScreen({ navigation }) {
                   {
                     text: 'Logout',
                     style: 'destructive',
-                    onPress: () => {
-                      // Handle logout logic here (clear storage, reset state, etc.)
-                      console.log('User logged out');
-                      navigation.navigate('Login');
+                    onPress: async () => {
+                      try {
+                        // Clear all auth-related storage
+                        await AsyncStorage.multiRemove(['authToken', 'authPhone', 'authName']);
+                        console.log('User logged out');
+                        navigation.reset({
+                          index: 0,
+                          routes: [{ name: 'Login' }],
+                        });
+                      } catch (error) {
+                        console.error('Error logging out:', error);
+                        navigation.reset({
+                          index: 0,
+                          routes: [{ name: 'Login' }],
+                        });
+                      }
                     },
                   },
                 ]
