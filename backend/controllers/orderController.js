@@ -31,6 +31,35 @@ export const createOrder = async (req, res) => {
       });
     }
 
+    // Validate customer address and vehicle details
+    if (!customer) {
+      return res.status(400).json({
+        success: false,
+        message: 'Customer information is required',
+      });
+    }
+
+    if (!customer.address || customer.address.trim() === '') {
+      return res.status(400).json({
+        success: false,
+        message: 'Delivery address is required',
+      });
+    }
+
+    if (!customer.vehicleType || customer.vehicleType.trim() === '') {
+      return res.status(400).json({
+        success: false,
+        message: 'Vehicle type is required',
+      });
+    }
+
+    if (!customer.vehicleModel || customer.vehicleModel.trim() === '') {
+      return res.status(400).json({
+        success: false,
+        message: 'Vehicle model is required',
+      });
+    }
+
     const hydratedItems = await Promise.all(items.map(async (item) => {
       if (!item.serviceId && !item.service) {
         throw new Error('Service ID is required');

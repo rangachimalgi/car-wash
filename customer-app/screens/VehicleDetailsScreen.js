@@ -7,7 +7,7 @@ import { useTheme } from '../theme/ThemeContext';
 import BackHeader from '../components/BackHeader';
 import { updateUserVehicle } from '../services/userApi';
 
-export default function VehicleDetailsScreen({ navigation }) {
+export default function VehicleDetailsScreen({ navigation, route }) {
   const insets = useSafeAreaInsets();
   const { theme, isLightMode } = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
@@ -15,6 +15,11 @@ export default function VehicleDetailsScreen({ navigation }) {
   const [vehicleModel, setVehicleModel] = useState('');
   const [phone, setPhone] = useState('');
   const [saving, setSaving] = useState(false);
+
+  // Vehicle type options - organized by category
+  const carTypes = ['SUV', 'Sedan', 'Hatchback'];
+  const bikeTypes = ['Bike', 'Scooter'];
+  const allTypes = [...carTypes, ...bikeTypes];
 
   useEffect(() => {
     const loadVehicle = async () => {
@@ -62,24 +67,49 @@ export default function VehicleDetailsScreen({ navigation }) {
       <BackHeader navigation={navigation} title="Vehicle Details" />
       <View style={[styles.content, { paddingBottom: 20 + insets.bottom }]}>
         <Text style={styles.label}>Vehicle Type</Text>
-        <View style={styles.typeRow}>
-          {['SUV', 'Sedan', 'Hatchback'].map(type => (
-            <TouchableOpacity
-              key={type}
-              style={[styles.typeChip, vehicleType === type && styles.typeChipActive]}
-              onPress={() => setVehicleType(type)}
-            >
-              <Text style={[styles.typeChipText, vehicleType === type && styles.typeChipTextActive]}>
-                {type}
-              </Text>
-            </TouchableOpacity>
-          ))}
+        
+        {/* Car Types */}
+        <View style={styles.typeSection}>
+          <Text style={styles.typeSectionLabel}>Car</Text>
+          <View style={styles.typeRow}>
+            {carTypes.map(type => (
+              <TouchableOpacity
+                key={type}
+                style={[styles.typeChip, vehicleType === type && styles.typeChipActive]}
+                onPress={() => setVehicleType(type)}
+              >
+                <Text style={[styles.typeChipText, vehicleType === type && styles.typeChipTextActive]}>
+                  {type}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
         </View>
 
-        <Text style={styles.label}>Car Name & Model</Text>
+        {/* Bike Types */}
+        <View style={styles.typeSection}>
+          <Text style={styles.typeSectionLabel}>Bike/Scooter</Text>
+          <View style={styles.typeRow}>
+            {bikeTypes.map(type => (
+              <TouchableOpacity
+                key={type}
+                style={[styles.typeChip, vehicleType === type && styles.typeChipActive]}
+                onPress={() => setVehicleType(type)}
+              >
+                <Text style={[styles.typeChipText, vehicleType === type && styles.typeChipTextActive]}>
+                  {type}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+
+        <Text style={styles.label}>Vehicle Name & Model</Text>
         <TextInput
           style={styles.input}
-          placeholder="e.g., Hyundai i20"
+          placeholder={vehicleType === 'Bike' || vehicleType === 'Scooter' 
+            ? "e.g., Royal Enfield Classic 350" 
+            : "e.g., Hyundai i20"}
           placeholderTextColor={theme.textSecondary}
           value={vehicleModel}
           onChangeText={setVehicleModel}
@@ -109,10 +139,20 @@ const createStyles = theme =>
       color: theme.textPrimary,
       marginBottom: 8,
     },
+    typeSection: {
+      marginBottom: 20,
+    },
+    typeSectionLabel: {
+      fontSize: 12,
+      fontWeight: '600',
+      color: theme.textSecondary,
+      marginBottom: 8,
+      textTransform: 'uppercase',
+    },
     typeRow: {
       flexDirection: 'row',
+      flexWrap: 'wrap',
       gap: 8,
-      marginBottom: 16,
     },
     typeChip: {
       paddingHorizontal: 12,

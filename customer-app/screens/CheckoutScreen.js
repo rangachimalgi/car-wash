@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useCallback } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, TextInput, Dimensions, Alert } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -6,6 +6,7 @@ import BackHeader from '../components/BackHeader';
 import { createOrder } from '../services/orderApi';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTheme } from '../theme/ThemeContext';
+import { useFocusEffect } from '@react-navigation/native';
 
 const { width } = Dimensions.get('window');
 
@@ -29,8 +30,59 @@ export default function CheckoutScreen({ navigation, route }) {
   const [appliedCoupon, setAppliedCoupon] = useState(null);
   const [discount, setDiscount] = useState(0);
   const [showToast, setShowToast] = useState(false);
+  const [address, setAddress] = useState(null);
+  const [vehicle, setVehicle] = useState(null);
   const { theme, isLightMode } = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
+
+  // Load address and vehicle data
+  const loadAddressAndVehicle = useCallback(async () => {
+    try {
+      const [storedAddress, storedPhone, storedLat, storedLng] = await Promise.all([
+        AsyncStorage.getItem('currentAddress'),
+        AsyncStorage.getItem('authPhone'),
+        AsyncStorage.getItem('currentLat'),
+        AsyncStorage.getItem('currentLng'),
+      ]);
+
+      if (storedAddress) {
+        setAddress({
+          address: storedAddress,
+          latitude: storedLat ? Number(storedLat) : null,
+          longitude: storedLng ? Number(storedLng) : null,
+        });
+      } else {
+        setAddress(null);
+      }
+
+      if (storedPhone) {
+        const [storedVehicleType, storedVehicleModel] = await Promise.all([
+          AsyncStorage.getItem(`userVehicleType:${storedPhone}`),
+          AsyncStorage.getItem(`userVehicleModel:${storedPhone}`),
+        ]);
+
+        if (storedVehicleType && storedVehicleModel) {
+          setVehicle({
+            type: storedVehicleType,
+            model: storedVehicleModel,
+          });
+        } else {
+          setVehicle(null);
+        }
+      } else {
+        setVehicle(null);
+      }
+    } catch (error) {
+      console.error('Error loading address/vehicle:', error);
+    }
+  }, []);
+
+  // Load on mount and when screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      loadAddressAndVehicle();
+    }, [loadAddressAndVehicle])
+  );
 
   const formatDate = (date) => {
     if (!date) return '';
@@ -69,6 +121,37 @@ export default function CheckoutScreen({ navigation, route }) {
   const finalTotal = total - discount;
 
   const handlePayNow = async () => {
+    // Validate address and vehicle before proceeding
+    if (!address || !address.address || address.address.trim() === '') {
+      Alert.alert(
+        'Address Required',
+        'Please add your delivery address before placing the order.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Add Address',
+            onPress: () => navigation.navigate('Addresses', { returnTo: 'Checkout' }),
+          },
+        ]
+      );
+      return;
+    }
+
+    if (!vehicle || !vehicle.type || !vehicle.model || vehicle.model.trim() === '') {
+      Alert.alert(
+        'Vehicle Details Required',
+        'Please add your vehicle details before placing the order.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Add Vehicle',
+            onPress: () => navigation.navigate('VehicleDetails', { returnTo: 'Checkout' }),
+          },
+        ]
+      );
+      return;
+    }
+
     try {
       const itemsPayload = cartItems.map((item) => {
         const addOnIds = (item.addOns || []).map(addOn => addOn?._id || addOn).filter(Boolean);
@@ -89,30 +172,23 @@ export default function CheckoutScreen({ navigation, route }) {
         };
       });
 
-      const [storedAddress, storedName, storedPhone, storedLat, storedLng] = await Promise.all([
-        AsyncStorage.getItem('currentAddress'),
+      const [storedName, storedPhone] = await Promise.all([
         AsyncStorage.getItem('authName'),
         AsyncStorage.getItem('authPhone'),
-        AsyncStorage.getItem('currentLat'),
-        AsyncStorage.getItem('currentLng'),
       ]);
-      const [storedVehicleType, storedVehicleModel] = storedPhone
-        ? await Promise.all([
-            AsyncStorage.getItem(`userVehicleType:${storedPhone}`),
-            AsyncStorage.getItem(`userVehicleModel:${storedPhone}`),
-          ])
-        : ['', ''];
+
+      // Use the loaded address and vehicle state (already validated above)
       console.log('Creating order payload:', itemsPayload);
       const response = await createOrder({
         items: itemsPayload,
         customer: {
           name: storedName || '',
           phone: storedPhone || '',
-          address: storedAddress || '',
-          vehicleType: storedVehicleType || '',
-          vehicleModel: storedVehicleModel || '',
-          latitude: storedLat ? Number(storedLat) : undefined,
-          longitude: storedLng ? Number(storedLng) : undefined,
+          address: address.address,
+          vehicleType: vehicle.type,
+          vehicleModel: vehicle.model,
+          latitude: address.latitude || undefined,
+          longitude: address.longitude || undefined,
         },
       });
       console.log('Order created:', response);
@@ -170,6 +246,64 @@ export default function CheckoutScreen({ navigation, route }) {
             </View>
           </View>
         )}
+
+        {/* Address Section */}
+        <View style={styles.infoSection}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Delivery Address</Text>
+            <TouchableOpacity
+              onPress={() => navigation.navigate('Addresses', { returnTo: 'Checkout' })}
+            >
+              <Text style={styles.editButtonText}>
+                {address ? 'Change' : 'Add'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+          {address ? (
+            <View style={styles.infoCard}>
+              <MaterialCommunityIcons name="map-marker" size={20} color={theme.accent} />
+              <Text style={styles.infoText}>{address.address}</Text>
+            </View>
+          ) : (
+            <TouchableOpacity
+              style={styles.addInfoCard}
+              onPress={() => navigation.navigate('Addresses', { returnTo: 'Checkout' })}
+            >
+              <MaterialCommunityIcons name="plus-circle" size={24} color={theme.accent} />
+              <Text style={styles.addInfoText}>Add Delivery Address</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+
+        {/* Vehicle Section */}
+        <View style={styles.infoSection}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Vehicle Details</Text>
+            <TouchableOpacity
+              onPress={() => navigation.navigate('VehicleDetails', { returnTo: 'Checkout' })}
+            >
+              <Text style={styles.editButtonText}>
+                {vehicle ? 'Change' : 'Add'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+          {vehicle ? (
+            <View style={styles.infoCard}>
+              <MaterialCommunityIcons name="car" size={20} color={theme.accent} />
+              <Text style={styles.infoText}>
+                {vehicle.type} - {vehicle.model}
+              </Text>
+            </View>
+          ) : (
+            <TouchableOpacity
+              style={styles.addInfoCard}
+              onPress={() => navigation.navigate('VehicleDetails', { returnTo: 'Checkout' })}
+            >
+              <MaterialCommunityIcons name="plus-circle" size={24} color={theme.accent} />
+              <Text style={styles.addInfoText}>Add Vehicle Details</Text>
+            </TouchableOpacity>
+          )}
+        </View>
 
         {/* Items Section */}
         <View style={styles.itemsSection}>
@@ -539,5 +673,53 @@ const createStyles = theme => StyleSheet.create({
     fontWeight: '600',
     color: theme.textPrimary,
     marginLeft: 12,
+  },
+  infoSection: {
+    marginTop: 24,
+    paddingHorizontal: 16,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  editButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: theme.accent,
+  },
+  infoCard: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    backgroundColor: theme.cardBackground,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: theme.cardBorder,
+    padding: 16,
+    gap: 12,
+  },
+  infoText: {
+    flex: 1,
+    fontSize: 14,
+    color: theme.textPrimary,
+    lineHeight: 20,
+  },
+  addInfoCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: theme.cardBackground,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: theme.cardBorder,
+    borderStyle: 'dashed',
+    padding: 20,
+    gap: 12,
+  },
+  addInfoText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: theme.accent,
   },
 });
