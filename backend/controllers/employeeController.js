@@ -32,11 +32,11 @@ export const loginEmployee = async (req, res) => {
       });
     }
 
-    // Generate JWT token (30 days expiration, same as customer)
+    // Generate JWT token (6 months expiration, same as customer)
     const token = jwt.sign(
       { employeeId: employee.employeeId, employeeDbId: employee._id },
       process.env.JWT_SECRET || 'dev_secret',
-      { expiresIn: '30d' }
+      { expiresIn: '180d' } // 6 months
     );
 
     res.status(200).json({
