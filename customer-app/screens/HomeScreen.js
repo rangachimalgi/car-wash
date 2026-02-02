@@ -4,6 +4,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import CustomHeader from '../components/CustomHeader';
 import { useTheme } from '../theme/ThemeContext';
+import { getPopularServices } from '../services/serviceApi';
 
 const { width } = Dimensions.get('window');
 const cardWidth = (width - 48) / 3; // 3 cards with padding
@@ -19,6 +20,8 @@ export default function HomeScreen({ navigation }) {
   const [imageErrors, setImageErrors] = useState({});
   const sliderRef = useRef(null);
   const [activeSlide, setActiveSlide] = useState(0);
+  const [popularServices, setPopularServices] = useState([]);
+  const [loadingPopular, setLoadingPopular] = useState(false);
   const { theme, isLightMode } = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
 
@@ -61,6 +64,36 @@ export default function HomeScreen({ navigation }) {
 
     return () => clearInterval(interval);
   }, []);
+
+  // Fetch popular services
+  useEffect(() => {
+    const fetchPopularServices = async () => {
+      setLoadingPopular(true);
+      try {
+        const response = await getPopularServices({ limit: 2 });
+        if (response.success) {
+          setPopularServices(response.data || []);
+        }
+      } catch (error) {
+        console.error('Error fetching popular services:', error);
+      } finally {
+        setLoadingPopular(false);
+      }
+    };
+
+    fetchPopularServices();
+  }, []);
+
+  const handleServicePress = (service) => {
+    const screenName = service.category === 'BikeWash' ? 'BikeWashDetails' : 'CarWashDetails';
+    navigation.navigate(screenName, {
+      serviceId: service._id,
+      serviceTitle: service.name,
+      price: `₹${service.basePrice}`,
+      duration: service.duration,
+      service: service,
+    });
+  };
 
   return (
     <View style={styles.container}>
@@ -196,41 +229,52 @@ export default function HomeScreen({ navigation }) {
               <Text style={styles.seeAllText}>See All</Text>
             </TouchableOpacity>
           </View>
-          <ScrollView 
-            horizontal 
-            showsHorizontalScrollIndicator={false}
-            style={styles.providersScrollView}
-            contentContainerStyle={styles.providersScrollContent}
-          >
-            <TouchableOpacity style={styles.providerCard} activeOpacity={0.9}>
-              <View style={styles.providerRatingBadge}>
-                <MaterialCommunityIcons name="star" size={14} color="#FFD700" />
-                <Text style={styles.providerRating}>4.8</Text>
-              </View>
-              <TouchableOpacity style={styles.providerBookmark}>
-                <MaterialCommunityIcons name="bookmark-outline" size={20} color="#85E4FC" />
-              </TouchableOpacity>
-              <ServiceImage 
-                uri="https://images.unsplash.com/photo-1502877338535-766e1452684a?w=300&h=200&fit=crop"
-                style={styles.providerImage}
-                imageKey="provider1"
-              />
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.providerCard} activeOpacity={0.9}>
-              <View style={styles.providerRatingBadge}>
-                <MaterialCommunityIcons name="star" size={14} color="#FFD700" />
-                <Text style={styles.providerRating}>4.8</Text>
-              </View>
-              <TouchableOpacity style={styles.providerBookmark}>
-                <MaterialCommunityIcons name="bookmark-outline" size={20} color="#85E4FC" />
-              </TouchableOpacity>
-              <ServiceImage 
-                uri="https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=300&h=200&fit=crop"
-                style={styles.providerImage}
-                imageKey="provider2"
-              />
-            </TouchableOpacity>
-          </ScrollView>
+          {loadingPopular ? (
+            <View style={styles.loadingContainer}>
+              <Text style={styles.loadingText}>Loading services...</Text>
+            </View>
+          ) : popularServices.length === 0 ? (
+            <View style={styles.emptyContainer}>
+              <Text style={styles.emptyText}>No popular services available</Text>
+            </View>
+          ) : (
+            <ScrollView 
+              horizontal 
+              showsHorizontalScrollIndicator={false}
+              style={styles.providersScrollView}
+              contentContainerStyle={styles.providersScrollContent}
+            >
+              {popularServices.map((service, index) => (
+                <View key={service._id || index} style={styles.providerCardWrapper}>
+                  <TouchableOpacity 
+                    style={styles.providerCard} 
+                    activeOpacity={0.9}
+                    onPress={() => handleServicePress(service)}
+                  >
+                    <View style={styles.providerRatingBadge}>
+                      <MaterialCommunityIcons name="star" size={14} color="#FFD700" />
+                      <Text style={styles.providerRating}>
+                        {service.rating ? service.rating.toFixed(1) : '4.8'}
+                      </Text>
+                    </View>
+                    <TouchableOpacity style={styles.providerBookmark}>
+                      <MaterialCommunityIcons name="bookmark-outline" size={20} color="#85E4FC" />
+                    </TouchableOpacity>
+                    <ServiceImage 
+                      uri={service.image || (service.category === 'BikeWash' 
+                        ? 'https://images.unsplash.com/photo-1558981806-ec527fa84c39?w=300&h=200&fit=crop&auto=format'
+                        : 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=300&h=200&fit=crop')}
+                      style={styles.providerImage}
+                      imageKey={`popular-${service._id || index}`}
+                    />
+                  </TouchableOpacity>
+                  <Text style={styles.providerServiceName} numberOfLines={2}>
+                    {service.name}
+                  </Text>
+                </View>
+              ))}
+            </ScrollView>
+          )}
         </View>
 
         {/* Why Choose Woosh Section */}
@@ -445,14 +489,18 @@ const createStyles = theme => StyleSheet.create({
   providersScrollContent: {
     paddingHorizontal: 16,
   },
+  providerCardWrapper: {
+    width: 200,
+    marginRight: 16,
+  },
   providerCard: {
     width: 200,
     height: 160,
     backgroundColor: theme.cardBackground,
     borderRadius: 16,
-    marginRight: 16,
     overflow: 'hidden',
     position: 'relative',
+    marginBottom: 8,
   },
   providerRatingBadge: {
     position: 'absolute',
@@ -481,6 +529,13 @@ const createStyles = theme => StyleSheet.create({
   providerImage: {
     width: '100%',
     height: '100%',
+  },
+  providerServiceName: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: theme.textPrimary,
+    textAlign: 'center',
+    paddingHorizontal: 4,
   },
   whyChooseSection: {
     paddingHorizontal: 16,
@@ -538,5 +593,21 @@ const createStyles = theme => StyleSheet.create({
     fontSize: 14,
     color: '#333333',
     lineHeight: 20,
+  },
+  loadingContainer: {
+    paddingVertical: 20,
+    alignItems: 'center',
+  },
+  loadingText: {
+    fontSize: 14,
+    color: theme.textSecondary,
+  },
+  emptyContainer: {
+    paddingVertical: 20,
+    alignItems: 'center',
+  },
+  emptyText: {
+    fontSize: 14,
+    color: theme.textSecondary,
   },
 });
