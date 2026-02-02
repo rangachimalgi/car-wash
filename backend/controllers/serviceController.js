@@ -355,3 +355,135 @@ export const createService = async (req, res) => {
     });
   }
 };
+
+// @desc    Update service
+// @route   PUT /api/services/:id
+// @access  Admin (will add auth middleware later)
+export const updateService = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const {
+      name,
+      description,
+      category,
+      basePrice,
+      duration,
+      image,
+      images,
+      rating,
+      totalReviews,
+      isActive,
+      specifications,
+      addOnServices,
+      packages,
+      applicableFor,
+    } = req.body;
+
+    // Find service
+    const service = await Service.findById(id);
+    if (!service) {
+      return res.status(404).json({
+        success: false,
+        message: 'Service not found',
+      });
+    }
+
+    // Validate required fields if provided
+    if (basePrice !== undefined && basePrice < 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Base price must be positive',
+      });
+    }
+
+    // Validate category if provided
+    if (category) {
+      const validCategories = ['CarWash', 'BikeWash', 'AddOn', 'Coverage'];
+      if (!validCategories.includes(category)) {
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid category. Must be one of: CarWash, BikeWash, AddOn, Coverage',
+        });
+      }
+    }
+
+    // Validate applicableFor for AddOn or Coverage category
+    if (
+      (category === 'AddOn' || category === 'Coverage' || service.category === 'AddOn' || service.category === 'Coverage') &&
+      applicableFor !== undefined &&
+      (!Array.isArray(applicableFor) || applicableFor.length === 0)
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: 'Add-On and Coverage items must specify applicableFor (CarWash and/or BikeWash)',
+      });
+    }
+
+    // Validate applicableFor values
+    if (applicableFor && Array.isArray(applicableFor)) {
+      const validTypes = ['CarWash', 'BikeWash'];
+      const invalidTypes = applicableFor.filter(type => !validTypes.includes(type));
+      if (invalidTypes.length > 0) {
+        return res.status(400).json({
+          success: false,
+          message: `Invalid applicableFor values: ${invalidTypes.join(', ')}. Must be CarWash and/or BikeWash`,
+        });
+      }
+    }
+
+    // Update service fields
+    if (name !== undefined) service.name = name.trim();
+    if (description !== undefined) service.description = description ? description.trim() : '';
+    if (category !== undefined) service.category = category;
+    if (basePrice !== undefined) service.basePrice = Number(basePrice);
+    if (duration !== undefined) service.duration = duration;
+    if (image !== undefined) service.image = image;
+    if (images !== undefined) service.images = images;
+    if (rating !== undefined) service.rating = rating;
+    if (totalReviews !== undefined) service.totalReviews = totalReviews;
+    if (isActive !== undefined) service.isActive = isActive;
+    if (specifications !== undefined) {
+      service.specifications = {
+        coverage: specifications?.coverage || [],
+        notIncluded: specifications?.notIncluded || [],
+      };
+    }
+    if (addOnServices !== undefined) service.addOnServices = addOnServices;
+    if (packages !== undefined) service.packages = packages;
+    if (applicableFor !== undefined) service.applicableFor = applicableFor;
+
+    // Save updated service
+    await service.save();
+
+    res.status(200).json({
+      success: true,
+      message: 'Service updated successfully',
+      data: service,
+    });
+  } catch (error) {
+    console.error('Error updating service:', error);
+    
+    // Handle validation errors
+    if (error.name === 'ValidationError') {
+      const messages = Object.values(error.errors).map(err => err.message);
+      return res.status(400).json({
+        success: false,
+        message: 'Validation error',
+        errors: messages,
+      });
+    }
+
+    if (error.name === 'CastError') {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid service ID',
+      });
+    }
+
+    res.status(500).json({
+      success: false,
+      message: 'Error updating service',
+      error: error.message,
+    });
+  }
+};

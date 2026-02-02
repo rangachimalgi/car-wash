@@ -55,10 +55,14 @@ function App() {
   const [loadingCoverage, setLoadingCoverage] = useState(false)
   const [loadingAllCoverage, setLoadingAllCoverage] = useState(false)
   const [loadingOrders, setLoadingOrders] = useState(false)
+  const [loadingAllServices, setLoadingAllServices] = useState(false)
   const [message, setMessage] = useState({ type: '', text: '' })
   const [addOnMessage, setAddOnMessage] = useState({ type: '', text: '' })
   const [coverageMessage, setCoverageMessage] = useState({ type: '', text: '' })
   const [orders, setOrders] = useState([])
+  const [allServices, setAllServices] = useState([])
+  const [serviceFilter, setServiceFilter] = useState('all') // 'all', 'car', 'bike'
+  const [editingServiceId, setEditingServiceId] = useState(null) // Track which service is being edited
 
   // Fetch available add-ons when component mounts
   useEffect(() => {
@@ -67,6 +71,7 @@ function App() {
     fetchCoverage()
     fetchAllCoverage()
     fetchOrders()
+    fetchAllServices()
   }, [])
 
   // Fetch all add-ons for listing
@@ -153,6 +158,9 @@ function App() {
     if (activeTab === 'orders') {
       fetchOrders()
     }
+    if (activeTab === 'services') {
+      fetchAllServices()
+    }
   }, [activeTab])
 
   const fetchAddOns = async () => {
@@ -219,6 +227,32 @@ function App() {
       setLoadingOrders(false)
     }
   }
+
+  // Fetch all services for listing
+  const fetchAllServices = async () => {
+    setLoadingAllServices(true)
+    try {
+      const response = await fetch(`${API_BASE_URL}/services?isActive=true`)
+      const data = await response.json()
+      if (data.success) {
+        // Filter to only CarWash and BikeWash services
+        const services = (data.data || []).filter(s => s.category === 'CarWash' || s.category === 'BikeWash')
+        setAllServices(services)
+      }
+    } catch (error) {
+      console.error('Error fetching all services:', error)
+    } finally {
+      setLoadingAllServices(false)
+    }
+  }
+
+  // Filter services based on selected filter
+  const filteredServices = allServices.filter(service => {
+    if (serviceFilter === 'all') return true
+    if (serviceFilter === 'car') return service.category === 'CarWash'
+    if (serviceFilter === 'bike') return service.category === 'BikeWash'
+    return true
+  })
 
   const markOrderDelivered = async (orderId) => {
     try {
@@ -431,6 +465,79 @@ function App() {
     )
   }
 
+  // Load service data into form for editing
+  const handleEditService = async (serviceId) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/services/${serviceId}`)
+      const data = await response.json()
+      
+      if (data.success && data.data) {
+        const service = data.data
+        setEditingServiceId(serviceId)
+        
+        // Format packages: convert from API format (with perWash, discount) to form format (times, price)
+        const formatPackagesForForm = (pkg) => {
+          if (!pkg) return { monthly: [], quarterly: [], yearly: [] }
+          
+          return {
+            monthly: (pkg.monthly || []).map(p => ({ times: String(p.times || ''), price: String(p.price || '') })),
+            quarterly: (pkg.quarterly || []).map(p => ({ times: String(p.times || ''), price: String(p.price || '') })),
+            yearly: (pkg.yearly || []).map(p => ({ times: String(p.times || ''), price: String(p.price || '') })),
+          }
+        }
+        
+        // Populate form with service data
+        setFormData({
+          name: service.name || '',
+          description: service.description || '',
+          category: service.category || 'CarWash',
+          basePrice: String(service.basePrice || ''),
+          duration: service.duration || '30 mins',
+          image: service.image || '',
+          images: (service.images || []).join(', '),
+          rating: String(service.rating || 0),
+          totalReviews: String(service.totalReviews || 0),
+          isActive: service.isActive !== undefined ? service.isActive : true,
+          packages: formatPackagesForForm(service.packages),
+        })
+        
+        // Set selected coverage
+        if (service.specifications?.coverage) {
+          setSelectedCoverage(service.specifications.coverage)
+        }
+        
+        // Scroll to form
+        window.scrollTo({ top: 0, behavior: 'smooth' })
+      }
+    } catch (error) {
+      console.error('Error loading service for edit:', error)
+      setMessage({ type: 'error', text: 'Failed to load service data' })
+    }
+  }
+
+  // Reset form to create new service
+  const handleNewService = () => {
+    setEditingServiceId(null)
+    setFormData({
+      name: '',
+      description: '',
+      category: 'CarWash',
+      basePrice: '',
+      duration: '30 mins',
+      image: '',
+      images: '',
+      rating: '0',
+      totalReviews: '0',
+      isActive: true,
+      packages: {
+        monthly: [],
+        quarterly: [],
+        yearly: [],
+      },
+    })
+    setSelectedCoverage([])
+  }
+
   const handleSubmit = async (e) => {
     e.preventDefault()
     setLoading(true)
@@ -496,8 +603,13 @@ function App() {
         packages: formatPackages(formData.packages),
       }
 
-      const response = await fetch(`${API_BASE_URL}/services`, {
-        method: 'POST',
+      const url = editingServiceId 
+        ? `${API_BASE_URL}/services/${editingServiceId}`
+        : `${API_BASE_URL}/services`
+      const method = editingServiceId ? 'PUT' : 'POST'
+
+      const response = await fetch(url, {
+        method,
         headers: {
           'Content-Type': 'application/json',
         },
@@ -507,30 +619,18 @@ function App() {
       const data = await response.json()
 
       if (response.ok && data.success) {
-        setMessage({ type: 'success', text: 'Service created successfully!' })
+        setMessage({ 
+          type: 'success', 
+          text: editingServiceId ? 'Service updated successfully!' : 'Service created successfully!' 
+        })
         // Reset form
-          setFormData({
-            name: '',
-            description: '',
-            category: 'CarWash',
-            basePrice: '',
-            duration: '30 mins',
-            image: '',
-            images: '',
-            rating: '0',
-            totalReviews: '0',
-            isActive: true,
-            packages: {
-              monthly: [],
-              quarterly: [],
-              yearly: [],
-            },
-          })
-          setSelectedCoverage([])
+        handleNewService()
+        // Refresh services list
+        fetchAllServices()
       } else {
         setMessage({ 
           type: 'error', 
-          text: data.message || 'Failed to create service' 
+          text: data.message || (editingServiceId ? 'Failed to update service' : 'Failed to create service')
         })
       }
     } catch (error) {
@@ -714,36 +814,139 @@ function App() {
           </button>
         </div>
 
-        {/* Services Form */}
+        {/* Services Tab */}
         {activeTab === 'services' && (
-          <form onSubmit={handleSubmit} className="form">
-          <div className="form-group">
-            <label htmlFor="name">Service Name *</label>
-            <input
-              type="text"
-              id="name"
-              name="name"
-              value={formData.name}
-              onChange={handleChange}
-              required
-              placeholder="e.g., Basic Routine Cleaning"
-            />
-          </div>
+          <>
+            {/* Services List Section */}
+            <div className="addons-list-section">
+              <div className="section-header">
+                <h2 className="section-title">Existing Services</h2>
+                <div className="filter-tabs">
+                  <button
+                    type="button"
+                    className={`filter-tab ${serviceFilter === 'all' ? 'active' : ''}`}
+                    onClick={() => setServiceFilter('all')}
+                  >
+                    All
+                  </button>
+                  <button
+                    type="button"
+                    className={`filter-tab ${serviceFilter === 'car' ? 'active' : ''}`}
+                    onClick={() => setServiceFilter('car')}
+                  >
+                    Car Wash
+                  </button>
+                  <button
+                    type="button"
+                    className={`filter-tab ${serviceFilter === 'bike' ? 'active' : ''}`}
+                    onClick={() => setServiceFilter('bike')}
+                  >
+                    Bike Wash
+                  </button>
+                </div>
+              </div>
 
-          <div className="form-group">
-            <label htmlFor="description">Description *</label>
-            <textarea
-              id="description"
-              name="description"
-              value={formData.description}
-              onChange={handleChange}
-              required
-              rows="3"
-              placeholder="Enter service description"
-            />
-          </div>
+              {loadingAllServices ? (
+                <div className="loading-text">Loading services...</div>
+              ) : filteredServices.length === 0 ? (
+                <div className="info-text">No services found for this filter.</div>
+              ) : (
+                <div className="addons-grid">
+                  {filteredServices.map(service => (
+                    <div key={service._id} className="addon-card">
+                      <div className="addon-card-header">
+                        <h3 className="addon-card-title">{service.name}</h3>
+                        <span className={`addon-status ${service.isActive ? 'active' : 'inactive'}`}>
+                          {service.isActive ? 'Active' : 'Inactive'}
+                        </span>
+                      </div>
+                      <div className="addon-card-details">
+                        <div className="detail-item">
+                          <span className="detail-label">Category:</span>
+                          <span className="detail-value">
+                            {service.category === 'CarWash' ? 'Car Wash' : 'Bike Wash'}
+                          </span>
+                        </div>
+                        <div className="detail-item">
+                          <span className="detail-label">Price:</span>
+                          <span className="detail-value">₹{service.basePrice}</span>
+                        </div>
+                        <div className="detail-item">
+                          <span className="detail-label">Duration:</span>
+                          <span className="detail-value">{service.duration || 'N/A'}</span>
+                        </div>
+                        {service.packages && (
+                          <div className="detail-item">
+                            <span className="detail-label">Packages:</span>
+                            <span className="detail-value">
+                              {[
+                                service.packages.monthly?.length > 0 && `${service.packages.monthly.length} Monthly`,
+                                service.packages.quarterly?.length > 0 && `${service.packages.quarterly.length} Quarterly`,
+                                service.packages.yearly?.length > 0 && `${service.packages.yearly.length} Yearly`,
+                              ].filter(Boolean).join(', ') || 'None'}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                      <div className="addon-card-footer">
+                        <button
+                          type="button"
+                          className="secondary-button"
+                          onClick={() => handleEditService(service._id)}
+                        >
+                          Edit
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
 
-          <div className="form-row">
+            {/* Create/Edit Service Form */}
+            <div className="form-section-divider"></div>
+            <div className="section-header">
+              <h2 className="section-title">
+                {editingServiceId ? 'Edit Service' : 'Create New Service'}
+              </h2>
+              {editingServiceId && (
+                <button
+                  type="button"
+                  className="secondary-button"
+                  onClick={handleNewService}
+                >
+                  Create New Instead
+                </button>
+              )}
+            </div>
+            <form onSubmit={handleSubmit} className="form">
+              <div className="form-group">
+                <label htmlFor="name">Service Name *</label>
+                <input
+                  type="text"
+                  id="name"
+                  name="name"
+                  value={formData.name}
+                  onChange={handleChange}
+                  required
+                  placeholder="e.g., Basic Routine Cleaning"
+                />
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="description">Description *</label>
+                <textarea
+                  id="description"
+                  name="description"
+                  value={formData.description}
+                  onChange={handleChange}
+                  required
+                  rows="3"
+                  placeholder="Enter service description"
+                />
+              </div>
+
+              <div className="form-row">
             <div className="form-group">
               <label htmlFor="category">Category *</label>
               <select
@@ -788,31 +991,31 @@ function App() {
             </div>
           </div>
 
-          <div className="form-group">
-            <label htmlFor="image">Main Image URL</label>
-            <input
-              type="url"
-              id="image"
-              name="image"
-              value={formData.image}
-              onChange={handleChange}
-              placeholder="https://example.com/image.jpg"
-            />
-          </div>
+              <div className="form-group">
+                <label htmlFor="image">Main Image URL</label>
+                <input
+                  type="url"
+                  id="image"
+                  name="image"
+                  value={formData.image}
+                  onChange={handleChange}
+                  placeholder="https://example.com/image.jpg"
+                />
+              </div>
 
-          <div className="form-group">
-            <label htmlFor="images">Additional Images (comma-separated URLs)</label>
-            <input
-              type="text"
-              id="images"
-              name="images"
-              value={formData.images}
-              onChange={handleChange}
-              placeholder="https://img1.com, https://img2.com"
-            />
-          </div>
+              <div className="form-group">
+                <label htmlFor="images">Additional Images (comma-separated URLs)</label>
+                <input
+                  type="text"
+                  id="images"
+                  name="images"
+                  value={formData.images}
+                  onChange={handleChange}
+                  placeholder="https://img1.com, https://img2.com"
+                />
+              </div>
 
-          <div className="form-row">
+              <div className="form-row">
             <div className="form-group">
               <label htmlFor="rating">Rating (0-5)</label>
               <input
@@ -854,9 +1057,9 @@ function App() {
             </div>
           </div>
 
-          {(formData.category === 'CarWash' || formData.category === 'BikeWash') && (
-            <div className="form-group">
-              <label>Coverage (Included)</label>
+              {(formData.category === 'CarWash' || formData.category === 'BikeWash') && (
+                <div className="form-group">
+                  <label>Coverage (Included)</label>
               {loadingCoverage ? (
                 <div className="loading-text">Loading coverage...</div>
               ) : availableCoverage.length === 0 ? (
@@ -875,13 +1078,13 @@ function App() {
                   ))}
                 </div>
               )}
-              <small className="help-text">Selected items go to Included. Others go to Not Included automatically.</small>
-            </div>
-          )}
+                  <small className="help-text">Selected items go to Included. Others go to Not Included automatically.</small>
+                </div>
+              )}
 
-          {(formData.category === 'CarWash' || formData.category === 'BikeWash') && (
-            <div className="form-group">
-              <label>Not Included (auto)</label>
+              {(formData.category === 'CarWash' || formData.category === 'BikeWash') && (
+                <div className="form-group">
+                  <label>Not Included (auto)</label>
               {availableCoverage.length === 0 ? (
                 <div className="info-text">No coverage items available.</div>
               ) : (
@@ -893,14 +1096,14 @@ function App() {
                       <span key={name} className="not-included-item">{name}</span>
                     ))}
                 </div>
+                  )}
+                </div>
               )}
-            </div>
-          )}
 
-          {/* Add-Ons are auto-attached based on service category */}
-          {(formData.category === 'CarWash' || formData.category === 'BikeWash') && (
-            <div className="form-group">
-              <label>Auto Add-Ons</label>
+              {/* Add-Ons are auto-attached based on service category */}
+              {(formData.category === 'CarWash' || formData.category === 'BikeWash') && (
+                <div className="form-group">
+                  <label>Auto Add-Ons</label>
               {loadingAddOns ? (
                 <div className="loading-text">Loading add-ons...</div>
               ) : availableAddOns.length === 0 ? (
@@ -915,29 +1118,32 @@ function App() {
                   ))}
                 </div>
               )}
-              <small className="help-text">All applicable add-ons are attached automatically.</small>
-            </div>
-          )}
+                  <small className="help-text">All applicable add-ons are attached automatically.</small>
+                </div>
+              )}
 
-          {/* Pricing Packages */}
-          {(formData.category === 'CarWash' || formData.category === 'BikeWash') && (
-            <>
-              {renderPackageSection('Monthly Packages', 'monthly')}
-              {renderPackageSection('Quarterly Packages', 'quarterly')}
-              {renderPackageSection('Yearly Packages', 'yearly')}
-            </>
-          )}
+              {/* Pricing Packages */}
+              {(formData.category === 'CarWash' || formData.category === 'BikeWash') && (
+                <>
+                  {renderPackageSection('Monthly Packages', 'monthly')}
+                  {renderPackageSection('Quarterly Packages', 'quarterly')}
+                  {renderPackageSection('Yearly Packages', 'yearly')}
+                </>
+              )}
 
-          {message.text && (
-            <div className={`message ${message.type}`}>
-              {message.text}
-            </div>
-          )}
+              {message.text && (
+                <div className={`message ${message.type}`}>
+                  {message.text}
+                </div>
+              )}
 
-          <button type="submit" className="submit-button" disabled={loading}>
-            {loading ? 'Creating...' : 'Create Service'}
-          </button>
-        </form>
+              <button type="submit" className="submit-button" disabled={loading}>
+                {loading 
+                  ? (editingServiceId ? 'Updating...' : 'Creating...') 
+                  : (editingServiceId ? 'Update Service' : 'Create Service')}
+              </button>
+            </form>
+          </>
         )}
 
         {/* Add-Ons Form */}

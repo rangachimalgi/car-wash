@@ -21,12 +21,21 @@ const orderItemSchema = new mongoose.Schema({
   },
   scheduledDate: {
     type: Date,
-    required: true,
+    required: function() {
+      return this.packageType === 'OneTime';
+    },
   },
   scheduledTimeSlot: {
     type: String,
-    required: true,
+    required: function() {
+      return this.packageType === 'OneTime';
+    },
   },
+  // For package orders: array of scheduled slots
+  scheduledSlots: [{
+    scheduledDate: { type: Date, required: true },
+    scheduledTimeSlot: { type: String, required: true },
+  }],
   unitPrice: {
     type: Number,
     required: true,

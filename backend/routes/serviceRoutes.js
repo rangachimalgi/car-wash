@@ -5,6 +5,7 @@ import {
   getPopularServices,
   getServicesByCategory,
   createService,
+  updateService,
 } from '../controllers/serviceController.js';
 
 const router = express.Router();
@@ -35,5 +36,10 @@ router.get('/category/:category', getServicesByCategory);
 // @desc    Get single service by ID
 // @access  Public
 router.get('/:id', getServiceById);
+
+// @route   PUT /api/services/:id
+// @desc    Update service
+// @access  Admin (will add auth middleware later)
+router.put('/:id', updateService);
 
 export default router;

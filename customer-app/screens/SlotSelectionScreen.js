@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions, Alert } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import BackHeader from '../components/BackHeader';
@@ -16,8 +16,14 @@ export default function SlotSelectionScreen({ navigation, route }) {
   const tax = route?.params?.tax || 0;
   const total = route?.params?.total || (pendingItem?.price || 0);
 
+  // Check if this is a package order
+  const isPackage = pendingItem?.packageType && pendingItem.packageType !== 'OneTime';
+  const packageTimes = pendingItem?.packageTimes || 1;
+
   const [selectedDate, setSelectedDate] = useState(null);
   const [selectedTimeSlot, setSelectedTimeSlot] = useState(null);
+  const [generatedSlots, setGeneratedSlots] = useState([]);
+  const [editingSlotIndex, setEditingSlotIndex] = useState(null);
   const [locationAddress, setLocationAddress] = useState('');
   const [locationError, setLocationError] = useState('');
   const [locationLoading, setLocationLoading] = useState(false);
@@ -55,11 +61,11 @@ export default function SlotSelectionScreen({ navigation, route }) {
     loadSavedAddress();
   }, []);
 
-  // Generate dates for the next 7 days
-  const generateDates = () => {
+  // Generate dates for the next 30 days (for package selection)
+  const generateDates = (days = 30) => {
     const dates = [];
     const today = new Date();
-    for (let i = 0; i < 7; i++) {
+    for (let i = 0; i < days; i++) {
       const date = new Date(today);
       date.setDate(today.getDate() + i);
       dates.push(date);
@@ -67,7 +73,7 @@ export default function SlotSelectionScreen({ navigation, route }) {
     return dates;
   };
 
-  const dates = generateDates();
+  const dates = generateDates(isPackage ? 30 : 7);
 
   // Generate time slots
   const timeSlots = [
@@ -90,6 +96,7 @@ export default function SlotSelectionScreen({ navigation, route }) {
       day: days[date.getDay()],
       date: date.getDate(),
       month: months[date.getMonth()],
+      full: `${days[date.getDay()]}, ${months[date.getMonth()]} ${date.getDate()}`,
     };
   };
 
@@ -98,22 +105,118 @@ export default function SlotSelectionScreen({ navigation, route }) {
     return date.toDateString() === today.toDateString();
   };
 
-  const handleCheckout = () => {
-    if (!selectedDate || !selectedTimeSlot) {
-      // Show alert or toast
+  // Auto-generate slots for package orders
+  const generatePackageSlots = (startDate, startTimeSlot) => {
+    if (!startDate || !startTimeSlot) return [];
+
+    const slots = [];
+    const start = new Date(startDate);
+    start.setHours(0, 0, 0, 0);
+
+    // Pattern: 3 washes per week
+    // Week pattern: Day 0, Day 2, Day 5 (1 day gap, then 2 day gap)
+    const weeklyPattern = [0, 2, 5];
+    
+    let weekOffset = 0;
+    
+    for (let i = 0; i < packageTimes; i++) {
+      const patternIndex = i % 3;
+      const dayOffset = weeklyPattern[patternIndex];
+      
+      // Move to next week after completing 3 slots
+      if (patternIndex === 0 && i > 0) {
+        weekOffset += 7;
+      }
+      
+      const slotDate = new Date(start);
+      slotDate.setDate(start.getDate() + weekOffset + dayOffset);
+      
+      slots.push({
+        scheduledDate: slotDate,
+        scheduledTimeSlot: startTimeSlot,
+      });
+    }
+    
+    return slots;
+  };
+
+  // Handle first date/time selection for packages
+  useEffect(() => {
+    if (isPackage && selectedDate && selectedTimeSlot && generatedSlots.length === 0) {
+      const slots = generatePackageSlots(selectedDate, selectedTimeSlot);
+      setGeneratedSlots(slots);
+    }
+  }, [selectedDate, selectedTimeSlot, isPackage]);
+
+  // Update a specific slot
+  const updateSlot = (index, newDate, newTimeSlot) => {
+    // Validate: no two washes on same day
+    const dateString = newDate.toDateString();
+    const hasConflict = generatedSlots.some((slot, idx) => 
+      idx !== index && slot.scheduledDate.toDateString() === dateString
+    );
+
+    if (hasConflict) {
+      Alert.alert('Invalid Date', 'Cannot schedule multiple washes on the same day. Please choose a different date.');
       return;
     }
-    if (!pendingItem) return;
 
-    const itemWithSlot = {
-      ...pendingItem,
-      selectedDate: selectedDate.toISOString(),
-      selectedTimeSlot,
+    const updated = [...generatedSlots];
+    updated[index] = {
+      scheduledDate: newDate,
+      scheduledTimeSlot: newTimeSlot,
     };
+    setGeneratedSlots(updated);
+    setEditingSlotIndex(null);
+  };
 
-    navigation.navigate('Cart', {
-      addItem: itemWithSlot,
-    });
+  const handleCheckout = () => {
+    if (isPackage) {
+      // Package: validate all slots are set
+      if (generatedSlots.length !== packageTimes) {
+        Alert.alert('Incomplete Selection', `Please select all ${packageTimes} slots for your package.`);
+        return;
+      }
+      
+      // Validate no duplicate dates
+      const dateStrings = generatedSlots.map(slot => slot.scheduledDate.toDateString());
+      const uniqueDates = new Set(dateStrings);
+      if (dateStrings.length !== uniqueDates.size) {
+        Alert.alert('Invalid Selection', 'Cannot schedule multiple washes on the same day.');
+        return;
+      }
+
+      const itemWithSlots = {
+        ...pendingItem,
+        startDate: selectedDate.toISOString(),
+        startTimeSlot: selectedTimeSlot,
+        scheduledSlots: generatedSlots.map(slot => ({
+          scheduledDate: slot.scheduledDate.toISOString(),
+          scheduledTimeSlot: slot.scheduledTimeSlot?.time || slot.scheduledTimeSlot,
+        })),
+      };
+
+      navigation.navigate('Cart', {
+        addItem: itemWithSlots,
+      });
+    } else {
+      // OneTime: single slot
+      if (!selectedDate || !selectedTimeSlot) {
+        Alert.alert('Incomplete Selection', 'Please select date and time for your service.');
+        return;
+      }
+      if (!pendingItem) return;
+
+      const itemWithSlot = {
+        ...pendingItem,
+        selectedDate: selectedDate.toISOString(),
+        selectedTimeSlot,
+      };
+
+      navigation.navigate('Cart', {
+        addItem: itemWithSlot,
+      });
+    }
   };
 
   const handleUseCurrentLocation = async () => {
@@ -159,10 +262,14 @@ export default function SlotSelectionScreen({ navigation, route }) {
     }
   };
 
+  const canProceed = isPackage 
+    ? (generatedSlots.length === packageTimes && generatedSlots.every(s => s.scheduledDate && s.scheduledTimeSlot))
+    : (selectedDate && selectedTimeSlot);
+
   return (
     <View style={styles.container}>
       <StatusBar style={isLightMode ? 'dark' : 'light'} />
-      <BackHeader navigation={navigation} title="Select Slot" />
+      <BackHeader navigation={navigation} title={isPackage ? `Select Slots (${packageTimes} washes)` : "Select Slot"} />
       <ScrollView 
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
@@ -187,64 +294,236 @@ export default function SlotSelectionScreen({ navigation, route }) {
           </TouchableOpacity>
         </View>
 
-        {/* Select Date Section */}
-        <View style={styles.dateSection}>
-          <Text style={styles.sectionTitle}>Select date for your service</Text>
-          <ScrollView 
-            horizontal 
-            showsHorizontalScrollIndicator={false}
-            style={styles.datesScrollView}
-            contentContainerStyle={styles.datesScrollContent}
-          >
-            {dates.map((date, index) => {
-              const formatted = formatDate(date);
-              const isSelected = selectedDate?.toDateString() === date.toDateString();
-              return (
-                <TouchableOpacity
-                  key={index}
-                  style={[styles.dateCard, isSelected && styles.dateCardSelected]}
-                  onPress={() => setSelectedDate(date)}
-                >
-                  <Text style={[styles.dateDay, isSelected && styles.dateDaySelected]}>
-                    {formatted.day}
+        {isPackage ? (
+          <>
+            {/* Package: First Date Selection */}
+            {generatedSlots.length === 0 && (
+              <>
+                <View style={styles.dateSection}>
+                  <Text style={styles.sectionTitle}>Select your first service date</Text>
+                  <Text style={styles.sectionSubtitle}>
+                    We'll automatically schedule {packageTimes} washes over the next 30 days (3 per week)
                   </Text>
-                  <Text style={[styles.dateNumber, isSelected && styles.dateNumberSelected]}>
-                    {formatted.date}
-                  </Text>
-                  <Text style={[styles.dateMonth, isSelected && styles.dateMonthSelected]}>
-                    {formatted.month}
-                  </Text>
-                  {isToday(date) && (
-                    <View style={styles.todayBadge}>
-                      <Text style={styles.todayBadgeText}>Today</Text>
-                    </View>
-                  )}
-                </TouchableOpacity>
-              );
-            })}
-          </ScrollView>
-        </View>
+                  <ScrollView 
+                    horizontal 
+                    showsHorizontalScrollIndicator={false}
+                    style={styles.datesScrollView}
+                    contentContainerStyle={styles.datesScrollContent}
+                  >
+                    {dates.map((date, index) => {
+                      const formatted = formatDate(date);
+                      const isSelected = selectedDate?.toDateString() === date.toDateString();
+                      return (
+                        <TouchableOpacity
+                          key={index}
+                          style={[styles.dateCard, isSelected && styles.dateCardSelected]}
+                          onPress={() => setSelectedDate(date)}
+                        >
+                          <Text style={[styles.dateDay, isSelected && styles.dateDaySelected]}>
+                            {formatted.day}
+                          </Text>
+                          <Text style={[styles.dateNumber, isSelected && styles.dateNumberSelected]}>
+                            {formatted.date}
+                          </Text>
+                          <Text style={[styles.dateMonth, isSelected && styles.dateMonthSelected]}>
+                            {formatted.month}
+                          </Text>
+                          {isToday(date) && (
+                            <View style={styles.todayBadge}>
+                              <Text style={styles.todayBadgeText}>Today</Text>
+                            </View>
+                          )}
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </ScrollView>
+                </View>
 
-        {/* Time Slots Section */}
-        <View style={styles.timeSlotsSection}>
-          <Text style={styles.sectionTitle}>Select time</Text>
-          <View style={styles.timeSlotsGrid}>
-            {timeSlots.map((slot) => {
-              const isSelected = selectedTimeSlot?.id === slot.id;
-              return (
-                <TouchableOpacity
-                  key={slot.id}
-                  style={[styles.timeSlotCard, isSelected && styles.timeSlotCardSelected]}
-                  onPress={() => setSelectedTimeSlot(slot)}
-                >
-                  <Text style={[styles.timeSlotText, isSelected && styles.timeSlotTextSelected]}>
-                    {slot.time}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-        </View>
+                {/* Time Slot Selection for First Date */}
+                {selectedDate && (
+                  <View style={styles.timeSlotsSection}>
+                    <Text style={styles.sectionTitle}>Select time for first service</Text>
+                    <View style={styles.timeSlotsGrid}>
+                      {timeSlots.map((slot) => {
+                        const isSelected = selectedTimeSlot?.id === slot.id;
+                        return (
+                          <TouchableOpacity
+                            key={slot.id}
+                            style={[styles.timeSlotCard, isSelected && styles.timeSlotCardSelected]}
+                            onPress={() => setSelectedTimeSlot(slot)}
+                          >
+                            <Text style={[styles.timeSlotText, isSelected && styles.timeSlotTextSelected]}>
+                              {slot.time}
+                            </Text>
+                          </TouchableOpacity>
+                        );
+                      })}
+                    </View>
+                  </View>
+                )}
+              </>
+            )}
+
+            {/* Generated Slots Display */}
+            {generatedSlots.length > 0 && (
+              <View style={styles.generatedSlotsSection}>
+                <View style={styles.sectionHeader}>
+                  <Text style={styles.sectionTitle}>Your Scheduled Services</Text>
+                  <Text style={styles.slotCount}>{generatedSlots.length} of {packageTimes} slots</Text>
+                </View>
+                <Text style={styles.sectionSubtitle}>
+                  Tap any slot to change the date or time. You cannot schedule multiple washes on the same day.
+                </Text>
+                
+                {generatedSlots.map((slot, index) => {
+                  const formatted = formatDate(slot.scheduledDate);
+                  const isEditing = editingSlotIndex === index;
+                  
+                  return (
+                    <View key={index} style={styles.slotCard}>
+                      <View style={styles.slotHeader}>
+                        <View style={styles.slotNumber}>
+                          <Text style={styles.slotNumberText}>{index + 1}</Text>
+                        </View>
+                        <View style={styles.slotInfo}>
+                          <Text style={styles.slotDateText}>{formatted.full}</Text>
+                          <Text style={styles.slotTimeText}>
+                            {slot.scheduledTimeSlot?.time || slot.scheduledTimeSlot}
+                          </Text>
+                        </View>
+                        <TouchableOpacity
+                          style={styles.editSlotButton}
+                          onPress={() => setEditingSlotIndex(isEditing ? null : index)}
+                        >
+                          <MaterialCommunityIcons 
+                            name={isEditing ? "close" : "pencil"} 
+                            size={18} 
+                            color={theme.accent} 
+                          />
+                        </TouchableOpacity>
+                      </View>
+
+                      {isEditing && (
+                        <View style={styles.editSlotContainer}>
+                          <Text style={styles.editLabel}>Change Date</Text>
+                          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.editDatesScroll}>
+                            {dates.map((date, dateIndex) => {
+                              const dateFormatted = formatDate(date);
+                              const isSelected = slot.scheduledDate.toDateString() === date.toDateString();
+                              const isDisabled = generatedSlots.some((s, idx) => 
+                                idx !== index && s.scheduledDate.toDateString() === date.toDateString()
+                              );
+                              
+                              return (
+                                <TouchableOpacity
+                                  key={dateIndex}
+                                  style={[
+                                    styles.editDateCard,
+                                    isSelected && styles.editDateCardSelected,
+                                    isDisabled && styles.editDateCardDisabled,
+                                  ]}
+                                  onPress={() => {
+                                    if (!isDisabled) {
+                                      updateSlot(index, date, slot.scheduledTimeSlot);
+                                    }
+                                  }}
+                                  disabled={isDisabled}
+                                >
+                                  <Text style={[styles.editDateText, isSelected && styles.editDateTextSelected]}>
+                                    {dateFormatted.day} {dateFormatted.date}
+                                  </Text>
+                                </TouchableOpacity>
+                              );
+                            })}
+                          </ScrollView>
+
+                          <Text style={styles.editLabel}>Change Time</Text>
+                          <View style={styles.editTimeSlotsGrid}>
+                            {timeSlots.map((timeSlot) => {
+                              const isSelected = (slot.scheduledTimeSlot?.id || slot.scheduledTimeSlot) === timeSlot.id;
+                              return (
+                                <TouchableOpacity
+                                  key={timeSlot.id}
+                                  style={[styles.editTimeSlotCard, isSelected && styles.editTimeSlotCardSelected]}
+                                  onPress={() => updateSlot(index, slot.scheduledDate, timeSlot)}
+                                >
+                                  <Text style={[styles.editTimeSlotText, isSelected && styles.editTimeSlotTextSelected]}>
+                                    {timeSlot.time}
+                                  </Text>
+                                </TouchableOpacity>
+                              );
+                            })}
+                          </View>
+                        </View>
+                      )}
+                    </View>
+                  );
+                })}
+              </View>
+            )}
+          </>
+        ) : (
+          <>
+            {/* OneTime: Regular Date Selection */}
+            <View style={styles.dateSection}>
+              <Text style={styles.sectionTitle}>Select date for your service</Text>
+              <ScrollView 
+                horizontal 
+                showsHorizontalScrollIndicator={false}
+                style={styles.datesScrollView}
+                contentContainerStyle={styles.datesScrollContent}
+              >
+                {dates.map((date, index) => {
+                  const formatted = formatDate(date);
+                  const isSelected = selectedDate?.toDateString() === date.toDateString();
+                  return (
+                    <TouchableOpacity
+                      key={index}
+                      style={[styles.dateCard, isSelected && styles.dateCardSelected]}
+                      onPress={() => setSelectedDate(date)}
+                    >
+                      <Text style={[styles.dateDay, isSelected && styles.dateDaySelected]}>
+                        {formatted.day}
+                      </Text>
+                      <Text style={[styles.dateNumber, isSelected && styles.dateNumberSelected]}>
+                        {formatted.date}
+                      </Text>
+                      <Text style={[styles.dateMonth, isSelected && styles.dateMonthSelected]}>
+                        {formatted.month}
+                      </Text>
+                      {isToday(date) && (
+                        <View style={styles.todayBadge}>
+                          <Text style={styles.todayBadgeText}>Today</Text>
+                        </View>
+                      )}
+                    </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
+            </View>
+
+            {/* OneTime: Time Slots Section */}
+            <View style={styles.timeSlotsSection}>
+              <Text style={styles.sectionTitle}>Select time</Text>
+              <View style={styles.timeSlotsGrid}>
+                {timeSlots.map((slot) => {
+                  const isSelected = selectedTimeSlot?.id === slot.id;
+                  return (
+                    <TouchableOpacity
+                      key={slot.id}
+                      style={[styles.timeSlotCard, isSelected && styles.timeSlotCardSelected]}
+                      onPress={() => setSelectedTimeSlot(slot)}
+                    >
+                      <Text style={[styles.timeSlotText, isSelected && styles.timeSlotTextSelected]}>
+                        {slot.time}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </View>
+          </>
+        )}
 
         {/* Total Amount Section */}
         <View style={styles.totalSection}>
@@ -260,22 +539,22 @@ export default function SlotSelectionScreen({ navigation, route }) {
         <TouchableOpacity 
           style={[
             styles.checkoutButton,
-            (!selectedDate || !selectedTimeSlot) && styles.checkoutButtonDisabled
+            !canProceed && styles.checkoutButtonDisabled
           ]}
           onPress={handleCheckout}
-          disabled={!selectedDate || !selectedTimeSlot}
+          disabled={!canProceed}
         >
           <Text style={[
             styles.checkoutButtonText,
-            (!selectedDate || !selectedTimeSlot) && styles.checkoutButtonTextDisabled
+            !canProceed && styles.checkoutButtonTextDisabled
           ]}>
             Add to Cart
           </Text>
-              <MaterialCommunityIcons 
-                name="arrow-right" 
-                size={20} 
-                color={(!selectedDate || !selectedTimeSlot) ? theme.textSecondary : '#000000'} 
-              />
+          <MaterialCommunityIcons 
+            name="arrow-right" 
+            size={20} 
+            color={!canProceed ? theme.textSecondary : '#000000'} 
+          />
         </TouchableOpacity>
       </View>
     </View>
@@ -340,7 +619,24 @@ const createStyles = theme => StyleSheet.create({
     fontSize: 18,
     fontWeight: 'bold',
     color: theme.textPrimary,
+    marginBottom: 8,
+  },
+  sectionSubtitle: {
+    fontSize: 14,
+    color: theme.textSecondary,
     marginBottom: 16,
+    lineHeight: 20,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  slotCount: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: theme.accent,
   },
   datesScrollView: {
     marginHorizontal: -16,
@@ -433,6 +729,120 @@ const createStyles = theme => StyleSheet.create({
     color: theme.textPrimary,
   },
   timeSlotTextSelected: {
+    color: '#000000',
+  },
+  generatedSlotsSection: {
+    marginTop: 24,
+    paddingHorizontal: 16,
+  },
+  slotCard: {
+    backgroundColor: theme.cardBackground,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: theme.cardBorder,
+    padding: 16,
+    marginBottom: 12,
+  },
+  slotHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  slotNumber: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: theme.accent,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  slotNumberText: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#000000',
+  },
+  slotInfo: {
+    flex: 1,
+  },
+  slotDateText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: theme.textPrimary,
+    marginBottom: 4,
+  },
+  slotTimeText: {
+    fontSize: 14,
+    color: theme.textSecondary,
+  },
+  editSlotButton: {
+    padding: 8,
+  },
+  editSlotContainer: {
+    marginTop: 16,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: theme.cardBorder,
+  },
+  editLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: theme.textPrimary,
+    marginBottom: 12,
+    marginTop: 8,
+  },
+  editDatesScroll: {
+    marginHorizontal: -16,
+    paddingHorizontal: 16,
+  },
+  editDateCard: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: theme.cardBorder,
+    marginRight: 8,
+    backgroundColor: theme.cardBackground,
+  },
+  editDateCardSelected: {
+    backgroundColor: theme.accent,
+    borderColor: theme.accent,
+  },
+  editDateCardDisabled: {
+    opacity: 0.4,
+  },
+  editDateText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: theme.textPrimary,
+  },
+  editDateTextSelected: {
+    color: '#000000',
+  },
+  editTimeSlotsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginHorizontal: -4,
+  },
+  editTimeSlotCard: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: theme.cardBorder,
+    marginHorizontal: 4,
+    marginBottom: 8,
+    backgroundColor: theme.cardBackground,
+  },
+  editTimeSlotCardSelected: {
+    backgroundColor: theme.accent,
+    borderColor: theme.accent,
+  },
+  editTimeSlotText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: theme.textPrimary,
+  },
+  editTimeSlotTextSelected: {
     color: '#000000',
   },
   totalSection: {

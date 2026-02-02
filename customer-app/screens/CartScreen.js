@@ -95,12 +95,18 @@ export default function CartScreen({ navigation, route }) {
   };
 
   const formatSlot = (item) => {
+    // Handle package orders with scheduledSlots
+    if (item?.scheduledSlots && Array.isArray(item.scheduledSlots) && item.scheduledSlots.length > 0) {
+      return `${item.scheduledSlots.length} slots scheduled`;
+    }
+    
+    // Handle OneTime orders
     if (!item?.selectedDate || !item?.selectedTimeSlot) return null;
     const date = new Date(item.selectedDate);
     const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
     const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     const label = `${days[date.getDay()]}, ${date.getDate()} ${months[date.getMonth()]}`;
-    return `${label} • ${item.selectedTimeSlot.time}`;
+    return `${label} • ${item.selectedTimeSlot.time || item.selectedTimeSlot}`;
   };
 
   const subtotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
