@@ -46,6 +46,7 @@ export default function LoginScreen({ onLogin }) {
         await AsyncStorage.setItem('employeeAuthToken', data.token);
         await AsyncStorage.setItem('employeeId', data.data.employeeId);
         await AsyncStorage.setItem('employeeName', data.data.name || '');
+        await AsyncStorage.setItem('employeePhone', data.data.phone || '');
       }
       
       if (onLogin) {

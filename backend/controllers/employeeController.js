@@ -59,6 +59,29 @@ export const loginEmployee = async (req, res) => {
   }
 };
 
+// @desc    Get all employees
+// @route   GET /api/employees
+// @access  Public (for admin panel)
+export const getEmployees = async (req, res) => {
+  try {
+    const employees = await Employee.find({ isActive: true })
+      .select('-passwordHash -__v')
+      .sort({ employeeId: 1 });
+
+    res.status(200).json({
+      success: true,
+      data: employees,
+    });
+  } catch (error) {
+    console.error('Error fetching employees:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching employees',
+      error: error.message,
+    });
+  }
+};
+
 // @desc    Create employee
 // @route   POST /api/employees
 // @access  Public (demo only)

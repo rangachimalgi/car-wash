@@ -1,21 +1,57 @@
-import React from 'react';
-import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { Image, StyleSheet, Text, TouchableOpacity, View, ActivityIndicator } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function ProfileScreen({ onLogout }) {
   const insets = useSafeAreaInsets();
-  const profile = {
-    employeeId: 'EMP-1024',
-    name: 'Ranga',
-    phone: '+91 98765 43210',
-  };
+  const [profile, setProfile] = useState({
+    employeeId: '',
+    name: '',
+    phone: '',
+  });
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const loadProfile = async () => {
+      try {
+        const [employeeId, employeeName, employeePhone] = await Promise.all([
+          AsyncStorage.getItem('employeeId'),
+          AsyncStorage.getItem('employeeName'),
+          AsyncStorage.getItem('employeePhone'),
+        ]);
+
+        setProfile({
+          employeeId: employeeId || '',
+          name: employeeName || '',
+          phone: employeePhone || '',
+        });
+      } catch (error) {
+        console.error('Error loading profile:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadProfile();
+  }, []);
 
   const handleLogout = () => {
     if (onLogout) {
       onLogout();
     }
   };
+
+  if (loading) {
+    return (
+      <View style={[styles.container, styles.loadingContainer, { paddingTop: 24 + insets.top }]}>
+        <StatusBar style="dark" />
+        <ActivityIndicator size="large" color="#85E4FC" />
+        <Text style={styles.loadingText}>Loading profile...</Text>
+      </View>
+    );
+  }
 
   return (
     <View style={[styles.container, { paddingTop: 24 + insets.top }]}>
@@ -32,22 +68,22 @@ export default function ProfileScreen({ onLogout }) {
             />
           </View>
           <View>
-            <Text style={styles.nameText}>{profile.name}</Text>
-            <Text style={styles.employeeText}>{profile.employeeId}</Text>
+            <Text style={styles.nameText}>{profile.name || 'Employee'}</Text>
+            <Text style={styles.employeeText}>{profile.employeeId || 'N/A'}</Text>
           </View>
         </View>
 
         <View style={styles.infoRow}>
           <Text style={styles.infoLabel}>Employee ID</Text>
-          <Text style={styles.infoValue}>{profile.employeeId}</Text>
+          <Text style={styles.infoValue}>{profile.employeeId || 'N/A'}</Text>
         </View>
         <View style={styles.infoRow}>
           <Text style={styles.infoLabel}>Name</Text>
-          <Text style={styles.infoValue}>{profile.name}</Text>
+          <Text style={styles.infoValue}>{profile.name || 'N/A'}</Text>
         </View>
         <View style={styles.infoRow}>
           <Text style={styles.infoLabel}>Phone Number</Text>
-          <Text style={styles.infoValue}>{profile.phone}</Text>
+          <Text style={styles.infoValue}>{profile.phone || 'N/A'}</Text>
         </View>
       </View>
 
@@ -135,5 +171,14 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontWeight: '700',
     fontSize: 14,
+  },
+  loadingContainer: {
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 14,
+    color: '#6B7280',
   },
 });

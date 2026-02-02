@@ -1,17 +1,17 @@
-import React, { useMemo, useState } from 'react';
-import { FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useMemo, useState, useEffect, useCallback } from 'react';
+import { FlatList, StyleSheet, Text, TouchableOpacity, View, Alert, ActivityIndicator, RefreshControl } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { markCheckIn, getTodayAttendance, getAttendanceHistory } from '../services/attendanceApi.js';
 
 export default function AttendanceScreen() {
   const insets = useSafeAreaInsets();
   const styles = useMemo(() => createStyles(), []);
-  const [status, setStatus] = useState('not_marked');
-  const [history, setHistory] = useState([
-    { id: '1', date: 'Jan 20, 2026', checkIn: '09:12 AM', checkOut: '06:05 PM' },
-    { id: '2', date: 'Jan 21, 2026', checkIn: '09:08 AM', checkOut: '06:02 PM' },
-    { id: '3', date: 'Jan 22, 2026', checkIn: '09:25 AM', checkOut: '05:58 PM' },
-  ]);
+  const [todayAttendance, setTodayAttendance] = useState(null);
+  const [history, setHistory] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [markingAttendance, setMarkingAttendance] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
 
   const today = new Date();
   const todayLabel = today.toLocaleDateString('en-IN', {
@@ -24,16 +24,115 @@ export default function AttendanceScreen() {
     minute: '2-digit',
   });
 
-  const handleMarkAttendance = () => {
-    setStatus('completed');
-    const newEntry = {
-      id: String(Date.now()),
-      date: today.toLocaleDateString('en-IN', { month: 'short', day: 'numeric', year: 'numeric' }),
-      checkIn: timeLabel,
-      checkOut: '—',
-    };
-    setHistory(prev => [newEntry, ...prev]);
+  // Fetch today's attendance and history
+  const fetchAttendance = useCallback(async () => {
+    try {
+      setLoading(true);
+      const [todayData, historyData] = await Promise.all([
+        getTodayAttendance(),
+        getAttendanceHistory(30, 1),
+      ]);
+      
+      if (todayData.success) {
+        setTodayAttendance(todayData.data);
+      }
+      
+      if (historyData.success) {
+        setHistory(historyData.data || []);
+      }
+    } catch (error) {
+      console.error('Error fetching attendance:', error);
+      Alert.alert('Error', error.message || 'Failed to fetch attendance');
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchAttendance();
+  }, [fetchAttendance]);
+
+  const handleMarkAttendance = async () => {
+    if (markingAttendance) return;
+    
+    try {
+      setMarkingAttendance(true);
+      const response = await markCheckIn();
+      
+      if (response.success) {
+        setTodayAttendance(response.data);
+        // Refresh history to show today's entry
+        const historyData = await getAttendanceHistory(30, 1);
+        if (historyData.success) {
+          setHistory(historyData.data || []);
+        }
+        Alert.alert('Success', 'Attendance marked successfully!');
+      }
+    } catch (error) {
+      console.error('Error marking attendance:', error);
+      Alert.alert('Error', error.message || 'Failed to mark attendance');
+    } finally {
+      setMarkingAttendance(false);
+    }
   };
+
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    fetchAttendance();
+  }, [fetchAttendance]);
+
+  // Determine status
+  const getStatus = () => {
+    if (!todayAttendance || !todayAttendance.checkIn) {
+      return 'not_marked';
+    }
+    return 'marked';
+  };
+
+  const status = getStatus();
+
+  // Format time from ISO string
+  const formatTime = (isoString) => {
+    if (!isoString) return '—';
+    const date = new Date(isoString);
+    return date.toLocaleTimeString('en-IN', {
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  };
+
+  // Format date for history
+  const formatHistoryDate = (dateString) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-IN', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+    });
+  };
+
+  // Get status text
+  const getStatusText = () => {
+    if (status === 'not_marked') return 'Not marked';
+    return 'Attendance marked';
+  };
+
+  // Get status dot color
+  const getStatusDotStyle = () => {
+    if (status === 'not_marked') return styles.statusDot;
+    return styles.statusDotDone;
+  };
+
+  if (loading && !todayAttendance) {
+    return (
+      <View style={[styles.container, styles.centerContent, { paddingTop: 24 + insets.top }]}>
+        <StatusBar style="dark" />
+        <ActivityIndicator size="large" color="#2F8CF4" />
+        <Text style={styles.loadingText}>Loading attendance...</Text>
+      </View>
+    );
+  }
 
   return (
     <View style={[styles.container, { paddingTop: 24 + insets.top }]}>
@@ -44,48 +143,65 @@ export default function AttendanceScreen() {
         <Text style={styles.dateText}>{todayLabel}</Text>
         <Text style={styles.timeText}>{timeLabel}</Text>
         <View style={styles.statusRow}>
-          <View
-            style={[
-              styles.statusDot,
-              status === 'completed' && styles.statusDotDone,
-            ]}
-          />
-            <Text style={styles.statusText}>
-              {status === 'not_marked' && 'Not marked'}
-              {status === 'completed' && 'Attendance completed'}
-            </Text>
+          <View style={getStatusDotStyle()} />
+          <Text style={styles.statusText}>{getStatusText()}</Text>
         </View>
-        {status === 'not_marked' ? (
-          <TouchableOpacity style={styles.primaryButton} onPress={handleMarkAttendance}>
-            <Text style={styles.primaryButtonText}>Mark Attendance</Text>
+        
+        {todayAttendance?.checkIn && (
+          <View style={styles.timeInfo}>
+            <Text style={styles.timeInfoLabel}>Marked at: {formatTime(todayAttendance.checkIn)}</Text>
+          </View>
+        )}
+
+        {status === 'not_marked' && (
+          <TouchableOpacity 
+            style={[styles.primaryButton, markingAttendance && styles.primaryButtonDisabled]} 
+            onPress={handleMarkAttendance}
+            disabled={markingAttendance}
+          >
+            {markingAttendance ? (
+              <ActivityIndicator size="small" color="#FFFFFF" />
+            ) : (
+              <Text style={styles.primaryButtonText}>Mark Attendance</Text>
+            )}
           </TouchableOpacity>
-        ) : (
+        )}
+        
+        {status === 'marked' && (
           <View style={styles.doneBadge}>
-            <Text style={styles.doneBadgeText}>Attendance completed</Text>
+            <Text style={styles.doneBadgeText}>Attendance marked for today</Text>
           </View>
         )}
       </View>
 
       <View style={styles.historyHeader}>
         <Text style={styles.historyTitle}>History</Text>
-        <Text style={styles.historyHint}>Last 7 days</Text>
+        <Text style={styles.historyHint}>Last 30 days</Text>
       </View>
 
       <FlatList
         data={history}
-        keyExtractor={item => item.id}
+        keyExtractor={item => item._id || String(item.date)}
         contentContainerStyle={styles.historyList}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
         renderItem={({ item }) => (
           <View style={styles.historyItem}>
             <View>
-              <Text style={styles.historyDate}>{item.date}</Text>
+              <Text style={styles.historyDate}>{formatHistoryDate(item.date)}</Text>
               <Text style={styles.historyTimes}>
-                In {item.checkIn} · Out {item.checkOut}
+                Marked at: {formatTime(item.checkIn)}
               </Text>
             </View>
             <Text style={styles.historyStatus}>Present</Text>
           </View>
         )}
+        ListEmptyComponent={
+          <View style={styles.emptyContainer}>
+            <Text style={styles.emptyText}>No attendance history</Text>
+          </View>
+        }
       />
     </View>
   );
@@ -212,5 +328,55 @@ const createStyles = () =>
       fontSize: 12,
       fontWeight: '700',
       color: '#16A34A',
+    },
+    historyStatusLate: {
+      color: '#F59E0B',
+    },
+    historyStatusAbsent: {
+      color: '#EF4444',
+    },
+    centerContent: {
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    loadingText: {
+      marginTop: 12,
+      fontSize: 14,
+      color: '#6B7280',
+    },
+    primaryButtonDisabled: {
+      opacity: 0.6,
+    },
+    secondaryButton: {
+      backgroundColor: '#FFFFFF',
+      borderRadius: 12,
+      paddingVertical: 14,
+      alignItems: 'center',
+      borderWidth: 1,
+      borderColor: '#2F8CF4',
+    },
+    secondaryButtonText: {
+      color: '#2F8CF4',
+      fontWeight: '700',
+      fontSize: 14,
+    },
+    secondaryButtonDisabled: {
+      opacity: 0.6,
+    },
+    timeInfo: {
+      marginBottom: 16,
+      gap: 4,
+    },
+    timeInfoLabel: {
+      fontSize: 13,
+      color: '#6B7280',
+    },
+    emptyContainer: {
+      padding: 24,
+      alignItems: 'center',
+    },
+    emptyText: {
+      fontSize: 14,
+      color: '#6B7280',
     },
   });
