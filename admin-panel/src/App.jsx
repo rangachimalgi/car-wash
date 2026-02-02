@@ -10,7 +10,7 @@ const API_BASE_URL = `http://${COMPUTER_IP}:8000/api`
 // const API_BASE_URL = 'https://car-wash-vbry.onrender.com/api'
 
 function App() {
-  const [activeTab, setActiveTab] = useState('services') // 'services', 'addons', 'coverage', 'orders', 'attendance'
+  const [activeTab, setActiveTab] = useState('services') // 'services', 'addons', 'coverage', 'orders', 'attendance', 'inventory'
   
   // Services form data
   const [formData, setFormData] = useState({
@@ -78,6 +78,25 @@ function App() {
   const [attendanceDate, setAttendanceDate] = useState(new Date().toISOString().split('T')[0])
   const [selectedEmployeeId, setSelectedEmployeeId] = useState('all')
 
+  // Inventory state
+  const [inventory, setInventory] = useState([])
+  const [loadingInventory, setLoadingInventory] = useState(false)
+  const [inventoryFilter, setInventoryFilter] = useState('all') // 'all', 'lowStock', or category
+  const [inventoryCategoryFilter, setInventoryCategoryFilter] = useState('all')
+  const [inventorySearch, setInventorySearch] = useState('')
+  const [inventoryFormData, setInventoryFormData] = useState({
+    name: '',
+    category: 'Soap',
+    currentStock: '',
+    unit: 'units',
+    lowStockThreshold: '',
+    description: '',
+    supplier: '',
+  })
+  const [editingInventoryId, setEditingInventoryId] = useState(null)
+  const [inventoryMessage, setInventoryMessage] = useState({ type: '', text: '' })
+  const [stockUpdateModal, setStockUpdateModal] = useState({ open: false, item: null, quantity: '', operation: 'add' })
+
   // Helper function to create fetch options with auth headers
   const getFetchOptions = (options = {}) => {
     return {
@@ -107,6 +126,13 @@ function App() {
       fetchAttendance()
     }
   }, [activeTab, attendanceDate, selectedEmployeeId])
+
+  // Fetch inventory when inventory tab is active or filters change
+  useEffect(() => {
+    if (activeTab === 'inventory') {
+      fetchInventory()
+    }
+  }, [activeTab, inventoryCategoryFilter, inventoryFilter, inventorySearch])
 
   // Fetch all add-ons for listing
   const fetchAllAddOns = async () => {
@@ -337,6 +363,249 @@ function App() {
       hour: '2-digit',
       minute: '2-digit',
     })
+  }
+
+  // Fetch inventory items
+  const fetchInventory = async () => {
+    setLoadingInventory(true)
+    try {
+      let url = `${API_BASE_URL}/inventory`
+      const params = []
+      
+      if (inventoryCategoryFilter !== 'all') {
+        params.push(`category=${inventoryCategoryFilter}`)
+      }
+      if (inventoryFilter === 'lowStock') {
+        params.push('lowStock=true')
+      }
+      if (inventorySearch) {
+        params.push(`search=${encodeURIComponent(inventorySearch)}`)
+      }
+      
+      if (params.length > 0) {
+        url += '?' + params.join('&')
+      }
+      
+      const response = await fetch(url)
+      const data = await response.json()
+      if (data.success) {
+        setInventory(data.data || [])
+      } else {
+        console.error('Error fetching inventory:', data.message)
+        setInventoryMessage({ type: 'error', text: data.message || 'Error fetching inventory' })
+      }
+    } catch (error) {
+      console.error('Error fetching inventory:', error)
+      setInventoryMessage({ type: 'error', text: `Network error: ${error.message}` })
+    } finally {
+      setLoadingInventory(false)
+    }
+  }
+
+  // Handle inventory form change
+  const handleInventoryChange = (e) => {
+    const { name, value } = e.target
+    setInventoryFormData(prev => ({
+      ...prev,
+      [name]: value
+    }))
+  }
+
+  // Handle inventory form submit
+  const handleInventorySubmit = async (e) => {
+    e.preventDefault()
+    setLoadingInventory(true)
+    setInventoryMessage({ type: '', text: '' })
+
+    try {
+      const inventoryData = {
+        name: inventoryFormData.name.trim(),
+        category: inventoryFormData.category,
+        currentStock: Number(inventoryFormData.currentStock),
+        unit: inventoryFormData.unit.trim(),
+        lowStockThreshold: Number(inventoryFormData.lowStockThreshold),
+        description: inventoryFormData.description.trim(),
+        supplier: inventoryFormData.supplier.trim(),
+      }
+
+      const url = editingInventoryId 
+        ? `${API_BASE_URL}/inventory/${editingInventoryId}`
+        : `${API_BASE_URL}/inventory`
+      const method = editingInventoryId ? 'PUT' : 'POST'
+
+      const response = await fetch(url, {
+        method,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(inventoryData),
+      })
+
+      const data = await response.json()
+
+      if (response.ok && data.success) {
+        setInventoryMessage({ 
+          type: 'success', 
+          text: editingInventoryId ? 'Inventory item updated successfully!' : 'Inventory item created successfully!' 
+        })
+        // Reset form
+        setInventoryFormData({
+          name: '',
+          category: 'Soap',
+          currentStock: '',
+          unit: 'units',
+          lowStockThreshold: '',
+          description: '',
+          supplier: '',
+        })
+        setEditingInventoryId(null)
+        // Refresh inventory list
+        fetchInventory()
+      } else {
+        setInventoryMessage({ 
+          type: 'error', 
+          text: data.message || (editingInventoryId ? 'Failed to update item' : 'Failed to create item')
+        })
+      }
+    } catch (error) {
+      console.error('Error saving inventory item:', error)
+      setInventoryMessage({ 
+        type: 'error', 
+        text: error.message || 'Network error. Please check if backend is running.' 
+      })
+    } finally {
+      setLoadingInventory(false)
+    }
+  }
+
+  // Handle edit inventory item
+  const handleEditInventory = async (itemId) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/inventory/${itemId}`)
+      const data = await response.json()
+      
+      if (data.success && data.data) {
+        const item = data.data
+        setEditingInventoryId(itemId)
+        setInventoryFormData({
+          name: item.name || '',
+          category: item.category || 'Soap',
+          currentStock: String(item.currentStock || ''),
+          unit: item.unit || 'units',
+          lowStockThreshold: String(item.lowStockThreshold || ''),
+          description: item.description || '',
+          supplier: item.supplier || '',
+        })
+        window.scrollTo({ top: 0, behavior: 'smooth' })
+      }
+    } catch (error) {
+      console.error('Error loading inventory item for edit:', error)
+      setInventoryMessage({ type: 'error', text: 'Failed to load item data' })
+    }
+  }
+
+  // Handle new inventory item
+  const handleNewInventory = () => {
+    setEditingInventoryId(null)
+    setInventoryFormData({
+      name: '',
+      category: 'Soap',
+      currentStock: '',
+      unit: 'units',
+      lowStockThreshold: '',
+      description: '',
+      supplier: '',
+    })
+  }
+
+  // Handle stock update
+  const handleStockUpdate = async () => {
+    if (!stockUpdateModal.item || !stockUpdateModal.quantity || Number(stockUpdateModal.quantity) <= 0) {
+      setInventoryMessage({ type: 'error', text: 'Please enter a valid quantity' })
+      return
+    }
+
+    setLoadingInventory(true)
+    setInventoryMessage({ type: '', text: '' })
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/inventory/${stockUpdateModal.item._id}/stock`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          quantity: Number(stockUpdateModal.quantity),
+          operation: stockUpdateModal.operation,
+        }),
+      })
+
+      const data = await response.json()
+
+      if (response.ok && data.success) {
+        setInventoryMessage({ type: 'success', text: data.message || 'Stock updated successfully!' })
+        setStockUpdateModal({ open: false, item: null, quantity: '', operation: 'add' })
+        fetchInventory()
+      } else {
+        setInventoryMessage({ type: 'error', text: data.message || 'Failed to update stock' })
+      }
+    } catch (error) {
+      console.error('Error updating stock:', error)
+      setInventoryMessage({ type: 'error', text: error.message || 'Network error' })
+    } finally {
+      setLoadingInventory(false)
+    }
+  }
+
+  // Handle delete inventory item
+  const handleDeleteInventory = async (itemId) => {
+    if (!window.confirm('Are you sure you want to delete this inventory item?')) {
+      return
+    }
+
+    setLoadingInventory(true)
+    try {
+      const response = await fetch(`${API_BASE_URL}/inventory/${itemId}`, {
+        method: 'DELETE',
+      })
+
+      const data = await response.json()
+
+      if (response.ok && data.success) {
+        setInventoryMessage({ type: 'success', text: 'Inventory item deleted successfully!' })
+        fetchInventory()
+      } else {
+        setInventoryMessage({ type: 'error', text: data.message || 'Failed to delete item' })
+      }
+    } catch (error) {
+      console.error('Error deleting inventory item:', error)
+      setInventoryMessage({ type: 'error', text: error.message || 'Network error' })
+    } finally {
+      setLoadingInventory(false)
+    }
+  }
+
+  // Filter inventory items
+  const filteredInventory = inventory.filter(item => {
+    if (inventoryCategoryFilter !== 'all' && item.category !== inventoryCategoryFilter) {
+      return false
+    }
+    if (inventoryFilter === 'lowStock' && !item.isLowStock) {
+      return false
+    }
+    if (inventorySearch && !item.name.toLowerCase().includes(inventorySearch.toLowerCase())) {
+      return false
+    }
+    return true
+  })
+
+  // Get inventory summary
+  const getInventorySummary = () => {
+    const totalItems = inventory.length
+    const lowStockItems = inventory.filter(item => item.isLowStock).length
+    const totalStockValue = inventory.reduce((sum, item) => sum + item.currentStock, 0)
+    
+    return { totalItems, lowStockItems, totalStockValue }
   }
 
   // Fetch all services for listing
@@ -973,6 +1242,17 @@ function App() {
             onClick={() => setActiveTab('attendance')}
           >
             Attendance
+          </button>
+          <button
+            type="button"
+            className={`tab ${activeTab === 'inventory' ? 'active' : ''}`}
+            onClick={() => setActiveTab('inventory')}
+          >
+            Inventory
+            {(() => {
+              const lowStockCount = inventory.filter(item => item.isLowStock).length
+              return lowStockCount > 0 ? ` (${lowStockCount})` : ''
+            })()}
           </button>
         </div>
 
@@ -1854,6 +2134,476 @@ function App() {
                     })}
                   </tbody>
                 </table>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Inventory Tab */}
+        {activeTab === 'inventory' && (
+          <div className="inventory-section">
+            {/* Summary Cards */}
+            {(() => {
+              const summary = getInventorySummary()
+              return (
+                <div style={{ 
+                  display: 'grid', 
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', 
+                  gap: '15px', 
+                  marginBottom: '20px' 
+                }}>
+                  <div style={{ 
+                    padding: '15px', 
+                    backgroundColor: '#f8f9fa', 
+                    borderRadius: '8px', 
+                    border: '1px solid #ddd' 
+                  }}>
+                    <div style={{ fontSize: '12px', color: '#666', marginBottom: '5px' }}>Total Items</div>
+                    <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#333' }}>{summary.totalItems}</div>
+                  </div>
+                  <div style={{ 
+                    padding: '15px', 
+                    backgroundColor: summary.lowStockItems > 0 ? '#fff3cd' : '#d4edda', 
+                    borderRadius: '8px', 
+                    border: `1px solid ${summary.lowStockItems > 0 ? '#ffc107' : '#c3e6cb'}` 
+                  }}>
+                    <div style={{ fontSize: '12px', color: summary.lowStockItems > 0 ? '#856404' : '#155724', marginBottom: '5px' }}>Low Stock Items</div>
+                    <div style={{ fontSize: '24px', fontWeight: 'bold', color: summary.lowStockItems > 0 ? '#856404' : '#155724' }}>{summary.lowStockItems}</div>
+                  </div>
+                </div>
+              )
+            })()}
+
+            {/* Inventory List Section */}
+            <div className="addons-list-section">
+              <div className="section-header">
+                <h2 className="section-title">Inventory Items</h2>
+                <button
+                  type="button"
+                  className="secondary-button"
+                  onClick={fetchInventory}
+                  disabled={loadingInventory}
+                >
+                  {loadingInventory ? 'Loading...' : 'Refresh'}
+                </button>
+              </div>
+
+              {/* Filters */}
+              <div style={{ marginBottom: '20px', display: 'flex', gap: '15px', alignItems: 'center', flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                  <label style={{ fontSize: '14px', fontWeight: '600' }}>Category:</label>
+                  <select
+                    value={inventoryCategoryFilter}
+                    onChange={(e) => setInventoryCategoryFilter(e.target.value)}
+                    style={{
+                      padding: '8px 12px',
+                      border: '1px solid #ddd',
+                      borderRadius: '4px',
+                      fontSize: '14px',
+                    }}
+                  >
+                    <option value="all">All Categories</option>
+                    <option value="Soap">Soap</option>
+                    <option value="Towels">Towels</option>
+                    <option value="Polish">Polish</option>
+                    <option value="Equipment">Equipment</option>
+                    <option value="Other">Other</option>
+                  </select>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                  <label style={{ fontSize: '14px', fontWeight: '600' }}>Filter:</label>
+                  <select
+                    value={inventoryFilter}
+                    onChange={(e) => setInventoryFilter(e.target.value)}
+                    style={{
+                      padding: '8px 12px',
+                      border: '1px solid #ddd',
+                      borderRadius: '4px',
+                      fontSize: '14px',
+                    }}
+                  >
+                    <option value="all">All Items</option>
+                    <option value="lowStock">Low Stock Only</option>
+                  </select>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '5px', flex: 1, minWidth: '200px' }}>
+                  <label style={{ fontSize: '14px', fontWeight: '600' }}>Search:</label>
+                  <input
+                    type="text"
+                    value={inventorySearch}
+                    onChange={(e) => setInventorySearch(e.target.value)}
+                    placeholder="Search by name..."
+                    style={{
+                      padding: '8px 12px',
+                      border: '1px solid #ddd',
+                      borderRadius: '4px',
+                      fontSize: '14px',
+                    }}
+                  />
+                </div>
+              </div>
+
+              {loadingInventory ? (
+                <div className="loading-text">Loading inventory...</div>
+              ) : filteredInventory.length === 0 ? (
+                <div className="info-text">No inventory items found.</div>
+              ) : (
+                <div className="addons-grid">
+                  {filteredInventory.map(item => (
+                    <div 
+                      key={item._id} 
+                      className="addon-card"
+                      style={{
+                        border: item.isLowStock ? '2px solid #dc3545' : '1px solid #ddd',
+                        backgroundColor: item.isLowStock ? '#fff5f5' : '#fff',
+                      }}
+                    >
+                      <div className="addon-card-header">
+                        <h3 className="addon-card-title">{item.name}</h3>
+                        {item.isLowStock && (
+                          <span style={{
+                            padding: '4px 8px',
+                            borderRadius: '4px',
+                            fontSize: '11px',
+                            fontWeight: '600',
+                            backgroundColor: '#dc3545',
+                            color: 'white',
+                          }}>
+                            LOW STOCK
+                          </span>
+                        )}
+                      </div>
+                      <div className="addon-card-details">
+                        <div className="detail-item">
+                          <span className="detail-label">Category:</span>
+                          <span className="detail-value">{item.category}</span>
+                        </div>
+                        <div className="detail-item">
+                          <span className="detail-label">Stock:</span>
+                          <span className="detail-value" style={{ 
+                            color: item.isLowStock ? '#dc3545' : '#333',
+                            fontWeight: item.isLowStock ? 'bold' : 'normal'
+                          }}>
+                            {item.currentStock} {item.unit}
+                          </span>
+                        </div>
+                        <div className="detail-item">
+                          <span className="detail-label">Low Stock Threshold:</span>
+                          <span className="detail-value">{item.lowStockThreshold} {item.unit}</span>
+                        </div>
+                        {item.supplier && (
+                          <div className="detail-item">
+                            <span className="detail-label">Supplier:</span>
+                            <span className="detail-value">{item.supplier}</span>
+                          </div>
+                        )}
+                        {item.lastRestocked && (
+                          <div className="detail-item">
+                            <span className="detail-label">Last Restocked:</span>
+                            <span className="detail-value">
+                              {new Date(item.lastRestocked).toLocaleDateString()}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                      <div className="addon-card-footer" style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                        <button
+                          type="button"
+                          className="secondary-button"
+                          onClick={() => handleEditInventory(item._id)}
+                          style={{ flex: 1, minWidth: '80px' }}
+                        >
+                          Edit
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setStockUpdateModal({ 
+                            open: true, 
+                            item, 
+                            quantity: '', 
+                            operation: 'add' 
+                          })}
+                          style={{
+                            flex: 1,
+                            minWidth: '80px',
+                            padding: '8px 16px',
+                            backgroundColor: '#28a745',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '4px',
+                            cursor: 'pointer',
+                            fontSize: '14px',
+                          }}
+                        >
+                          Add Stock
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setStockUpdateModal({ 
+                            open: true, 
+                            item, 
+                            quantity: '', 
+                            operation: 'remove' 
+                          })}
+                          style={{
+                            flex: 1,
+                            minWidth: '80px',
+                            padding: '8px 16px',
+                            backgroundColor: '#ffc107',
+                            color: '#333',
+                            border: 'none',
+                            borderRadius: '4px',
+                            cursor: 'pointer',
+                            fontSize: '14px',
+                          }}
+                        >
+                          Remove
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteInventory(item._id)}
+                          style={{
+                            padding: '8px 16px',
+                            backgroundColor: '#dc3545',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '4px',
+                            cursor: 'pointer',
+                            fontSize: '14px',
+                          }}
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Create/Edit Inventory Form */}
+            <div className="form-section-divider"></div>
+            <div className="section-header">
+              <h2 className="section-title">
+                {editingInventoryId ? 'Edit Inventory Item' : 'Create New Inventory Item'}
+              </h2>
+              {editingInventoryId && (
+                <button
+                  type="button"
+                  className="secondary-button"
+                  onClick={handleNewInventory}
+                >
+                  Create New Instead
+                </button>
+              )}
+            </div>
+            <form onSubmit={handleInventorySubmit} className="form">
+              <div className="form-group">
+                <label htmlFor="inventory-name">Item Name *</label>
+                <input
+                  type="text"
+                  id="inventory-name"
+                  name="name"
+                  value={inventoryFormData.name}
+                  onChange={handleInventoryChange}
+                  required
+                  placeholder="e.g., Car Soap, Microfiber Towels"
+                />
+              </div>
+
+              <div className="form-row">
+                <div className="form-group">
+                  <label htmlFor="inventory-category">Category *</label>
+                  <select
+                    id="inventory-category"
+                    name="category"
+                    value={inventoryFormData.category}
+                    onChange={handleInventoryChange}
+                    required
+                  >
+                    <option value="Soap">Soap</option>
+                    <option value="Towels">Towels</option>
+                    <option value="Polish">Polish</option>
+                    <option value="Equipment">Equipment</option>
+                    <option value="Other">Other</option>
+                  </select>
+                </div>
+
+                <div className="form-group">
+                  <label htmlFor="inventory-unit">Unit *</label>
+                  <input
+                    type="text"
+                    id="inventory-unit"
+                    name="unit"
+                    value={inventoryFormData.unit}
+                    onChange={handleInventoryChange}
+                    required
+                    placeholder="e.g., liters, pieces, kg, bottles"
+                  />
+                </div>
+              </div>
+
+              <div className="form-row">
+                <div className="form-group">
+                  <label htmlFor="inventory-stock">Current Stock *</label>
+                  <input
+                    type="number"
+                    id="inventory-stock"
+                    name="currentStock"
+                    value={inventoryFormData.currentStock}
+                    onChange={handleInventoryChange}
+                    required
+                    min="0"
+                    step="0.01"
+                    placeholder="0"
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label htmlFor="inventory-threshold">Low Stock Threshold *</label>
+                  <input
+                    type="number"
+                    id="inventory-threshold"
+                    name="lowStockThreshold"
+                    value={inventoryFormData.lowStockThreshold}
+                    onChange={handleInventoryChange}
+                    required
+                    min="0"
+                    step="0.01"
+                    placeholder="10"
+                  />
+                  <small className="help-text">Alert when stock falls below this amount</small>
+                </div>
+              </div>
+
+              <div className="form-row">
+                <div className="form-group">
+                  <label htmlFor="inventory-supplier">Supplier</label>
+                  <input
+                    type="text"
+                    id="inventory-supplier"
+                    name="supplier"
+                    value={inventoryFormData.supplier}
+                    onChange={handleInventoryChange}
+                    placeholder="e.g., ABC Supplies"
+                  />
+                </div>
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="inventory-description">Description</label>
+                <textarea
+                  id="inventory-description"
+                  name="description"
+                  value={inventoryFormData.description}
+                  onChange={handleInventoryChange}
+                  rows="3"
+                  placeholder="Additional notes about this item"
+                />
+              </div>
+
+              {inventoryMessage.text && (
+                <div className={`message ${inventoryMessage.type}`}>
+                  {inventoryMessage.text}
+                </div>
+              )}
+
+              <button type="submit" className="submit-button" disabled={loadingInventory}>
+                {loadingInventory 
+                  ? (editingInventoryId ? 'Updating...' : 'Creating...') 
+                  : (editingInventoryId ? 'Update Item' : 'Create Item')}
+              </button>
+            </form>
+
+            {/* Stock Update Modal */}
+            {stockUpdateModal.open && (
+              <div style={{
+                position: 'fixed',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                backgroundColor: 'rgba(0,0,0,0.5)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                zIndex: 1000,
+              }}>
+                <div style={{
+                  backgroundColor: 'white',
+                  padding: '30px',
+                  borderRadius: '8px',
+                  maxWidth: '500px',
+                  width: '90%',
+                }}>
+                  <h2 style={{ marginBottom: '20px' }}>
+                    {stockUpdateModal.operation === 'add' ? 'Add' : 'Remove'} Stock
+                  </h2>
+                  <p style={{ marginBottom: '15px' }}>
+                    <strong>Item:</strong> {stockUpdateModal.item?.name}
+                  </p>
+                  <p style={{ marginBottom: '15px' }}>
+                    <strong>Current Stock:</strong> {stockUpdateModal.item?.currentStock} {stockUpdateModal.item?.unit}
+                  </p>
+                  <div className="form-group">
+                    <label>Quantity to {stockUpdateModal.operation === 'add' ? 'Add' : 'Remove'} *</label>
+                    <input
+                      type="number"
+                      value={stockUpdateModal.quantity}
+                      onChange={(e) => setStockUpdateModal(prev => ({ ...prev, quantity: e.target.value }))}
+                      min="0.01"
+                      step="0.01"
+                      required
+                      placeholder="Enter quantity"
+                      style={{
+                        width: '100%',
+                        padding: '8px 12px',
+                        border: '1px solid #ddd',
+                        borderRadius: '4px',
+                        fontSize: '14px',
+                        marginBottom: '10px',
+                      }}
+                    />
+                    <small className="help-text">Unit: {stockUpdateModal.item?.unit}</small>
+                  </div>
+                  <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
+                    <button
+                      type="button"
+                      onClick={handleStockUpdate}
+                      disabled={loadingInventory || !stockUpdateModal.quantity}
+                      style={{
+                        flex: 1,
+                        padding: '10px 20px',
+                        backgroundColor: stockUpdateModal.operation === 'add' ? '#28a745' : '#ffc107',
+                        color: stockUpdateModal.operation === 'add' ? 'white' : '#333',
+                        border: 'none',
+                        borderRadius: '4px',
+                        cursor: loadingInventory ? 'not-allowed' : 'pointer',
+                        fontSize: '14px',
+                        fontWeight: '600',
+                      }}
+                    >
+                      {loadingInventory ? 'Updating...' : stockUpdateModal.operation === 'add' ? 'Add Stock' : 'Remove Stock'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setStockUpdateModal({ open: false, item: null, quantity: '', operation: 'add' })}
+                      disabled={loadingInventory}
+                      style={{
+                        flex: 1,
+                        padding: '10px 20px',
+                        backgroundColor: '#6c757d',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '4px',
+                        cursor: loadingInventory ? 'not-allowed' : 'pointer',
+                        fontSize: '14px',
+                      }}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
               </div>
             )}
           </div>
