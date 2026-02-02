@@ -21,12 +21,21 @@ const renderIcon = ({ route, color, size }) => (
 
 export default function MainTabs({ onLogout, employeeId, navigation }) {
   const [index, setIndex] = useState(0);
+  const [refreshKey, setRefreshKey] = useState(0);
   const openAttendance = () => setIndex(1);
+
+  const handleIndexChange = (newIndex) => {
+    setIndex(newIndex);
+    // Refresh home screen when coming back from attendance tab
+    if (newIndex === 0 && index === 1) {
+      setRefreshKey(prev => prev + 1);
+    }
+  };
 
   const renderScene = ({ route }) => {
     switch (route.key) {
       case 'home':
-        return <HomeScreen onOpenAttendance={openAttendance} employeeId={employeeId} />;
+        return <HomeScreen key={refreshKey} onOpenAttendance={openAttendance} employeeId={employeeId} />;
       case 'attendance':
         return <AttendanceScreen />;
       case 'jobs':
@@ -43,7 +52,7 @@ export default function MainTabs({ onLogout, employeeId, navigation }) {
   return (
     <BottomNavigation
       navigationState={{ index, routes }}
-      onIndexChange={setIndex}
+      onIndexChange={handleIndexChange}
       renderScene={renderScene}
       renderIcon={renderIcon}
     />

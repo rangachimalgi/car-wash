@@ -1,18 +1,31 @@
-import React, { useEffect, useState } from 'react';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useEffect, useState, useCallback } from 'react';
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View, ActivityIndicator } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { API_BASE_URL } from '../config/api';
+import { getTodayAttendance } from '../services/attendanceApi';
 
 export default function HomeScreen({ onOpenAttendance, employeeId }) {
   const insets = useSafeAreaInsets();
   const [incomingJob, setIncomingJob] = useState(null);
   const [loadingJob, setLoadingJob] = useState(false);
-  const attendance = {
-    date: 'Today',
-    status: 'Not marked',
-    time: '09:30 AM',
-  };
+  const [todayAttendance, setTodayAttendance] = useState(null);
+  const [loadingAttendance, setLoadingAttendance] = useState(true);
+
+  const fetchTodayAttendance = useCallback(async () => {
+    try {
+      setLoadingAttendance(true);
+      const response = await getTodayAttendance();
+      if (response.success) {
+        setTodayAttendance(response.data);
+      }
+    } catch (error) {
+      console.error('Error fetching today attendance:', error);
+      setTodayAttendance(null);
+    } finally {
+      setLoadingAttendance(false);
+    }
+  }, []);
 
   const fetchIncomingJob = async () => {
     if (!employeeId) return;
@@ -41,8 +54,22 @@ export default function HomeScreen({ onOpenAttendance, employeeId }) {
   };
 
   useEffect(() => {
+    fetchTodayAttendance();
     fetchIncomingJob();
-  }, [employeeId]);
+  }, [employeeId, fetchTodayAttendance]);
+
+  // Format time from ISO string
+  const formatTime = (isoString) => {
+    if (!isoString) return '—';
+    const date = new Date(isoString);
+    return date.toLocaleTimeString('en-IN', {
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  };
+
+  const attendanceStatus = todayAttendance?.checkIn ? 'Marked' : 'Not marked';
+  const attendanceTime = todayAttendance?.checkIn ? formatTime(todayAttendance.checkIn) : '—';
 
   return (
     <ScrollView
@@ -56,14 +83,43 @@ export default function HomeScreen({ onOpenAttendance, employeeId }) {
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Attendance</Text>
         <View style={styles.card}>
-          <View style={styles.row}>
-            <Text style={styles.cardTitle}>{attendance.date}</Text>
-            <Text style={styles.badge}>{attendance.status}</Text>
-          </View>
-          <Text style={styles.cardMeta}>Last check-in: {attendance.time}</Text>
-          <TouchableOpacity style={styles.primaryButton} onPress={onOpenAttendance}>
-            <Text style={styles.primaryButtonText}>Mark Attendance</Text>
-          </TouchableOpacity>
+          {loadingAttendance ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="small" color="#2F8CF4" />
+              <Text style={styles.cardMeta}>Loading attendance...</Text>
+            </View>
+          ) : (
+            <>
+              <View style={styles.row}>
+                <Text style={styles.cardTitle}>Today</Text>
+                <Text style={[
+                  styles.badge,
+                  attendanceStatus === 'Marked' && styles.badgeMarked
+                ]}>
+                  {attendanceStatus}
+                </Text>
+              </View>
+              {todayAttendance?.checkIn ? (
+                <Text style={styles.cardMeta}>Marked at: {attendanceTime}</Text>
+              ) : (
+                <Text style={styles.cardMeta}>Not marked yet</Text>
+              )}
+              {!todayAttendance?.checkIn && (
+                <TouchableOpacity 
+                  style={styles.primaryButton} 
+                  onPress={() => {
+                    onOpenAttendance();
+                    // Refresh attendance after opening attendance screen
+                    setTimeout(() => {
+                      fetchTodayAttendance();
+                    }, 1000);
+                  }}
+                >
+                  <Text style={styles.primaryButtonText}>Mark Attendance</Text>
+                </TouchableOpacity>
+              )}
+            </>
+          )}
         </View>
       </View>
 
@@ -155,6 +211,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 8,
+  },
+  badgeMarked: {
+    color: '#15803D',
+    backgroundColor: '#DCFCE7',
+  },
+  loadingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
   primaryButton: {
     marginTop: 8,
