@@ -1,5 +1,5 @@
 import express from 'express';
-import { createOrder, getOrderById, getOrders, updateEmployeeLocation, updateOrderStatus } from '../controllers/orderController.js';
+import { createOrder, getOrderById, getOrders, getAllOrders, updateEmployeeLocation, updateOrderStatus } from '../controllers/orderController.js';
 import { protect } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
@@ -15,6 +15,7 @@ const conditionalProtect = (req, res, next) => {
 };
 
 router.post('/', protect, createOrder);
+router.get('/admin/all', getAllOrders); // Admin route - no auth required
 router.get('/', protect, getOrders);
 router.get('/:id', conditionalProtect, getOrderById);
 router.patch('/:id/employee-location', conditionalProtect, updateEmployeeLocation);

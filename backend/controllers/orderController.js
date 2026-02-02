@@ -314,6 +314,42 @@ export const getOrders = async (req, res) => {
   }
 };
 
+// @desc    Get all orders (admin access - no user filter)
+// @route   GET /api/orders/admin/all
+// @access  Public (for admin panel)
+export const getAllOrders = async (req, res) => {
+  try {
+    const { status } = req.query;
+    const query = {}; // No user filter - get all orders
+
+    if (status) {
+      const statuses = status.split(',').map(s => s.trim()).filter(Boolean);
+      if (statuses.length > 0) {
+        query.status = { $in: statuses };
+      }
+    }
+
+    const orders = await Order.find(query)
+      .sort({ createdAt: -1 })
+      .populate('items.service', 'name category')
+      .populate('items.addOns', 'name basePrice')
+      .populate('user', 'name phone'); // Include user info for admin
+
+    res.status(200).json({
+      success: true,
+      count: orders.length,
+      data: orders,
+    });
+  } catch (error) {
+    console.error('Error fetching all orders:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching all orders',
+      error: error.message,
+    });
+  }
+};
+
 // @desc    Update order status
 // @route   PATCH /api/orders/:id
 // @access  Protected (or employeeId query param for employees)

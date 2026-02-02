@@ -1,6 +1,6 @@
 import { Platform } from 'react-native';
 
-const COMPUTER_IP = '192.168.29.174';
+const COMPUTER_IP = '192.168.1.3';
 
 const getBaseURL = () => {
   if (!__DEV__) {

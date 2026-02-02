@@ -2,7 +2,12 @@ import React, { useState, useEffect } from 'react'
 import './App.css'
 
 // API configuration
-const API_BASE_URL = 'https://car-wash-vbry.onrender.com/api'
+// For local development: use your computer's IP address
+// Find it with: ipconfig getifaddr en0 (Mac) or ipconfig (Windows)
+const COMPUTER_IP = '192.168.1.3'
+const API_BASE_URL = `http://${COMPUTER_IP}:8000/api`
+// For production, uncomment the line below and comment the line above:
+// const API_BASE_URL = 'https://car-wash-vbry.onrender.com/api'
 
 function App() {
   const [activeTab, setActiveTab] = useState('services') // 'services', 'addons', 'coverage', 'orders'
@@ -63,6 +68,19 @@ function App() {
   const [allServices, setAllServices] = useState([])
   const [serviceFilter, setServiceFilter] = useState('all') // 'all', 'car', 'bike'
   const [editingServiceId, setEditingServiceId] = useState(null) // Track which service is being edited
+  const [authToken, setAuthToken] = useState(() => localStorage.getItem('adminAuthToken') || '')
+
+  // Helper function to create fetch options with auth headers
+  const getFetchOptions = (options = {}) => {
+    return {
+      ...options,
+      headers: {
+        'Content-Type': 'application/json',
+        ...(authToken && { Authorization: `Bearer ${authToken}` }),
+        ...(options.headers || {}),
+      },
+    }
+  }
 
   // Fetch available add-ons when component mounts
   useEffect(() => {
@@ -216,13 +234,18 @@ function App() {
   const fetchOrders = async () => {
     setLoadingOrders(true)
     try {
-      const response = await fetch(`${API_BASE_URL}/orders`)
+      // Use admin route that doesn't require authentication
+      const response = await fetch(`${API_BASE_URL}/orders/admin/all`)
       const data = await response.json()
       if (data.success) {
         setOrders(data.data || [])
+      } else {
+        console.error('Error fetching orders:', data.message || 'Unknown error')
+        setMessage({ type: 'error', text: data.message || 'Error fetching orders' })
       }
     } catch (error) {
       console.error('Error fetching orders:', error)
+      setMessage({ type: 'error', text: `Network error: ${error.message}. Check if server is running on ${API_BASE_URL}` })
     } finally {
       setLoadingOrders(false)
     }
@@ -256,13 +279,10 @@ function App() {
 
   const markOrderDelivered = async (orderId) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/orders/${orderId}`, {
+      const response = await fetch(`${API_BASE_URL}/orders/${orderId}`, getFetchOptions({
         method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
         body: JSON.stringify({ status: 'Completed' }),
-      })
+      }))
       const data = await response.json()
       if (data.success) {
         setOrders(prev => prev.map(order => (
@@ -781,6 +801,53 @@ function App() {
       <div className="container">
         <h1 className="title">Admin Panel</h1>
         <p className="subtitle">Woosh Car & Bike Wash Service</p>
+
+        {/* Auth Token Section */}
+        <div style={{ marginBottom: '20px', padding: '15px', backgroundColor: '#f5f5f5', borderRadius: '8px', border: '1px solid #ddd' }}>
+          <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600', fontSize: '14px' }}>
+            Auth Token (for protected endpoints):
+          </label>
+          <div style={{ display: 'flex', gap: '10px' }}>
+            <input
+              type="text"
+              value={authToken}
+              onChange={(e) => {
+                const token = e.target.value
+                setAuthToken(token)
+                localStorage.setItem('adminAuthToken', token)
+              }}
+              placeholder="Enter JWT token from customer app login"
+              style={{
+                flex: 1,
+                padding: '8px 12px',
+                border: '1px solid #ddd',
+                borderRadius: '4px',
+                fontSize: '14px',
+              }}
+            />
+            <button
+              type="button"
+              onClick={() => {
+                setAuthToken('')
+                localStorage.removeItem('adminAuthToken')
+              }}
+              style={{
+                padding: '8px 16px',
+                backgroundColor: '#dc3545',
+                color: 'white',
+                border: 'none',
+                borderRadius: '4px',
+                cursor: 'pointer',
+                fontSize: '14px',
+              }}
+            >
+              Clear
+            </button>
+          </div>
+          <p style={{ marginTop: '8px', fontSize: '12px', color: '#666' }}>
+            Get token from customer app after logging in, or use browser dev tools to copy from network requests.
+          </p>
+        </div>
 
         {/* Tabs */}
         <div className="tabs">
