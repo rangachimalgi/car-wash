@@ -1,5 +1,5 @@
-import React, { useMemo, useState, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, TextInput, Dimensions, Alert } from 'react-native';
+import React, { useMemo, useState, useEffect, useCallback, useRef } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, TextInput, Dimensions, Alert, Animated } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import BackHeader from '../components/BackHeader';
@@ -7,6 +7,7 @@ import { createOrder } from '../services/orderApi';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTheme } from '../theme/ThemeContext';
 import { useFocusEffect } from '@react-navigation/native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const { width } = Dimensions.get('window');
 
@@ -30,10 +31,24 @@ export default function CheckoutScreen({ navigation, route }) {
   const [appliedCoupon, setAppliedCoupon] = useState(null);
   const [discount, setDiscount] = useState(0);
   const [showToast, setShowToast] = useState(false);
+  const [toastData, setToastData] = useState({ title: 'Booking confirmed', subtitle: 'Your service has been booked successfully.', orderId: '' });
   const [address, setAddress] = useState(null);
   const [vehicle, setVehicle] = useState(null);
   const { theme, isLightMode } = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
+  const insets = useSafeAreaInsets();
+  const toastAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (!showToast) return;
+    toastAnim.setValue(0);
+    Animated.spring(toastAnim, {
+      toValue: 1,
+      useNativeDriver: true,
+      friction: 7,
+      tension: 90,
+    }).start();
+  }, [showToast, toastAnim]);
 
   // Load address and vehicle data
   const loadAddressAndVehicle = useCallback(async () => {
@@ -241,14 +256,27 @@ export default function CheckoutScreen({ navigation, route }) {
       await AsyncStorage.removeItem('cartItems');
 
       // Show toast notification
+      const orderId = response?.data?._id ? String(response.data._id) : '';
+      const shortId = orderId ? orderId.slice(-6).toUpperCase() : '';
+      setToastData({
+        title: 'Booking confirmed',
+        subtitle: 'We’ll assign a professional.',
+        orderId: shortId ? `Order #${shortId}` : '',
+      });
       setShowToast(true);
       
       // Hide toast after 2 seconds and navigate to home
       setTimeout(() => {
-        setShowToast(false);
-        navigation.reset({
-          index: 0,
-          routes: [{ name: 'MainTabs' }],
+        Animated.timing(toastAnim, {
+          toValue: 0,
+          duration: 180,
+          useNativeDriver: true,
+        }).start(() => {
+          setShowToast(false);
+          navigation.reset({
+            index: 0,
+            routes: [{ name: 'MainTabs' }],
+          });
         });
       }, 2000);
     } catch (error) {
@@ -264,10 +292,33 @@ export default function CheckoutScreen({ navigation, route }) {
       
       {/* Toast Notification */}
       {showToast && (
-        <View style={styles.toastContainer}>
-          <MaterialCommunityIcons name="check-circle" size={24} color={theme.accent} />
-          <Text style={styles.toastText}>Service booked</Text>
-        </View>
+        <Animated.View
+          pointerEvents="none"
+          style={[
+            styles.toastContainer,
+            { top: insets.top + 12 },
+            {
+              opacity: toastAnim,
+              transform: [
+                {
+                  translateY: toastAnim.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [-16, 0],
+                  }),
+                },
+              ],
+            },
+          ]}
+        >
+          <View style={styles.toastIconWrap}>
+            <MaterialCommunityIcons name="check" size={22} color="#FFFFFF" />
+          </View>
+          <View style={styles.toastTextWrap}>
+            <Text style={styles.toastTitle}>{toastData.title}</Text>
+            {!!toastData.orderId && <Text style={styles.toastOrderId}>{toastData.orderId}</Text>}
+            <Text style={styles.toastSubtitle}>{toastData.subtitle}</Text>
+          </View>
+        </Animated.View>
       )}
       <ScrollView 
         style={styles.scrollView}
@@ -692,32 +743,54 @@ const createStyles = theme => StyleSheet.create({
   },
   toastContainer: {
     position: 'absolute',
-    top: 100,
     left: 16,
     right: 16,
-    backgroundColor: theme.cardBackground,
+    backgroundColor: '#16A34A',
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
+    paddingHorizontal: 14,
     paddingVertical: 14,
-    borderRadius: 12,
+    borderRadius: 14,
     borderWidth: 1,
-    borderColor: theme.accent,
+    borderColor: 'rgba(255, 255, 255, 0.25)',
     zIndex: 1000,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
       height: 4,
     },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
+    shadowOpacity: 0.35,
+    shadowRadius: 10,
     elevation: 8,
   },
-  toastText: {
+  toastIconWrap: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255, 255, 255, 0.22)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  toastTextWrap: {
+    flex: 1,
+  },
+  toastTitle: {
     fontSize: 16,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    marginBottom: 2,
+  },
+  toastOrderId: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: 'rgba(255, 255, 255, 0.95)',
+    marginBottom: 2,
+  },
+  toastSubtitle: {
+    fontSize: 13,
     fontWeight: '600',
-    color: theme.textPrimary,
-    marginLeft: 12,
+    color: 'rgba(255, 255, 255, 0.92)',
   },
   infoSection: {
     marginTop: 24,
