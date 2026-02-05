@@ -101,7 +101,9 @@ export default function BikeWashDetailsScreen({ navigation, route }) {
         serviceId={service?._id || serviceId}
         getServiceData={getServiceData}
         categoryText={service?.category ? `${service.category.toUpperCase()} SERVICE` : "BIKE WASH SERVICE"}
-        addOnServices={addOnServices}
+        showAddOns={false}
+        showPackages={false}
+        addOnServices={[]}
       />
     );
   }

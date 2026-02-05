@@ -13,7 +13,7 @@ export default function ServiceCoverage({ included = [], notIncluded = [] }) {
         {isIncluded ? (
           <MaterialCommunityIcons name="check" size={16} color={theme.accent} />
         ) : (
-          <MaterialCommunityIcons name="information" size={16} color={theme.textPrimary} />
+          <MaterialCommunityIcons name="information" size={16} color="#000000" />
         )}
       </View>
       <Text style={styles.itemText}>{item}</Text>
@@ -51,7 +51,7 @@ export default function ServiceCoverage({ included = [], notIncluded = [] }) {
         <View style={[styles.column, { borderRightWidth: 0 }]}>
           <View style={[styles.columnHeader, styles.notIncludedHeader]}>
             <View style={[styles.headerIcon, styles.notIncludedHeaderIcon]}>
-              <MaterialCommunityIcons name="information" size={18} color={theme.textPrimary} />
+              <MaterialCommunityIcons name="information" size={18} color="#000000" />
             </View>
             <Text style={styles.columnHeaderText}>Not Included</Text>
           </View>
@@ -132,7 +132,7 @@ const createStyles = theme => StyleSheet.create({
   columnHeaderText: {
     fontSize: 14,
     fontWeight: '600',
-    color: theme.textPrimary,
+    color: '#000000',
   },
   itemsContainer: {
     backgroundColor: theme.cardBackground,

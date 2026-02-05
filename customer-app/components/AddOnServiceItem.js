@@ -103,7 +103,7 @@ const createStyles = theme => StyleSheet.create({
   addButtonText: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: '#000000',
   },
   addButtonTextSelected: {
     color: '#FFFFFF',

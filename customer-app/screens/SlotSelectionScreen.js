@@ -11,6 +11,8 @@ const { width } = Dimensions.get('window');
 
 export default function SlotSelectionScreen({ navigation, route }) {
   const pendingItem = route?.params?.pendingItem || null;
+  const editingItemId = route?.params?.editingItemId || null;
+  const nextScreen = route?.params?.nextScreen || 'Cart'; // 'Cart' | 'Checkout'
   const cartItems = route?.params?.cartItems || (pendingItem ? [pendingItem] : []);
   const subtotal = route?.params?.subtotal || (pendingItem?.price || 0);
   const tax = route?.params?.tax || 0;
@@ -196,9 +198,59 @@ export default function SlotSelectionScreen({ navigation, route }) {
         })),
       };
 
-      navigation.navigate('Cart', {
-        addItem: itemWithSlots,
-      });
+      const finalItem = editingItemId ? { ...itemWithSlots, id: editingItemId } : itemWithSlots;
+      if (nextScreen === 'Checkout') {
+        (async () => {
+          try {
+            const stored = await AsyncStorage.getItem('cartItems');
+            const base = Array.isArray(cartItems) && cartItems.length > 0
+              ? cartItems
+              : (stored ? JSON.parse(stored) : []);
+            const idx = base.findIndex(i => i?.id === finalItem.id);
+            const next = idx >= 0
+              ? base.map(i => (i?.id === finalItem.id ? { ...i, ...finalItem } : i))
+              : [...base, finalItem];
+            await AsyncStorage.setItem('cartItems', JSON.stringify(next));
+
+            const isScheduleComplete = (item) => {
+              const packageType = item?.packageType || 'OneTime';
+              if (packageType === 'OneTime') {
+                return Boolean(item?.selectedDate && item?.selectedTimeSlot);
+              }
+              const times = Number(item?.packageTimes || 0);
+              if (Array.isArray(item?.scheduledSlots) && item.scheduledSlots.length === times) return true;
+              return Boolean(item?.startDate && item?.startTimeSlot);
+            };
+            const incomplete = next.find(i => !isScheduleComplete(i));
+            if (incomplete) {
+              Alert.alert('Select slot(s) required', 'Please select slots for all items before checkout.');
+              navigation.navigate('Cart', { updateItem: finalItem });
+              return;
+            }
+
+            const sub = next.reduce((sum, it) => sum + Number(it.price || 0) * Number(it.quantity || 1), 0);
+            const t = sub * 0.18;
+            const tot = sub + t;
+            navigation.navigate('Checkout', {
+              cartItems: next,
+              subtotal: sub,
+              tax: t,
+              total: tot,
+            });
+          } catch (e) {
+            navigation.navigate('Checkout', {
+              cartItems: [finalItem],
+              subtotal: Number(finalItem.price || 0),
+              tax: Number(finalItem.price || 0) * 0.18,
+              total: Number(finalItem.price || 0) * 1.18,
+            });
+          }
+        })();
+      } else {
+        navigation.navigate('Cart', {
+          ...(editingItemId ? { updateItem: finalItem } : { addItem: finalItem }),
+        });
+      }
     } else {
       // OneTime: single slot
       if (!selectedDate || !selectedTimeSlot) {
@@ -213,9 +265,59 @@ export default function SlotSelectionScreen({ navigation, route }) {
         selectedTimeSlot,
       };
 
-      navigation.navigate('Cart', {
-        addItem: itemWithSlot,
-      });
+      const finalItem = editingItemId ? { ...itemWithSlot, id: editingItemId } : itemWithSlot;
+      if (nextScreen === 'Checkout') {
+        (async () => {
+          try {
+            const stored = await AsyncStorage.getItem('cartItems');
+            const base = Array.isArray(cartItems) && cartItems.length > 0
+              ? cartItems
+              : (stored ? JSON.parse(stored) : []);
+            const idx = base.findIndex(i => i?.id === finalItem.id);
+            const next = idx >= 0
+              ? base.map(i => (i?.id === finalItem.id ? { ...i, ...finalItem } : i))
+              : [...base, finalItem];
+            await AsyncStorage.setItem('cartItems', JSON.stringify(next));
+
+            const isScheduleComplete = (item) => {
+              const packageType = item?.packageType || 'OneTime';
+              if (packageType === 'OneTime') {
+                return Boolean(item?.selectedDate && item?.selectedTimeSlot);
+              }
+              const times = Number(item?.packageTimes || 0);
+              if (Array.isArray(item?.scheduledSlots) && item.scheduledSlots.length === times) return true;
+              return Boolean(item?.startDate && item?.startTimeSlot);
+            };
+            const incomplete = next.find(i => !isScheduleComplete(i));
+            if (incomplete) {
+              Alert.alert('Select slot(s) required', 'Please select slots for all items before checkout.');
+              navigation.navigate('Cart', { updateItem: finalItem });
+              return;
+            }
+
+            const sub = next.reduce((sum, it) => sum + Number(it.price || 0) * Number(it.quantity || 1), 0);
+            const t = sub * 0.18;
+            const tot = sub + t;
+            navigation.navigate('Checkout', {
+              cartItems: next,
+              subtotal: sub,
+              tax: t,
+              total: tot,
+            });
+          } catch (e) {
+            navigation.navigate('Checkout', {
+              cartItems: [finalItem],
+              subtotal: Number(finalItem.price || 0),
+              tax: Number(finalItem.price || 0) * 0.18,
+              total: Number(finalItem.price || 0) * 1.18,
+            });
+          }
+        })();
+      } else {
+        navigation.navigate('Cart', {
+          ...(editingItemId ? { updateItem: finalItem } : { addItem: finalItem }),
+        });
+      }
     }
   };
 
@@ -548,7 +650,7 @@ export default function SlotSelectionScreen({ navigation, route }) {
             styles.checkoutButtonText,
             !canProceed && styles.checkoutButtonTextDisabled
           ]}>
-            Add to Cart
+            {nextScreen === 'Checkout' ? 'Checkout' : 'Add to Cart'}
           </Text>
           <MaterialCommunityIcons 
             name="arrow-right" 

@@ -120,6 +120,17 @@ export default function CheckoutScreen({ navigation, route }) {
 
   const finalTotal = total - discount;
 
+  const isScheduleComplete = (item) => {
+    const packageType = item?.packageType || 'OneTime';
+    if (packageType === 'OneTime') {
+      return Boolean(item?.selectedDate && item?.selectedTimeSlot);
+    }
+    const times = Number(item?.packageTimes || 0);
+    if (Array.isArray(item?.scheduledSlots) && item.scheduledSlots.length === times) return true;
+    // Backend can also auto-generate if startDate + startTimeSlot exist
+    return Boolean(item?.startDate && item?.startTimeSlot);
+  };
+
   const handlePayNow = async () => {
     // Validate address and vehicle before proceeding
     if (!address || !address.address || address.address.trim() === '') {
@@ -152,24 +163,58 @@ export default function CheckoutScreen({ navigation, route }) {
       return;
     }
 
+    const incomplete = cartItems.find(i => !isScheduleComplete(i));
+    if (incomplete) {
+      Alert.alert('Select slot(s) required', 'Please select the required slot(s) for all items before placing the order.');
+      navigation.navigate('Cart');
+      return;
+    }
+
     try {
       const itemsPayload = cartItems.map((item) => {
         const addOnIds = (item.addOns || []).map(addOn => addOn?._id || addOn).filter(Boolean);
         if (!item.serviceId) {
           throw new Error('Service ID missing from cart item');
         }
-        if (!item.selectedDate || !item.selectedTimeSlot) {
-          throw new Error('Scheduled slot missing from cart item');
+        const packageType = item.packageType || 'OneTime';
+        const packageTimes = item.packageTimes || 1;
+
+        if (packageType === 'OneTime') {
+          if (!item.selectedDate || !item.selectedTimeSlot) {
+            throw new Error('Scheduled slot missing from cart item');
+          }
+          return {
+            serviceId: item.serviceId,
+            addOnIds,
+            packageType: 'OneTime',
+            packageTimes: 1,
+            scheduledDate: item.selectedDate,
+            scheduledTimeSlot: item.selectedTimeSlot?.time || item.selectedTimeSlot,
+          };
         }
 
-        return {
-          serviceId: item.serviceId,
-          addOnIds,
-          packageType: item.packageType || 'OneTime',
-          packageTimes: item.packageTimes || 1,
-          scheduledDate: item.selectedDate,
-          scheduledTimeSlot: item.selectedTimeSlot?.time || item.selectedTimeSlot,
-        };
+        // Package: send scheduledSlots if available (preferred), else fallback to startDate/startTimeSlot
+        if (item.scheduledSlots && Array.isArray(item.scheduledSlots) && item.scheduledSlots.length > 0) {
+          return {
+            serviceId: item.serviceId,
+            addOnIds,
+            packageType,
+            packageTimes,
+            scheduledSlots: item.scheduledSlots,
+          };
+        }
+        if (item.startDate && item.startTimeSlot) {
+          return {
+            serviceId: item.serviceId,
+            addOnIds,
+            packageType,
+            packageTimes,
+            startDate: item.startDate,
+            startTimeSlot: item.startTimeSlot?.time || item.startTimeSlot,
+          };
+        }
+        throw new Error('Scheduled slots missing from package cart item');
+
       });
 
       const [storedName, storedPhone] = await Promise.all([

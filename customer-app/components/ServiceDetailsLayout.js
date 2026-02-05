@@ -19,6 +19,8 @@ export default function ServiceDetailsLayout({
   categoryText,
   getServiceData,
   addOnServices = [],
+  showAddOns = true,
+  showPackages = true,
 }) {
   const insets = useSafeAreaInsets();
   const { serviceTitle, price, duration } = route?.params || {};
@@ -35,6 +37,7 @@ export default function ServiceDetailsLayout({
 
   // Toggle add-on selection
   const toggleAddOn = (addOnId) => {
+    if (!showAddOns) return;
     setSelectedAddOns(prev => {
       if (prev.includes(addOnId)) {
         // Remove if already selected
@@ -60,10 +63,12 @@ export default function ServiceDetailsLayout({
     }
 
     // Add selected add-ons prices
-    const addOnsTotal = selectedAddOns.reduce((total, addOnId) => {
-      const addOn = addOnServices.find(a => a._id === addOnId);
-      return total + (addOn?.price || 0);
-    }, 0);
+    const addOnsTotal = showAddOns
+      ? selectedAddOns.reduce((total, addOnId) => {
+          const addOn = addOnServices.find(a => a._id === addOnId);
+          return total + (addOn?.price || 0);
+        }, 0)
+      : 0;
 
     return basePrice + addOnsTotal;
   };
@@ -127,15 +132,10 @@ export default function ServiceDetailsLayout({
               serviceId={serviceData?._id}
               serviceTitle={serviceData?.name || serviceTitle}
               serviceImage={data.imageUri}
-              selectedAddOns={selectedAddOns}
-              addOnServices={addOnServices}
+              selectedAddOns={showAddOns ? selectedAddOns : []}
+              addOnServices={showAddOns ? addOnServices : []}
               navigation={navigation}
-              onSelectSlot={(item) => {
-                if (!navigation) return;
-                navigation.navigate('SlotSelection', {
-                  pendingItem: item,
-                });
-              }}
+              action="add_to_cart"
             />
           </View>
         }
@@ -183,7 +183,7 @@ export default function ServiceDetailsLayout({
             </View> */}
             
             {/* Pricing Packages */}
-            <PricingPackages 
+            <PricingPackages
               oneTimePrice={oneTimePrice}
               serviceTitle={serviceData?.name || serviceTitle}
               serviceImage={data.imageUri}
@@ -191,6 +191,8 @@ export default function ServiceDetailsLayout({
               navigation={navigation}
               onSelectionChange={setSelectedPackage}
               packages={serviceData?.packages}
+              hideSubscriptions={!showPackages}
+              forceOneTime={!showPackages}
             />
             
             {/* Service Coverage Table */}
@@ -200,7 +202,7 @@ export default function ServiceDetailsLayout({
             />
             
             {/* Add-On Services List */}
-            {addOnServices.length > 0 && (
+            {showAddOns && addOnServices.length > 0 && (
               <AddOnServicesList 
                 services={addOnServices}
                 maxVisible={4}

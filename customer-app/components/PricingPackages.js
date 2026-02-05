@@ -1,13 +1,36 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTheme } from '../theme/ThemeContext';
 
-export default function PricingPackages({ oneTimePrice = 299, serviceTitle = 'Service', serviceImage = '', duration = '50 mins', navigation, onSelectionChange, packages = null }) {
+export default function PricingPackages({
+  oneTimePrice = 299,
+  serviceTitle = 'Service',
+  serviceImage = '',
+  duration = '50 mins',
+  navigation,
+  onSelectionChange,
+  packages = null,
+  hideSubscriptions = false,
+  forceOneTime = false,
+  initialSelectedPackage,
+}) {
   const [expandedSection, setExpandedSection] = useState(null);
-  const [selectedPackage, setSelectedPackage] = useState('oneTime'); // Default to one time wash
+  const [selectedPackage, setSelectedPackage] = useState(initialSelectedPackage ?? 'oneTime'); // Default to one time wash
   const { theme } = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
+
+  useEffect(() => {
+    if (forceOneTime) {
+      setSelectedPackage('oneTime');
+      if (onSelectionChange) onSelectionChange('oneTime');
+      return;
+    }
+    if (initialSelectedPackage !== undefined) {
+      setSelectedPackage(initialSelectedPackage ?? 'oneTime');
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [forceOneTime, initialSelectedPackage]);
 
   const toggleSection = (section) => {
     setExpandedSection(expandedSection === section ? null : section);
@@ -43,6 +66,7 @@ export default function PricingPackages({ oneTimePrice = 299, serviceTitle = 'Se
   ];
 
   const handleSelectPackage = (pkg, section) => {
+    if (forceOneTime) return;
     const newSelection = { ...pkg, section, type: section === 'monthly' ? 'Monthly' : section === 'quarterly' ? 'Quarterly' : 'Yearly' };
     setSelectedPackage(newSelection);
     if (onSelectionChange) {
@@ -76,7 +100,10 @@ export default function PricingPackages({ oneTimePrice = 299, serviceTitle = 'Se
   };
 
   const renderPackageItem = (pkg, section) => {
-    const isSelected = selectedPackage?.id === pkg.id && selectedPackage?.section === section;
+    const isSelected = selectedPackage?.section === section && (
+      selectedPackage?.id === pkg.id ||
+      (selectedPackage?.times && pkg.times && Number(selectedPackage.times) === Number(pkg.times))
+    );
     return (
       <TouchableOpacity 
         key={pkg.id} 
@@ -122,61 +149,65 @@ export default function PricingPackages({ oneTimePrice = 299, serviceTitle = 'Se
         </View>
       </TouchableOpacity>
 
-      {/* Monthly Packages */}
-      <TouchableOpacity 
-        style={styles.sectionHeader}
-        onPress={() => toggleSection('monthly')}
-        activeOpacity={0.7}
-      >
-        <Text style={styles.sectionTitle}>Monthly Packages</Text>
-        <MaterialCommunityIcons 
-          name={expandedSection === 'monthly' ? 'chevron-up' : 'chevron-down'} 
-          size={24} 
-          color={theme.textPrimary} 
-        />
-      </TouchableOpacity>
-      {expandedSection === 'monthly' && (
-        <View style={styles.packagesList}>
-          {monthlyPackages.map(pkg => renderPackageItem(pkg, 'monthly'))}
-        </View>
-      )}
+      {!hideSubscriptions && (
+        <>
+          {/* Monthly Packages */}
+          <TouchableOpacity 
+            style={styles.sectionHeader}
+            onPress={() => toggleSection('monthly')}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.sectionTitle}>Monthly Packages</Text>
+            <MaterialCommunityIcons 
+              name={expandedSection === 'monthly' ? 'chevron-up' : 'chevron-down'} 
+              size={24} 
+              color={theme.textPrimary} 
+            />
+          </TouchableOpacity>
+          {expandedSection === 'monthly' && (
+            <View style={styles.packagesList}>
+              {monthlyPackages.map(pkg => renderPackageItem(pkg, 'monthly'))}
+            </View>
+          )}
 
-      {/* Quarterly Packages */}
-      <TouchableOpacity 
-        style={styles.sectionHeader}
-        onPress={() => toggleSection('quarterly')}
-        activeOpacity={0.7}
-      >
-        <Text style={styles.sectionTitle}>Quarterly Packages</Text>
-        <MaterialCommunityIcons 
-          name={expandedSection === 'quarterly' ? 'chevron-up' : 'chevron-down'} 
-          size={24} 
-          color={theme.textPrimary} 
-        />
-      </TouchableOpacity>
-      {expandedSection === 'quarterly' && (
-        <View style={styles.packagesList}>
-          {quarterlyPackages.map(pkg => renderPackageItem(pkg, 'quarterly'))}
-        </View>
-      )}
+          {/* Quarterly Packages */}
+          <TouchableOpacity 
+            style={styles.sectionHeader}
+            onPress={() => toggleSection('quarterly')}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.sectionTitle}>Quarterly Packages</Text>
+            <MaterialCommunityIcons 
+              name={expandedSection === 'quarterly' ? 'chevron-up' : 'chevron-down'} 
+              size={24} 
+              color={theme.textPrimary} 
+            />
+          </TouchableOpacity>
+          {expandedSection === 'quarterly' && (
+            <View style={styles.packagesList}>
+              {quarterlyPackages.map(pkg => renderPackageItem(pkg, 'quarterly'))}
+            </View>
+          )}
 
-      {/* Yearly Packages */}
-      <TouchableOpacity 
-        style={styles.sectionHeader}
-        onPress={() => toggleSection('yearly')}
-        activeOpacity={0.7}
-      >
-        <Text style={styles.sectionTitle}>Yearly Packages</Text>
-        <MaterialCommunityIcons 
-          name={expandedSection === 'yearly' ? 'chevron-up' : 'chevron-down'} 
-          size={24} 
-          color={theme.textPrimary} 
-        />
-      </TouchableOpacity>
-      {expandedSection === 'yearly' && (
-        <View style={styles.packagesList}>
-          {yearlyPackages.map(pkg => renderPackageItem(pkg, 'yearly'))}
-        </View>
+          {/* Yearly Packages */}
+          <TouchableOpacity 
+            style={styles.sectionHeader}
+            onPress={() => toggleSection('yearly')}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.sectionTitle}>Yearly Packages</Text>
+            <MaterialCommunityIcons 
+              name={expandedSection === 'yearly' ? 'chevron-up' : 'chevron-down'} 
+              size={24} 
+              color={theme.textPrimary} 
+            />
+          </TouchableOpacity>
+          {expandedSection === 'yearly' && (
+            <View style={styles.packagesList}>
+              {yearlyPackages.map(pkg => renderPackageItem(pkg, 'yearly'))}
+            </View>
+          )}
+        </>
       )}
 
     </View>
@@ -184,7 +215,20 @@ export default function PricingPackages({ oneTimePrice = 299, serviceTitle = 'Se
 }
 
 // Separate component for fixed Add to Cart button
-export function AddToCartButton({ selectedPackage, oneTimePrice, totalPrice, duration, serviceId, serviceTitle, serviceImage, selectedAddOns = [], addOnServices = [], navigation, onSelectSlot }) {
+export function AddToCartButton({
+  selectedPackage,
+  oneTimePrice,
+  totalPrice,
+  duration,
+  serviceId,
+  serviceTitle,
+  serviceImage,
+  selectedAddOns = [],
+  addOnServices = [],
+  navigation,
+  onSelectSlot,
+  action = 'select_slot', // 'select_slot' | 'add_to_cart'
+}) {
   const { theme } = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
 
@@ -210,8 +254,10 @@ export function AddToCartButton({ selectedPackage, oneTimePrice, totalPrice, dur
       ? {
           id: `oneTime_${Date.now()}`,
           serviceId,
+          serviceName: serviceTitle,
           title: `${serviceTitle} - 1 Time Wash`,
           image: serviceImage || 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=300&h=200&fit=crop&auto=format',
+          basePrice: Math.round(oneTimePrice),
           price: Math.round(displayPrice),
           quantity: 1,
           addOns: selectedAddOnsDetails,
@@ -220,14 +266,23 @@ export function AddToCartButton({ selectedPackage, oneTimePrice, totalPrice, dur
       : {
           id: `pkg_${selectedPackage.id}_${Date.now()}`,
           serviceId,
+          serviceName: serviceTitle,
           title: `${serviceTitle} - ${selectedPackage.type} (${selectedPackage.times}x/month)`,
           image: serviceImage || 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=300&h=200&fit=crop&auto=format',
+          basePrice: Math.round(selectedPackage.price || displayPrice),
           price: Math.round(selectedPackage.price || displayPrice),
           quantity: 1,
           addOns: selectedAddOnsDetails,
           packageType: selectedPackage.type,
           packageTimes: selectedPackage.times,
         };
+
+    if (action === 'add_to_cart') {
+      if (navigation) {
+        navigation.navigate('Cart', { addItem: item });
+      }
+      return;
+    }
 
     if (onSelectSlot) {
       onSelectSlot(item);
@@ -250,8 +305,10 @@ export function AddToCartButton({ selectedPackage, oneTimePrice, totalPrice, dur
         onPress={handlePress}
         activeOpacity={0.8}
       >
-        <Text style={styles.addToCartButtonText}>Select Slot</Text>
-        <MaterialCommunityIcons name="arrow-right" size={20} color="#FFFFFF" />
+        <Text style={styles.addToCartButtonText}>
+          {action === 'add_to_cart' ? 'Add to Cart' : 'Select Slot'}
+        </Text>
+        <MaterialCommunityIcons name="arrow-right" size={20} color="#000000" />
       </TouchableOpacity>
     </View>
   );
@@ -394,6 +451,6 @@ const createStyles = theme => StyleSheet.create({
   addToCartButtonText: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#FFFFFF',
+    color: '#000000',
   },
 });
