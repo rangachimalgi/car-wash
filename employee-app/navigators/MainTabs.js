@@ -4,6 +4,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import AttendanceScreen from '../screens/AttendanceScreen';
 import EarningsHistoryScreen from '../screens/EarningsHistoryScreen';
 import HomeScreen from '../screens/HomeScreen';
+import InventoryScreen from '../screens/InventoryScreen';
 import JobQueueScreen from '../screens/JobQueueScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 
@@ -11,6 +12,7 @@ const routes = [
   { key: 'home', title: 'Home', icon: 'home-variant-outline' },
   { key: 'attendance', title: 'Attendance', icon: 'calendar-check-outline' },
   { key: 'jobs', title: 'Job Queue', icon: 'clipboard-list-outline' },
+  { key: 'inventory', title: 'Inventory', icon: 'package-variant-closed' },
   { key: 'earnings', title: 'Earnings', icon: 'cash-multiple' },
   { key: 'profile', title: 'Profile', icon: 'account-outline' },
 ];
@@ -40,6 +42,8 @@ export default function MainTabs({ onLogout, employeeId, navigation }) {
         return <AttendanceScreen />;
       case 'jobs':
         return <JobQueueScreen employeeId={employeeId} navigation={navigation} />;
+      case 'inventory':
+        return <InventoryScreen employeeId={employeeId} />;
       case 'earnings':
         return <EarningsHistoryScreen />;
       case 'profile':
