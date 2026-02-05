@@ -117,7 +117,7 @@ function LiquidGlassTabBar({ state, descriptors, navigation }) {
                       <MaterialCommunityIcons
                         name={iconName}
                         size={24}
-                        color="#FFFFFF"
+                        color="#000000"
                       />
                       <Animated.View
                         style={[
@@ -291,7 +291,7 @@ const createStyles = theme => StyleSheet.create({
     marginLeft: 8,
   },
   labelText: {
-    color: '#FFFFFF',
+    color: '#000000',
     fontSize: 12,
     fontWeight: '700',
     marginLeft: 2, // Reduced margin to match calculation
