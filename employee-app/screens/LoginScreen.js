@@ -21,6 +21,7 @@ export default function LoginScreen({ onLogin }) {
   const styles = useMemo(() => createStyles(), []);
   const [employeeId, setEmployeeId] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async () => {
@@ -120,8 +121,19 @@ export default function LoginScreen({ onLogin }) {
                 placeholderTextColor="#6B7280"
                 value={password}
                 onChangeText={setPassword}
-                secureTextEntry
+                secureTextEntry={!showPassword}
               />
+              <TouchableOpacity
+                onPress={() => setShowPassword((v) => !v)}
+                style={styles.passwordToggle}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              >
+                <MaterialCommunityIcons
+                  name={showPassword ? 'eye-off-outline' : 'eye-outline'}
+                  size={20}
+                  color="#6B7280"
+                />
+              </TouchableOpacity>
             </View>
           </View>
 
@@ -206,6 +218,14 @@ const createStyles = () =>
       fontSize: 16,
       color: '#1A1A1A',
       paddingVertical: 16,
+    },
+    passwordToggle: {
+      marginLeft: 8,
+      height: 40,
+      width: 40,
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderRadius: 10,
     },
     primaryButton: {
       backgroundColor: '#2F8CF4',
