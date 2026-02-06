@@ -161,13 +161,17 @@ export default function HomeScreen({ navigation }) {
                 onPress={() => navigation.navigate('CarWash')}
                 activeOpacity={0.9}
               >
-                <ServiceImage 
-                  uri="https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&h=300&fit=crop"
-                  style={styles.mainServiceImage}
-                  imageKey="carWash"
-                />
+                <View style={styles.carWashImageWrap}>
+                  <Image
+                    source={require('../assets/carwash.png')}
+                    style={styles.carWashImage}
+                    resizeMode="cover"
+                  />
+                </View>
+                <Text style={styles.tileTitle} numberOfLines={1}>
+                  Car Wash
+                </Text>
               </TouchableOpacity>
-              <Text style={styles.mainServiceName}>Car Wash</Text>
             </View>
             <View style={styles.mainServiceItem}>
               <TouchableOpacity 
@@ -180,8 +184,10 @@ export default function HomeScreen({ navigation }) {
                   style={styles.mainServiceImage}
                   imageKey="bikeWash"
                 />
+                <Text style={styles.tileTitle} numberOfLines={2}>
+                  Bike/Scooter Wash
+                </Text>
               </TouchableOpacity>
-              <Text style={styles.mainServiceName}>Bike/Scooter Wash</Text>
             </View>
           </View>
         </View>
@@ -365,11 +371,11 @@ const createStyles = theme => StyleSheet.create({
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
-      height: 2,
+      height: 8,
     },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowOpacity: 0.18,
+    shadowRadius: 10,
+    elevation: 7,
     marginBottom: 8,
     overflow: 'hidden',
   },
@@ -377,11 +383,28 @@ const createStyles = theme => StyleSheet.create({
     width: '100%',
     height: '100%',
   },
-  mainServiceName: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: theme.textPrimary,
-    textAlign: 'center',
+  carWashImageWrap: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#F8FAFC',
+  },
+  carWashImage: {
+    width: '100%',
+    height: '100%',
+  },
+  tileTitle: {
+    position: 'absolute',
+    left: 14,
+    top: 12,
+    maxWidth: '92%',
+    color: '#0B0B0B',
+    fontSize: 20,
+    fontWeight: '900',
+    letterSpacing: 0.2,
+    textShadowColor: 'rgba(255,255,255,0.85)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
   },
   popularSection: {
     paddingHorizontal: 16,
