@@ -32,25 +32,28 @@ const lightTheme = {
 };
 
 const ThemeContext = createContext({
-  theme: darkTheme,
-  isLightMode: false,
-  colorScheme: 'dark',
+  theme: lightTheme,
+  isLightMode: true,
+  colorScheme: 'light',
   setColorScheme: () => {},
   toggleColorScheme: () => {},
   isLoaded: false,
 });
 
 export function ThemeProvider({ children }) {
-  const [colorScheme, setColorScheme] = useState('dark');
+  // Default to light mode
+  const [colorScheme, setColorScheme] = useState('light');
   const [isLoaded, setIsLoaded] = useState(false);
 
   useEffect(() => {
     const loadTheme = async () => {
       try {
-        const storedTheme = await AsyncStorage.getItem('themePreference');
-        if (storedTheme === 'light' || storedTheme === 'dark') {
-          setColorScheme(storedTheme);
-        }
+        // Theme toggling is temporarily disabled; always use light mode by default.
+        // const storedTheme = await AsyncStorage.getItem('themePreference');
+        // if (storedTheme === 'light' || storedTheme === 'dark') {
+        //   setColorScheme(storedTheme);
+        // }
+        await AsyncStorage.getItem('themePreference');
       } catch (error) {
         console.error('Error loading theme preference:', error);
       } finally {
@@ -74,7 +77,8 @@ export function ThemeProvider({ children }) {
       isLightMode,
       colorScheme,
       setColorScheme,
-      toggleColorScheme: () => setColorScheme(prev => (prev === 'light' ? 'dark' : 'light')),
+      // toggleColorScheme: () => setColorScheme(prev => (prev === 'light' ? 'dark' : 'light')),
+      toggleColorScheme: () => {},
       isLoaded,
     };
   }, [colorScheme, isLoaded]);

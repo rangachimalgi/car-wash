@@ -240,7 +240,8 @@ export default function ProfileScreen({ navigation }) {
           </View>
         </View>
 
-        {/* Appearance Section */}
+        {/*
+        // Appearance Section (temporarily hidden)
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <MaterialCommunityIcons name="theme-light-dark" size={24} color={theme.accent} />
@@ -253,13 +254,15 @@ export default function ProfileScreen({ navigation }) {
             </View>
             <Switch
               value={isLightMode}
-              onValueChange={toggleColorScheme}
+              // onValueChange={toggleColorScheme} // temporarily disabled
+              disabled
               trackColor={{ false: theme.cardBorder, true: theme.accent }}
               thumbColor={isLightMode ? '#FFFFFF' : theme.textSecondary}
               ios_backgroundColor={theme.cardBorder}
             />
           </View>
         </View>
+        */}
 
         {/* Logout Button */}
         <View style={styles.logoutSection}>
