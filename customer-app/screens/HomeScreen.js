@@ -113,43 +113,48 @@ export default function HomeScreen({ navigation }) {
         </View>
 
         {/* Woosh Special Slider */}
-        <ScrollView 
-          horizontal 
-          pagingEnabled
-          showsHorizontalScrollIndicator={false}
-          style={styles.sliderScrollView}
-          contentContainerStyle={styles.sliderScrollContent}
-          decelerationRate="fast"
-          snapToInterval={sliderCardWidth}
-          onMomentumScrollEnd={handleSliderScrollEnd}
-          ref={sliderRef}
-        >
-          {sliderImages.map(item => (
-            <View key={item.key} style={styles.sliderCard}>
-              <ServiceImage 
-                uri={item.uri}
-                style={styles.sliderImage}
-                imageKey={item.key}
+        <View style={styles.sliderWrap}>
+          <ScrollView 
+            horizontal 
+            pagingEnabled
+            showsHorizontalScrollIndicator={false}
+            style={styles.sliderScrollView}
+            contentContainerStyle={styles.sliderScrollContent}
+            decelerationRate="fast"
+            snapToInterval={sliderCardWidth}
+            onMomentumScrollEnd={handleSliderScrollEnd}
+            ref={sliderRef}
+          >
+            {sliderImages.map(item => (
+              <View key={item.key} style={styles.sliderCard}>
+                <ServiceImage 
+                  uri={item.uri}
+                  style={styles.sliderImage}
+                  imageKey={item.key}
+                />
+              </View>
+            ))}
+          </ScrollView>
+
+          <View style={styles.sliderDotsInside}>
+            {sliderImages.map((item, index) => (
+              <View
+                key={`${item.key}-dot`}
+                style={[
+                  styles.sliderDot,
+                  index === activeSlide && styles.sliderDotActive,
+                ]}
               />
-            </View>
-          ))}
-        </ScrollView>
-        <View style={styles.sliderDots}>
-          {sliderImages.map((item, index) => (
-            <View
-              key={`${item.key}-dot`}
-              style={[
-                styles.sliderDot,
-                index === activeSlide && styles.sliderDotActive,
-              ]}
-            />
-          ))}
+            ))}
+          </View>
         </View>
 
         {/* Services Section */}
         <View style={styles.servicesSection}>
           <View style={styles.sectionHeader}>
+            {/*
             <Text style={styles.sectionTitle}>Woosh Services</Text>
+            */}
             {/* <TouchableOpacity>
               <Text style={styles.seeAllText}>See All</Text>
             </TouchableOpacity> */}
@@ -273,12 +278,15 @@ const createStyles = theme => StyleSheet.create({
   sliderScrollView: {
     marginVertical: 10,
   },
+  sliderWrap: {
+    position: 'relative',
+  },
   sliderScrollContent: {
     paddingHorizontal: 0,
   },
   sliderCard: {
     width: width,
-    height: 200,
+    height: 240,
     backgroundColor: theme.cardBackground,
     borderRadius: 0,
     marginRight: 0,
@@ -289,23 +297,25 @@ const createStyles = theme => StyleSheet.create({
     width: '100%',
     height: '100%',
   },
-  sliderDots: {
+  sliderDotsInside: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 18,
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: 8,
-    marginBottom: 4,
     gap: 6,
   },
   sliderDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
     backgroundColor: theme.cardBorder,
   },
   sliderDotActive: {
-    width: 18,
-    borderRadius: 6,
+    width: 22,
+    borderRadius: 8,
     backgroundColor: theme.accent,
   },
   servicesSection: {
