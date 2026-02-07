@@ -10,6 +10,7 @@ import { useTheme } from '../theme/ThemeContext';
 import { getServiceById } from '../services/serviceApi';
 
 const { width } = Dimensions.get('window');
+const LIGHT_BLUE = '#85E4FC';
 
 export default function CartScreen({ navigation, route }) {
   const [cartItems, setCartItems] = useState([]);
@@ -517,7 +518,7 @@ const createStyles = theme => StyleSheet.create({
   },
   itemPrice: {
     fontSize: 14,
-    color: theme.textSecondary,
+    color: '#0B0B0B',
     marginBottom: 8,
   },
   addOnsText: {
@@ -568,7 +569,7 @@ const createStyles = theme => StyleSheet.create({
   itemTotalPrice: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: theme.textPrimary,
+    color: '#0B0B0B',
     marginBottom: 8,
   },
   removeButton: {
@@ -595,7 +596,7 @@ const createStyles = theme => StyleSheet.create({
   },
   summaryValue: {
     fontSize: 14,
-    color: theme.textPrimary,
+    color: '#0B0B0B',
     fontWeight: '600',
   },
   totalRow: {
@@ -613,11 +614,11 @@ const createStyles = theme => StyleSheet.create({
   totalValue: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: theme.accent,
+    color: '#0B0B0B',
   },
   checkoutButton: {
     flexDirection: 'row',
-    backgroundColor: theme.accent,
+    backgroundColor: LIGHT_BLUE,
     marginHorizontal: 16,
     marginTop: 16,
     paddingVertical: 16,

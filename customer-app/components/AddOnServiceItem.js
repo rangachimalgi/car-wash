@@ -3,6 +3,8 @@ import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTheme } from '../theme/ThemeContext';
 
+const LIGHT_BLUE = '#85E4FC';
+
 export default function AddOnServiceItem({ 
   imageUri, 
   title, 
@@ -89,7 +91,7 @@ const createStyles = theme => StyleSheet.create({
     color: theme.textSecondary,
   },
   addButton: {
-    backgroundColor: theme.accent,
+    backgroundColor: LIGHT_BLUE,
     paddingVertical: 10,
     paddingHorizontal: 24,
     borderRadius: 8,

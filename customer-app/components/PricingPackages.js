@@ -125,7 +125,7 @@ export default function PricingPackages({
         </View>
         {isSelected && (
           <View style={styles.selectedIndicator}>
-            <MaterialCommunityIcons name="check-circle" size={20} color={LIGHT_BLUE} />
+            <MaterialCommunityIcons name="check-circle" size={20} color="#0B0B0B" />
           </View>
         )}
       </TouchableOpacity>
@@ -146,7 +146,7 @@ export default function PricingPackages({
             <Text style={styles.oneTimePrice}>₹{oneTimePrice}</Text>
           </View>
           {selectedPackage === 'oneTime' ? (
-            <MaterialCommunityIcons name="check-circle" size={24} color={LIGHT_BLUE} />
+            <MaterialCommunityIcons name="check-circle" size={24} color="#0B0B0B" />
           ) : (
             <View style={styles.circlePlaceholder} />
           )}
@@ -323,7 +323,7 @@ const createStyles = theme => StyleSheet.create({
     marginTop: 24,
   },
   oneTimeSection: {
-    backgroundColor: theme.cardBackground,
+    backgroundColor: LIGHT_BLUE_SOFT,
     borderRadius: 12,
     padding: 16,
     borderWidth: 1,
@@ -347,7 +347,7 @@ const createStyles = theme => StyleSheet.create({
   },
   oneTimeLabel: {
     fontSize: 14,
-    color: theme.textSecondary,
+    color: '#0B0B0B',
     marginBottom: 4,
   },
   oneTimePrice: {
@@ -412,13 +412,13 @@ const createStyles = theme => StyleSheet.create({
   packagePerWash: {
     fontSize: 14,
     fontWeight: '600',
-    color: LIGHT_BLUE,
+    color: '#0B0B0B',
     marginBottom: 4,
   },
   packageTotal: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: theme.textPrimary,
+    color: '#0B0B0B',
   },
   addToCartContainer: {
     flexDirection: 'row',
