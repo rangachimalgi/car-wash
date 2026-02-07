@@ -3,15 +3,18 @@ import { View, Text, StyleSheet } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTheme } from '../theme/ThemeContext';
 
+const LIGHT_BLUE = '#85E4FC';
+const SKY_BLUE_BG = '#E6F4FF';
+
 export default function ServiceCoverage({ included = [], notIncluded = [] }) {
   const { theme } = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
 
   const renderItem = (item, isIncluded) => (
-    <View key={item} style={styles.itemRow}>
+    <View key={item} style={[styles.itemRow, isIncluded && styles.includedItemRow]}>
       <View style={[styles.iconContainer, isIncluded ? styles.includedIcon : styles.notIncludedIcon]}>
         {isIncluded ? (
-          <MaterialCommunityIcons name="check" size={16} color={theme.accent} />
+          <MaterialCommunityIcons name="check" size={16} color="#FFFFFF" />
         ) : (
           <MaterialCommunityIcons name="information" size={16} color="#000000" />
         )}
@@ -29,10 +32,10 @@ export default function ServiceCoverage({ included = [], notIncluded = [] }) {
       
       <View style={styles.tableContainer}>
         {/* What's Included Column */}
-        <View style={styles.column}>
+        <View style={[styles.column, styles.includedColumn]}>
           <View style={[styles.columnHeader, styles.includedHeader]}>
             <View style={[styles.headerIcon, styles.includedHeaderIcon]}>
-              <MaterialCommunityIcons name="check" size={18} color="#000000" />
+              <MaterialCommunityIcons name="check" size={18} color="#FFFFFF" />
             </View>
             <Text style={styles.columnHeaderText}>What's Included</Text>
           </View>
@@ -48,10 +51,10 @@ export default function ServiceCoverage({ included = [], notIncluded = [] }) {
         </View>
 
         {/* Not Included Column */}
-        <View style={[styles.column, { borderRightWidth: 0 }]}>
+        <View style={[styles.column, styles.notIncludedColumn, { borderRightWidth: 0 }]}>
           <View style={[styles.columnHeader, styles.notIncludedHeader]}>
             <View style={[styles.headerIcon, styles.notIncludedHeaderIcon]}>
-              <MaterialCommunityIcons name="information" size={18} color="#000000" />
+              <MaterialCommunityIcons name="information" size={18} color="#FFFFFF" />
             </View>
             <Text style={styles.columnHeaderText}>Not Included</Text>
           </View>
@@ -87,7 +90,7 @@ const createStyles = theme => StyleSheet.create({
   },
   seeAllText: {
     fontSize: 14,
-    color: theme.accent,
+    color: '#0B0B0B',
     fontWeight: '600',
   },
   tableContainer: {
@@ -96,24 +99,32 @@ const createStyles = theme => StyleSheet.create({
     borderRadius: 12,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: theme.cardBorder,
+    borderColor: '#0B0B0B',
   },
   column: {
     flex: 1,
     borderRightWidth: 1,
-    borderRightColor: theme.cardBorder,
+    borderRightColor: '#0B0B0B',
+  },
+  includedColumn: {
+    backgroundColor: SKY_BLUE_BG, // sky blue background for "What's Included" column
+  },
+  notIncludedColumn: {
+    backgroundColor: '#F1F5F9',
   },
   columnHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 14,
     paddingHorizontal: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#0B0B0B',
   },
   includedHeader: {
-    backgroundColor: theme.accent,
+    backgroundColor: SKY_BLUE_BG,
   },
   notIncludedHeader: {
-    backgroundColor: theme.textSecondary,
+    backgroundColor: '#F1F5F9',
   },
   headerIcon: {
     width: 24,
@@ -124,10 +135,10 @@ const createStyles = theme => StyleSheet.create({
     marginRight: 8,
   },
   includedHeaderIcon: {
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    backgroundColor: '#0B0B0B',
   },
   notIncludedHeaderIcon: {
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    backgroundColor: '#0B0B0B',
   },
   columnHeaderText: {
     fontSize: 14,
@@ -137,6 +148,9 @@ const createStyles = theme => StyleSheet.create({
   itemsContainer: {
     backgroundColor: theme.cardBackground,
   },
+  notIncludedItemsContainer: {
+    backgroundColor: '#F1F5F9',
+  },
   itemRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -144,6 +158,9 @@ const createStyles = theme => StyleSheet.create({
     paddingHorizontal: 12,
     borderBottomWidth: 1,
     borderBottomColor: theme.cardBorder,
+  },
+  includedItemRow: {
+    backgroundColor: '#FFFFFF', // included rows as white bg
   },
   iconContainer: {
     width: 20,
@@ -154,7 +171,7 @@ const createStyles = theme => StyleSheet.create({
     marginRight: 10,
   },
   includedIcon: {
-    backgroundColor: theme.accentSoft,
+    backgroundColor: '#0B0B0B',
   },
   notIncludedIcon: {
     backgroundColor: theme.cardBorder,

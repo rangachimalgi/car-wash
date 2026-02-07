@@ -3,6 +3,10 @@ import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTheme } from '../theme/ThemeContext';
 
+// Details screen palette tweaks (lighter blue)
+const LIGHT_BLUE = '#85E4FC';
+const LIGHT_BLUE_SOFT = 'rgba(133, 228, 252, 0.18)';
+
 export default function PricingPackages({
   oneTimePrice = 299,
   serviceTitle = 'Service',
@@ -121,7 +125,7 @@ export default function PricingPackages({
         </View>
         {isSelected && (
           <View style={styles.selectedIndicator}>
-            <MaterialCommunityIcons name="check-circle" size={20} color={theme.accent} />
+            <MaterialCommunityIcons name="check-circle" size={20} color={LIGHT_BLUE} />
           </View>
         )}
       </TouchableOpacity>
@@ -142,7 +146,7 @@ export default function PricingPackages({
             <Text style={styles.oneTimePrice}>₹{oneTimePrice}</Text>
           </View>
           {selectedPackage === 'oneTime' ? (
-            <MaterialCommunityIcons name="check-circle" size={24} color={theme.accent} />
+            <MaterialCommunityIcons name="check-circle" size={24} color={LIGHT_BLUE} />
           ) : (
             <View style={styles.circlePlaceholder} />
           )}
@@ -327,7 +331,7 @@ const createStyles = theme => StyleSheet.create({
     marginBottom: 16,
   },
   oneTimeSectionSelected: {
-    borderColor: theme.accent,
+    borderColor: LIGHT_BLUE,
   },
   circlePlaceholder: {
     width: 24,
@@ -349,7 +353,7 @@ const createStyles = theme => StyleSheet.create({
   oneTimePrice: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: theme.textPrimary,
+    color: '#0B0B0B',
   },
   sectionHeader: {
     flexDirection: 'row',
@@ -381,8 +385,8 @@ const createStyles = theme => StyleSheet.create({
     position: 'relative',
   },
   packageItemSelected: {
-    borderColor: theme.accent,
-    backgroundColor: theme.accentSoft,
+    borderColor: LIGHT_BLUE,
+    backgroundColor: LIGHT_BLUE_SOFT,
   },
   selectedIndicator: {
     position: 'absolute',
@@ -400,7 +404,7 @@ const createStyles = theme => StyleSheet.create({
   },
   packageDiscount: {
     fontSize: 12,
-    color: theme.accent,
+    color: LIGHT_BLUE,
   },
   packageRight: {
     alignItems: 'flex-end',
@@ -408,7 +412,7 @@ const createStyles = theme => StyleSheet.create({
   packagePerWash: {
     fontSize: 14,
     fontWeight: '600',
-    color: theme.accent,
+    color: LIGHT_BLUE,
     marginBottom: 4,
   },
   packageTotal: {
@@ -432,7 +436,7 @@ const createStyles = theme => StyleSheet.create({
   addToCartPrice: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: theme.accent,
+    color: '#0B0B0B',
     marginBottom: 4,
   },
   addToCartDuration: {
@@ -442,7 +446,7 @@ const createStyles = theme => StyleSheet.create({
   addToCartButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: theme.accent,
+    backgroundColor: LIGHT_BLUE,
     borderRadius: 8,
     paddingVertical: 14,
     paddingHorizontal: 24,
