@@ -38,7 +38,7 @@ function AppContent() {
       <View style={styles.splashContainer}>
         <StatusBar style="light" />
         <Image 
-          source={require('./assets/logo.jpeg')} 
+          source={require('./assets/logo.png')} 
           style={styles.splashLogo}
           resizeMode="contain"
         />

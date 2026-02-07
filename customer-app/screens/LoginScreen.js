@@ -100,9 +100,9 @@ export default function LoginScreen({ navigation }) {
         <View style={styles.headerSection}>
           <View style={styles.logoContainer}>
             <Image 
-              source={require('../assets/logo.jpeg')} 
+              source={require('../assets/logo.png')} 
               style={styles.logoImage}
-              resizeMode="contain"
+              resizeMode="cover"
             />
           </View>
           <Text style={styles.welcomeText}>Welcome to Woosh!</Text>
@@ -137,7 +137,7 @@ export default function LoginScreen({ navigation }) {
 
               <View style={styles.inputContainer}>
                 <Text style={styles.label}>Phone Number</Text>
-                <View style={[styles.inputWrapper, errors.phone && styles.inputError]}>
+                <View style={[styles.phoneInputWrapper, errors.phone && styles.inputError]}>
                   <View style={styles.countryCode}>
                     <Text style={styles.countryCodeText}>+91</Text>
                   </View>
@@ -160,7 +160,7 @@ export default function LoginScreen({ navigation }) {
 
               {/* Send OTP Button */}
               <TouchableOpacity 
-                style={styles.primaryButton}
+                style={styles.sendOtpButton}
                 onPress={handleSendOtp}
                 activeOpacity={0.8}
               >
@@ -242,7 +242,6 @@ const createStyles = theme => StyleSheet.create({
     width: 180,
     height: 180,
     borderRadius: 90,
-    backgroundColor: theme.accentSoft,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 24,
@@ -285,6 +284,17 @@ const createStyles = theme => StyleSheet.create({
     paddingHorizontal: 16,
     minHeight: 56,
   },
+  phoneInputWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: theme.cardBackground,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: theme.cardBorder,
+    paddingLeft: 0,
+    paddingRight: 16,
+    minHeight: 56,
+  },
   inputError: {
     borderColor: '#FF5252',
   },
@@ -294,6 +304,7 @@ const createStyles = theme => StyleSheet.create({
     paddingVertical: 16,
     borderRadius: 8,
     marginRight: 12,
+    marginLeft: 0,
   },
   countryCodeText: {
     fontSize: 16,
@@ -345,6 +356,16 @@ const createStyles = theme => StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
     color: '#FFFFFF',
+  },
+  sendOtpButton: {
+    backgroundColor: theme.accent,
+    borderRadius: 12,
+    paddingVertical: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 24,
+    gap: 8,
   },
   sendOtpButtonText: {
     fontSize: 16,
