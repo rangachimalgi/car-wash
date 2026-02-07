@@ -140,7 +140,7 @@ const createStyles = theme => StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 16,
     paddingBottom: 10,
-    backgroundColor: theme.accentSoft, // light blue strip behind the name row
+    backgroundColor: '#CBD5E1', // darker grey strip behind the name row
     borderBottomWidth: 1,
     borderBottomColor: theme.cardBorder,
   },
