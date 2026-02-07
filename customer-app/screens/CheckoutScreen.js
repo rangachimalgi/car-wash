@@ -10,6 +10,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const { width } = Dimensions.get('window');
+const LIGHT_BLUE = '#85E4FC';
 
 export default function CheckoutScreen({ navigation, route }) {
   const cartItems = route?.params?.cartItems || [];
@@ -329,13 +330,13 @@ export default function CheckoutScreen({ navigation, route }) {
         {selectedDate && selectedTimeSlot && (
           <View style={styles.serviceDetailsSection}>
             <View style={styles.serviceDetailRow}>
-              <MaterialCommunityIcons name="calendar" size={20} color={theme.accent} />
+              <MaterialCommunityIcons name="calendar" size={20} color={LIGHT_BLUE} />
               <Text style={styles.serviceDetailText}>
                 {formatDate(selectedDate)}
               </Text>
             </View>
             <View style={styles.serviceDetailRow}>
-              <MaterialCommunityIcons name="clock-outline" size={20} color={theme.accent} />
+              <MaterialCommunityIcons name="clock-outline" size={20} color={LIGHT_BLUE} />
               <Text style={styles.serviceDetailText}>
                 {selectedTimeSlot.time}
               </Text>
@@ -357,7 +358,7 @@ export default function CheckoutScreen({ navigation, route }) {
           </View>
           {address ? (
             <View style={styles.infoCard}>
-              <MaterialCommunityIcons name="map-marker" size={20} color={theme.accent} />
+              <MaterialCommunityIcons name="map-marker" size={20} color={LIGHT_BLUE} />
               <Text style={styles.infoText}>{address.address}</Text>
             </View>
           ) : (
@@ -365,7 +366,7 @@ export default function CheckoutScreen({ navigation, route }) {
               style={styles.addInfoCard}
               onPress={() => navigation.navigate('Addresses', { returnTo: 'Checkout' })}
             >
-              <MaterialCommunityIcons name="plus-circle" size={24} color={theme.accent} />
+              <MaterialCommunityIcons name="plus-circle" size={24} color={LIGHT_BLUE} />
               <Text style={styles.addInfoText}>Add Delivery Address</Text>
             </TouchableOpacity>
           )}
@@ -385,7 +386,7 @@ export default function CheckoutScreen({ navigation, route }) {
           </View>
           {vehicle ? (
             <View style={styles.infoCard}>
-              <MaterialCommunityIcons name="car" size={20} color={theme.accent} />
+              <MaterialCommunityIcons name="car" size={20} color={LIGHT_BLUE} />
               <Text style={styles.infoText}>
                 {vehicle.type} - {vehicle.model}
               </Text>
@@ -395,7 +396,7 @@ export default function CheckoutScreen({ navigation, route }) {
               style={styles.addInfoCard}
               onPress={() => navigation.navigate('VehicleDetails', { returnTo: 'Checkout' })}
             >
-              <MaterialCommunityIcons name="plus-circle" size={24} color={theme.accent} />
+              <MaterialCommunityIcons name="plus-circle" size={24} color={LIGHT_BLUE} />
               <Text style={styles.addInfoText}>Add Vehicle Details</Text>
             </TouchableOpacity>
           )}
@@ -425,13 +426,13 @@ export default function CheckoutScreen({ navigation, route }) {
         {/* Apply Coupon Section */}
         <View style={styles.couponSection}>
           <View style={styles.couponHeader}>
-            <MaterialCommunityIcons name="ticket-percent" size={20} color={theme.accent} />
+            <MaterialCommunityIcons name="ticket-percent" size={20} color={LIGHT_BLUE} />
             <Text style={styles.sectionTitle}>Apply Coupon</Text>
           </View>
           {appliedCoupon ? (
             <View style={styles.appliedCouponContainer}>
               <View style={styles.appliedCouponRow}>
-                <MaterialCommunityIcons name="check-circle" size={20} color={theme.accent} />
+                <MaterialCommunityIcons name="check-circle" size={20} color={LIGHT_BLUE} />
                 <Text style={styles.appliedCouponText}>{appliedCoupon} Applied</Text>
                 <Text style={styles.discountText}>-₹{discount.toFixed(2)}</Text>
               </View>
@@ -584,7 +585,7 @@ const createStyles = theme => StyleSheet.create({
   itemPrice: {
     fontSize: 16,
     fontWeight: '600',
-    color: theme.textPrimary,
+    color: '#0B0B0B',
   },
   couponSection: {
     marginTop: 24,
@@ -611,7 +612,9 @@ const createStyles = theme => StyleSheet.create({
     color: theme.textPrimary,
   },
   applyButton: {
-    backgroundColor: theme.accent,
+    backgroundColor: LIGHT_BLUE,
+    borderLeftWidth: 1,
+    borderLeftColor: theme.cardBorder,
     paddingHorizontal: 24,
     paddingVertical: 14,
     justifyContent: 'center',
@@ -625,7 +628,7 @@ const createStyles = theme => StyleSheet.create({
     backgroundColor: theme.cardBackground,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: theme.accent,
+    borderColor: LIGHT_BLUE,
     padding: 16,
   },
   appliedCouponRow: {
@@ -642,7 +645,7 @@ const createStyles = theme => StyleSheet.create({
   },
   discountText: {
     fontSize: 14,
-    color: theme.accent,
+    color: LIGHT_BLUE,
     fontWeight: '600',
   },
   removeCouponButton: {
@@ -681,7 +684,7 @@ const createStyles = theme => StyleSheet.create({
     fontWeight: '600',
   },
   discountValue: {
-    color: theme.accent,
+    color: LIGHT_BLUE,
   },
   totalRow: {
     borderTopWidth: 1,
@@ -698,7 +701,7 @@ const createStyles = theme => StyleSheet.create({
   totalValue: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: theme.accent,
+    color: '#0B0B0B',
   },
   payNowContainer: {
     position: 'absolute',
@@ -725,11 +728,11 @@ const createStyles = theme => StyleSheet.create({
   amountValue: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: theme.accent,
+    color: '#0B0B0B',
   },
   payNowButton: {
     flexDirection: 'row',
-    backgroundColor: theme.accent,
+    backgroundColor: LIGHT_BLUE,
     paddingVertical: 16,
     borderRadius: 12,
     justifyContent: 'center',
@@ -804,8 +807,8 @@ const createStyles = theme => StyleSheet.create({
   },
   editButtonText: {
     fontSize: 14,
-    fontWeight: '600',
-    color: theme.accent,
+    fontWeight: '700',
+    color: '#0B0B0B',
   },
   infoCard: {
     flexDirection: 'row',
@@ -837,7 +840,7 @@ const createStyles = theme => StyleSheet.create({
   },
   addInfoText: {
     fontSize: 14,
-    fontWeight: '600',
-    color: theme.accent,
+    fontWeight: '700',
+    color: '#0B0B0B',
   },
 });
