@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, Alert, Image } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -99,7 +99,11 @@ export default function LoginScreen({ navigation }) {
         {/* Logo/Header Section */}
         <View style={styles.headerSection}>
           <View style={styles.logoContainer}>
-            <MaterialCommunityIcons name="car-wash" size={64} color={theme.accent} />
+            <Image 
+              source={require('../assets/logo.jpeg')} 
+              style={styles.logoImage}
+              resizeMode="contain"
+            />
           </View>
           <Text style={styles.welcomeText}>Welcome to Woosh!</Text>
           <Text style={styles.subtitleText}>
@@ -160,8 +164,8 @@ export default function LoginScreen({ navigation }) {
                 onPress={handleSendOtp}
                 activeOpacity={0.8}
               >
-                <Text style={styles.primaryButtonText}>Send OTP</Text>
-                <MaterialCommunityIcons name="arrow-right" size={20} color="#FFFFFF" />
+                <Text style={styles.sendOtpButtonText}>Send OTP</Text>
+                <MaterialCommunityIcons name="arrow-right" size={20} color="#000000" />
               </TouchableOpacity>
             </>
           ) : (
@@ -235,13 +239,18 @@ const createStyles = theme => StyleSheet.create({
     marginBottom: 48,
   },
   logoContainer: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
+    width: 180,
+    height: 180,
+    borderRadius: 90,
     backgroundColor: theme.accentSoft,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 24,
+    overflow: 'hidden',
+  },
+  logoImage: {
+    width: '100%',
+    height: '100%',
   },
   welcomeText: {
     fontSize: 32,
@@ -336,6 +345,11 @@ const createStyles = theme => StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
     color: '#FFFFFF',
+  },
+  sendOtpButtonText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#000000',
   },
   resendContainer: {
     flexDirection: 'row',
