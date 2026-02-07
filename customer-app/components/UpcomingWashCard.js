@@ -95,6 +95,11 @@ const createStyles = theme => StyleSheet.create({
     borderWidth: 1,
     borderColor: theme.cardBorder,
     overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.12,
+    shadowRadius: 14,
+    elevation: 6,
   },
   content: {
     flexDirection: 'row',
