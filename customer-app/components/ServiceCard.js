@@ -11,6 +11,8 @@ export default function ServiceCard({
   description,
   price,
   duration,
+  showActions = true,
+  showDescription = true,
   onReadMore,
   onBookService,
   onCardPress,
@@ -19,12 +21,42 @@ export default function ServiceCard({
   const { theme } = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
 
+  const toTitleCase = (value) => {
+    const s = String(value || '').trim();
+    if (!s) return '';
+    return s
+      .toLowerCase()
+      .split(' ')
+      .filter(Boolean)
+      .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+      .join(' ');
+  };
+
+  const normalizeDuration = (d) => {
+    if (!d) return '';
+    const s = String(d).trim();
+    const m = s.match(/^(\d+)\s*min(s)?$/i);
+    if (m) return `${m[1]} mins`;
+    return s;
+  };
+
+  const durationLabel = normalizeDuration(duration);
+  const titleLabel = toTitleCase(title);
+
   return (
     <TouchableOpacity 
       style={styles.serviceCard}
       onPress={onCardPress}
       activeOpacity={0.9}
     >
+      <View style={styles.cardHeader}>
+        <View style={styles.cardHeaderRow}>
+          <Text style={styles.cardTitle} numberOfLines={1}>
+            {titleLabel}
+          </Text>
+        </View>
+      </View>
+
       <View style={styles.imageContainer}>
         {!imageError ? (
           <Image 
@@ -40,27 +72,47 @@ export default function ServiceCard({
         )}
       </View>
       <View style={styles.cardContent}>
-        <Text style={styles.cardTitle}>{title}</Text>
-        <Text style={styles.cardDescription}>{description}</Text>
-        <View style={styles.cardInfo}>
-          <Text style={styles.cardPrice}>{price}</Text>
-          <Text style={styles.cardDuration}>{duration}</Text>
+        <View style={styles.cardInfoRow}>
+          <Text style={styles.cardPriceLine} numberOfLines={1}>
+            <Text style={styles.cardPricePrefix}>Starting </Text>
+            <Text style={styles.cardPriceValue}>{price}</Text>
+          </Text>
+          {!!durationLabel ? (
+            <View style={styles.durationRowInline}>
+              <MaterialCommunityIcons name="clock-outline" size={16} color={theme.textSecondary} />
+              <Text style={styles.durationText}>{durationLabel}</Text>
+            </View>
+          ) : (
+            <View />
+          )}
         </View>
-        <View style={styles.cardButtons}>
-          <TouchableOpacity 
-            style={styles.readMoreButton} 
-            onPress={onReadMore}
-          >
-            <Text style={styles.readMoreText}>Read more</Text>
-          </TouchableOpacity>
-          <TouchableOpacity 
-            style={styles.bookButton} 
-            onPress={onBookService}
-          >
-            <Text style={styles.bookText}>Book service</Text>
-            <MaterialCommunityIcons name="arrow-right" size={18} color="#FFFFFF" />
-          </TouchableOpacity>
-        </View>
+
+        {showDescription ? (
+          <Text style={styles.cardDescription} numberOfLines={3}>
+            {description}
+          </Text>
+        ) : null}
+        {/*
+          Action buttons are optional. Keep component reusable for list screens where
+          we only need the card tap behavior.
+        */}
+        {showActions ? (
+          <View style={styles.cardButtons}>
+            <TouchableOpacity
+              style={styles.readMoreButton}
+              onPress={onReadMore}
+            >
+              <Text style={styles.readMoreText}>Read more</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.bookButton}
+              onPress={onBookService}
+            >
+              <Text style={styles.bookText}>Book service</Text>
+              <MaterialCommunityIcons name="arrow-right" size={18} color="#FFFFFF" />
+            </TouchableOpacity>
+          </View>
+        ) : null}
       </View>
     </TouchableOpacity>
   );
@@ -84,16 +136,25 @@ const createStyles = theme => StyleSheet.create({
     shadowRadius: 4,
     elevation: 5,
   },
+  cardHeader: {
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 10,
+    backgroundColor: theme.accentSoft, // light blue strip behind the name row
+    borderBottomWidth: 1,
+    borderBottomColor: theme.cardBorder,
+  },
   imageContainer: {
     position: 'relative',
-    margin: 12,
-    borderRadius: 12,
+    marginHorizontal: 0,
+    marginBottom: 12,
+    borderRadius: 0,
     overflow: 'hidden',
   },
   serviceImage: {
-    width: width - 56,
-    height: 150,
-    borderRadius: 12,
+    width: '100%',
+    height: 165,
+    borderRadius: 0,
   },
   placeholderImage: {
     backgroundColor: theme.accentSoft,
@@ -104,11 +165,24 @@ const createStyles = theme => StyleSheet.create({
     padding: 16,
     paddingTop: 0,
   },
+  cardHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
   cardTitle: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    color: theme.accent,
-    marginBottom: 8,
+    flex: 1,
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#0B0B0B',
+  },
+  cardInfoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+    gap: 12,
   },
   cardDescription: {
     fontSize: 14,
@@ -116,25 +190,30 @@ const createStyles = theme => StyleSheet.create({
     marginBottom: 16,
     lineHeight: 20,
   },
-  cardInfo: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
+  cardPriceLine: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#0B0B0B',
   },
-  cardPrice: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: theme.textPrimary,
-  },
-  cardDuration: {
-    fontSize: 14,
-    fontWeight: '600',
+  cardPricePrefix: {
+    fontSize: 15,
+    fontWeight: '700',
     color: theme.textSecondary,
-    backgroundColor: theme.accentSoft,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
+  },
+  cardPriceValue: {
+    fontSize: 22,
+    fontWeight: '900',
+    color: '#0B0B0B',
+  },
+  durationRowInline: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  durationText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: theme.textSecondary,
   },
   cardButtons: {
     flexDirection: 'row',

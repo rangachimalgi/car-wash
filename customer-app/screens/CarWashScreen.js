@@ -103,7 +103,7 @@ export default function CarWashScreen({ navigation }) {
         }
       >
         <View style={styles.content}>
-          <Text style={styles.browseTitle}>browse woosh!</Text>
+          {/* <Text style={styles.browseTitle}>browse woosh!</Text> */}
           
           {services.length === 0 ? (
             <View style={styles.emptyContainer}>
@@ -120,11 +120,10 @@ export default function CarWashScreen({ navigation }) {
                   description={service.description}
                   price={formatPrice(service.basePrice)}
                   duration={service.duration}
-                  onReadMore={() => handleServicePress(service)}
-                  onBookService={() => {
-                    // Navigate to service details or add to cart
-                    handleServicePress(service);
-                  }}
+                  showActions={false}
+                  showDescription={false}
+                  // onReadMore={() => handleServicePress(service)} // not needed here
+                  // onBookService={() => handleServicePress(service)} // not needed here
                   onCardPress={() => handleServicePress(service)}
                 />
               </View>
