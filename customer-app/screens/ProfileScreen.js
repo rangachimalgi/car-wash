@@ -108,23 +108,23 @@ export default function ProfileScreen({ navigation }) {
                 <Text style={styles.walletBalance}>{userData.walletBalance}</Text>
               </View>
               <TouchableOpacity style={styles.addMoneyButton}>
-                <MaterialCommunityIcons name="plus" size={20} color="#FFFFFF" />
+                <MaterialCommunityIcons name="plus" size={20} color="#000000" />
                 <Text style={styles.addMoneyText}>Add Money</Text>
               </TouchableOpacity>
             </View>
             <View style={styles.walletFooter}>
               <TouchableOpacity style={styles.walletAction}>
-                <MaterialCommunityIcons name="arrow-up" size={18} color={theme.accent} />
+                <MaterialCommunityIcons name="arrow-up" size={18} color="#000000" />
                 <Text style={styles.walletActionText}>Send</Text>
               </TouchableOpacity>
               <View style={styles.divider} />
               <TouchableOpacity style={styles.walletAction}>
-                <MaterialCommunityIcons name="arrow-down" size={18} color={theme.accent} />
+                <MaterialCommunityIcons name="arrow-down" size={18} color="#000000" />
                 <Text style={styles.walletActionText}>Receive</Text>
               </TouchableOpacity>
               <View style={styles.divider} />
               <TouchableOpacity style={styles.walletAction}>
-                <MaterialCommunityIcons name="history" size={18} color={theme.accent} />
+                <MaterialCommunityIcons name="history" size={18} color="#000000" />
                 <Text style={styles.walletActionText}>History</Text>
               </TouchableOpacity>
             </View>
@@ -410,7 +410,7 @@ const createStyles = theme => StyleSheet.create({
   walletBalance: {
     fontSize: 32,
     fontWeight: 'bold',
-    color: theme.accent,
+    color: '#000000',
   },
   addMoneyButton: {
     flexDirection: 'row',
@@ -424,7 +424,7 @@ const createStyles = theme => StyleSheet.create({
   addMoneyText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#FFFFFF',
+    color: '#000000',
   },
   walletFooter: {
     flexDirection: 'row',
@@ -440,7 +440,7 @@ const createStyles = theme => StyleSheet.create({
   },
   walletActionText: {
     fontSize: 14,
-    color: theme.accent,
+    color: '#000000',
     fontWeight: '600',
   },
   divider: {

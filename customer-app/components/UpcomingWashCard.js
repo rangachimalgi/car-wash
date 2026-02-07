@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTheme } from '../theme/ThemeContext';
 
-export default function UpcomingWashCard({ wash, onDelivered, onPress, onViewLocation }) {
+export default function UpcomingWashCard({ wash, onPress, onViewLocation }) {
   const { theme } = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
   const statusLabel = wash.status === 'In Progress' ? 'Ongoing' : (wash.status || 'Upcoming');
@@ -34,8 +34,12 @@ export default function UpcomingWashCard({ wash, onDelivered, onPress, onViewLoc
               <Text style={styles.serviceTypeText}>{wash.serviceType}</Text>
             </View>
             <View style={styles.statusBadge}>
-              <MaterialCommunityIcons name="clock-outline" size={14} color={theme.accent} />
-              <Text style={styles.statusText}>{statusLabel}</Text>
+              <MaterialCommunityIcons 
+                name="clock-outline" 
+                size={14} 
+                color={wash.status === 'Pending' ? '#000000' : theme.accent} 
+              />
+              <Text style={[styles.statusText, wash.status === 'Pending' && styles.statusTextPending]}>{statusLabel}</Text>
             </View>
           </View>
 
@@ -57,7 +61,7 @@ export default function UpcomingWashCard({ wash, onDelivered, onPress, onViewLoc
               <Text style={styles.priceLabel}>Total</Text>
               <Text style={styles.priceText}>{wash.price}</Text>
             </View>
-            {wash.status === 'In Progress' ? (
+            {wash.status === 'In Progress' && (
               <TouchableOpacity
                 style={styles.viewLocationButton}
                 onPress={(e) => {
@@ -65,19 +69,8 @@ export default function UpcomingWashCard({ wash, onDelivered, onPress, onViewLoc
                   onViewLocation?.(wash);
                 }}
               >
-                <MaterialCommunityIcons name="map-marker" size={18} color="#2F5CF4" />
+                <MaterialCommunityIcons name="map-marker" size={18} color="#87CEEB" />
                 <Text style={styles.viewLocationText}>View Location</Text>
-              </TouchableOpacity>
-            ) : (
-              <TouchableOpacity 
-                style={styles.deliveredButton}
-                onPress={(e) => {
-                  e.stopPropagation();
-                  onDelivered?.(wash);
-                }}
-              >
-                <MaterialCommunityIcons name="check-circle" size={18} color="#4CAF50" />
-                <Text style={styles.deliveredButtonText}>Delivered</Text>
               </TouchableOpacity>
             )}
           </View>
@@ -171,6 +164,9 @@ const createStyles = theme => StyleSheet.create({
     color: theme.accent,
     fontWeight: '600',
   },
+  statusTextPending: {
+    color: '#000000',
+  },
   serviceName: {
     fontSize: 16,
     fontWeight: 'bold',
@@ -211,26 +207,12 @@ const createStyles = theme => StyleSheet.create({
   priceText: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: theme.accent,
-  },
-  deliveredButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(76, 175, 80, 0.15)',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 8,
-    gap: 6,
-  },
-  deliveredButtonText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#4CAF50',
+    color: '#000000',
   },
   viewLocationButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(47, 92, 244, 0.12)',
+    backgroundColor: 'rgba(135, 206, 235, 0.12)',
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 8,
@@ -239,6 +221,6 @@ const createStyles = theme => StyleSheet.create({
   viewLocationText: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#2F5CF4',
+    color: '#87CEEB',
   },
 });

@@ -7,7 +7,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import CustomHeader from '../components/CustomHeader';
 import UpcomingWashCard from '../components/UpcomingWashCard';
 import RecentServiceCard from '../components/RecentServiceCard';
-import { getOrders, updateOrderStatus } from '../services/orderApi';
+import { getOrders } from '../services/orderApi';
 import { useTheme } from '../theme/ThemeContext';
 
 export default function BookingsScreen({ navigation }) {
@@ -106,15 +106,6 @@ export default function BookingsScreen({ navigation }) {
     }, [])
   );
 
-  const handleDelivered = async (wash) => {
-    try {
-      await updateOrderStatus(wash.id, 'Completed');
-      fetchOrders();
-    } catch (error) {
-      console.error('Failed to mark delivered:', error);
-    }
-  };
-
   const handleViewLocation = (wash) => {
     navigation.navigate('EmployeeLiveLocation', { orderId: wash.id });
   };
@@ -145,7 +136,6 @@ export default function BookingsScreen({ navigation }) {
               <UpcomingWashCard 
                 key={wash.id} 
                 wash={wash}
-                onDelivered={handleDelivered}
                 onViewLocation={handleViewLocation}
                 onPress={() => {
                   // Handle card press if needed
