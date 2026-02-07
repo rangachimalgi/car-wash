@@ -614,6 +614,7 @@ const createStyles = theme => StyleSheet.create({
     borderRadius: 12,
     paddingVertical: 12,
     alignItems: 'center',
+    marginTop: 8,
   },
   saveVehicleText: {
     color: '#000000',
