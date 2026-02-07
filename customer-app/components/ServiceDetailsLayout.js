@@ -87,11 +87,7 @@ export default function ServiceDetailsLayout({
           >
             <MaterialCommunityIcons name="chevron-left" size={24} color={theme.textPrimary} />
           </TouchableOpacity>
-          <View style={styles.headerRight}>
-            <TouchableOpacity style={styles.headerButton}>
-              <MaterialCommunityIcons name="dots-vertical" size={24} color={theme.textPrimary} />
-            </TouchableOpacity>
-          </View>
+          <View style={styles.headerRight} />
         </View>
       </View>
 
