@@ -3,6 +3,9 @@ import { View, Text, StyleSheet, ScrollView, Dimensions, TouchableOpacity, Image
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import CustomHeader from '../components/CustomHeader';
+import CustomerTestimonials from '../components/CustomerTestimonials';
+import SeeTheDifference from '../components/SeeTheDifference';
+import SeeTheTransformations from '../components/SeeTheTransformations';
 import { useTheme } from '../theme/ThemeContext';
 // import { getPopularServices } from '../services/serviceApi';
 
@@ -241,6 +244,10 @@ export default function HomeScreen({ navigation }) {
             </View>
           </ScrollView>
         </View>
+
+        <CustomerTestimonials />
+        <SeeTheDifference />
+        <SeeTheTransformations />
       </ScrollView>
     </View>
   );
@@ -494,7 +501,7 @@ const createStyles = theme => StyleSheet.create({
   },
   whyChooseCard: {
     width: width - 64,
-    height: 180,
+    height: 120,
     borderRadius: 20,
     marginRight: 16,
     flexDirection: 'row',
@@ -513,7 +520,7 @@ const createStyles = theme => StyleSheet.create({
   },
   whyChooseImage: {
     width: 120,
-    height: 150,
+    height: 120,
     borderRadius: 12,
     marginRight: 16,
   },
