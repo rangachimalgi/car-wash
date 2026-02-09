@@ -162,42 +162,62 @@ export default function HomeScreen({ navigation }) {
               <Text style={styles.seeAllText}>See All</Text>
             </TouchableOpacity> */}
           </View>
-          <View style={styles.mainServicesRow}>
-            <View style={styles.mainServiceItem}>
-              <TouchableOpacity 
-                style={styles.mainServiceCard}
-                onPress={() => navigation.navigate('CarWash')}
-                activeOpacity={0.9}
-              >
-                <View style={styles.carWashImageWrap}>
-                  <Image
-                    source={require('../assets/carwash.png')}
-                    style={styles.carWashImage}
-                    resizeMode="cover"
-                  />
-                </View>
-                <Text style={styles.tileTitle} numberOfLines={1}>
-                  Car Wash
-                </Text>
-              </TouchableOpacity>
-            </View>
-            <View style={styles.mainServiceItem}>
-              <TouchableOpacity 
-                style={styles.mainServiceCard}
-                onPress={() => navigation.navigate('BikeWash')}
-                activeOpacity={0.9}
-              >
-                <ServiceImage 
-                  uri="https://images.unsplash.com/photo-1558981806-ec527fa84c39?w=800&h=400&fit=crop&auto=format"
-                  style={styles.mainServiceImage}
-                  imageKey="bikeWash"
+          {/* Top row: Car Wash + Car Wash Packages */}
+          <View style={styles.topServicesRow}>
+            <TouchableOpacity
+              style={styles.halfCard}
+              onPress={() => navigation.navigate('CarWash')}
+              activeOpacity={0.9}
+            >
+              <Text style={styles.halfCardTitle}>CAR WASH</Text>
+              <Text style={styles.halfCardTitle}>& CARE</Text>
+              <View style={styles.halfCardImageWrap}>
+                <Image
+                  source={require('../assets/carwash.png')}
+                  style={styles.halfCardImage}
+                  resizeMode="contain"
                 />
-                <Text style={styles.tileTitle} numberOfLines={2}>
-                  Bike/Scooter Wash
-                </Text>
-              </TouchableOpacity>
-            </View>
+              </View>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.halfCard}
+              onPress={() => navigation.navigate('CarWash')}
+              activeOpacity={0.9}
+            >
+              <Text style={styles.halfCardTitle}>CAR WASH</Text>
+              <Text style={styles.halfCardTitle}>PACKAGES</Text>
+              <View style={styles.offerPill}>
+                <Text style={styles.offerPillText}>EXTRA 50% OFF</Text>
+              </View>
+              <View style={styles.halfCardImageWrap}>
+                <Image
+                  source={require('../assets/carImage.jpeg')}
+                  style={styles.halfCardImage}
+                  resizeMode="contain"
+                />
+              </View>
+            </TouchableOpacity>
           </View>
+
+          {/* Below: Bike/Scooter Wash full-width card */}
+          <TouchableOpacity
+            style={styles.wideBikeCard}
+            onPress={() => navigation.navigate('BikeWash')}
+            activeOpacity={0.9}
+          >
+            <View style={styles.wideBikeImageWrap}>
+              <Image
+                source={require('../assets/carwash.png')}
+                style={styles.wideBikeImage}
+                resizeMode="contain"
+              />
+            </View>
+            <View style={styles.wideBikeTextWrap}>
+              <Text style={styles.wideBikeTitle}>BIKE WASH & CARE</Text>
+              <Text style={styles.wideBikeSubtitle}>Bike / Scooter Wash</Text>
+            </View>
+          </TouchableOpacity>
         </View>
 
         {/* Why Choose Woosh Section */}
@@ -283,7 +303,7 @@ const createStyles = theme => StyleSheet.create({
     fontWeight: '600',
   },
   sliderScrollView: {
-    marginVertical: 10,
+    marginVertical: 6,
   },
   sliderWrap: {
     position: 'relative',
@@ -327,19 +347,19 @@ const createStyles = theme => StyleSheet.create({
   },
   servicesSection: {
     paddingHorizontal: 16,
-    paddingTop: 24,
-    paddingBottom: 100,
+    paddingTop: 10,
+    paddingBottom: 24,
   },
-  mainServicesRow: {
+  topServicesRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 8,
+    gap: 14,
+    marginTop: 2,
   },
   sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: 8,
   },
   sectionTitle: {
     fontSize: 20,
@@ -373,55 +393,84 @@ const createStyles = theme => StyleSheet.create({
     color: theme.textPrimary,
     textAlign: 'center',
   },
-  mainServiceItem: {
+  halfCard: {
     flex: 1,
-    alignItems: 'center',
-    marginHorizontal: 8,
-  },
-  mainServiceCard: {
-    width: '100%',
-    height: 200,
     backgroundColor: theme.cardBackground,
-    borderRadius: 16,
+    borderRadius: 18,
+    padding: 16,
     borderWidth: 1,
     borderColor: theme.cardBorder,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 8,
-    },
-    shadowOpacity: 0.18,
-    shadowRadius: 10,
-    elevation: 7,
-    marginBottom: 8,
     overflow: 'hidden',
+    // ~40% shorter than before (190 -> 114)
+    minHeight: 114,
   },
-  mainServiceImage: {
-    width: '100%',
-    height: '100%',
+  halfCardTitle: {
+    fontSize: 18,
+    fontWeight: '900',
+    color: theme.textPrimary,
+    letterSpacing: 0.3,
   },
-  carWashImageWrap: {
+  offerPill: {
+    marginTop: 10,
+    alignSelf: 'flex-start',
+    backgroundColor: '#D91F26',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 14,
+  },
+  offerPillText: {
+    color: '#FFFFFF',
+    fontWeight: '900',
+    fontSize: 12,
+    letterSpacing: 0.4,
+  },
+  halfCardImageWrap: {
     flex: 1,
+    marginTop: 10,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#F8FAFC',
   },
-  carWashImage: {
-    width: '100%',
-    height: '100%',
+  halfCardImage: {
+    width: '110%',
+    height: 80,
   },
-  tileTitle: {
-    position: 'absolute',
-    left: 14,
-    top: 12,
-    maxWidth: '92%',
-    color: '#0B0B0B',
+  wideBikeCard: {
+    marginTop: 14,
+    backgroundColor: theme.cardBackground,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: theme.cardBorder,
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    overflow: 'hidden',
+  },
+  wideBikeImageWrap: {
+    width: 140,
+    height: 90,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 14,
+  },
+  wideBikeImage: {
+    width: '120%',
+    height: '120%',
+  },
+  wideBikeTextWrap: {
+    flex: 1,
+    justifyContent: 'center',
+  },
+  wideBikeTitle: {
     fontSize: 20,
     fontWeight: '900',
-    letterSpacing: 0.2,
-    textShadowColor: 'rgba(255,255,255,0.85)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 2,
+    color: theme.textPrimary,
+    letterSpacing: 0.3,
+  },
+  wideBikeSubtitle: {
+    marginTop: 4,
+    fontSize: 13,
+    fontWeight: '600',
+    color: theme.textSecondary,
   },
   popularSection: {
     paddingHorizontal: 16,
@@ -484,7 +533,7 @@ const createStyles = theme => StyleSheet.create({
   },
   whyChooseSection: {
     paddingHorizontal: 16,
-    paddingTop: 20,
+    paddingTop: 8,
     paddingBottom: 20,
   },
   whyChooseTitle: {
