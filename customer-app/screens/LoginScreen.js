@@ -89,7 +89,7 @@ export default function LoginScreen({ navigation }) {
         await AsyncStorage.setItem('authPhone', phoneNumber);
         await AsyncStorage.setItem('authName', response.user?.name || name);
       }
-      navigation.navigate('MainTabs');
+      navigation.navigate('Welcome');
     } catch (error) {
       Alert.alert('Invalid OTP', 'Please check the OTP and try again.');
     }
@@ -145,7 +145,7 @@ export default function LoginScreen({ navigation }) {
         await AsyncStorage.setItem('authPhone', phoneNumber);
         await AsyncStorage.setItem('authName', response.user?.name || name);
       }
-      navigation.navigate('MainTabs');
+      navigation.navigate('Welcome');
     } catch (error) {
       Alert.alert('Invalid OTP', 'Please check the OTP and try again.');
     }

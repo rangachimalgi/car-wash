@@ -1,0 +1,349 @@
+import React from 'react';
+import { 
+  View, 
+  Text, 
+  StyleSheet, 
+  ScrollView, 
+  Dimensions, 
+  TouchableOpacity, 
+  Image 
+} from 'react-native';
+import { MaterialIcons } from '@expo/vector-icons';
+import { StatusBar } from 'expo-status-bar';
+import { LinearGradient } from 'expo-linear-gradient';
+import CustomHeader from '../components/CustomHeader';
+
+const { width } = Dimensions.get('window');
+
+export default function WelcomeScreen({ navigation }) {
+
+  return (
+    <View style={styles.container}>
+      <StatusBar style="dark" />
+      
+      <ScrollView 
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Blue Banner Section */}
+        <View style={styles.bannerWrapper}>
+          <LinearGradient
+            colors={['#36A0E2', '#4DB5F5', '#5DC1F7']}
+            style={styles.blueBannerSection}
+          >
+            {/* Hero Banner */}
+            <View style={styles.heroBanner}>
+              <View style={styles.heroContent}>
+                <View style={styles.heroLeft}>
+                  <View style={styles.locationPinContainer}>
+                    <View style={styles.locationPin}>
+                      <MaterialIcons name="location-on" size={40} color="#FFD700" />
+                    </View>
+                  </View>
+                  <View style={styles.heroTextContainer}>
+                    <Text style={styles.atYourText}>At Your</Text>
+                    <Text style={styles.timeText}>TIME</Text>
+                    <Text style={styles.andText}>&</Text>
+                    <Text style={styles.placeText}>PLACE</Text>
+                  </View>
+                </View>
+                <View style={styles.heroRight}>
+                  <Image
+                    source={require('../assets/carwash.png')}
+                    style={styles.heroImage}
+                    resizeMode="contain"
+                  />
+                </View>
+              </View>
+            </View>
+          </LinearGradient>
+          
+          {/* Header on top of banner */}
+          <View style={styles.headerWrapper}>
+            <CustomHeader navigation={navigation} />
+          </View>
+        </View>
+
+        {/* Main Service Cards - Overlapping */}
+        <View style={styles.serviceCardsContainer}>
+          {/* Car/Bike Wash & Care Card */}
+          <TouchableOpacity 
+            style={styles.serviceCard}
+            onPress={() => navigation.navigate('MainTabs')}
+            activeOpacity={0.9}
+          >
+            <View style={styles.cardContent}>
+              <Text style={styles.cardTitle}>CAR WASH </Text>
+              <Text style={styles.cardTitle}>& CARE</Text>
+              <View style={styles.cardImageContainer}>
+                <Image
+                  source={require('../assets/carwash.png')}
+                  style={styles.cardImage}
+                  resizeMode="contain"
+                />
+              </View>
+            </View>
+          </TouchableOpacity>
+
+          {/* Bike Wash & Care Card */}
+          <TouchableOpacity 
+            style={styles.serviceCard}
+            onPress={() => navigation.navigate('MainTabs')}
+            activeOpacity={0.9}
+          >
+            <View style={styles.cardContent}>
+              <Text style={styles.cardTitle}>BIKE WASH</Text>
+              <Text style={styles.cardTitle}>& CARE</Text>
+              <View style={styles.offerBadge}>
+                <Text style={styles.offerText}>Upto 50% Off</Text>
+              </View>
+              <View style={styles.cardImageContainer}>
+                <Image
+                  source={require('../assets/carwash.png')}
+                  style={styles.cardImage}
+                  resizeMode="contain"
+                />
+              </View>
+            </View>
+          </TouchableOpacity>
+        </View>
+
+        {/* Insurance Section */}
+        <View style={styles.insuranceCard}>
+          <View style={styles.insuranceLeft}>
+            <Text style={styles.insuranceTitle}>CAR / BIKE INSURANCE</Text>
+            <Text style={styles.insuranceSubtitle}>EXPLORE OUR INSURANCE PARTNERS</Text>
+            
+            <View style={styles.rewardsContainer}>
+              <Text style={styles.rewardsText}>Get Hoora Points Rewards</Text>
+              <Text style={styles.pointsText}>Upto 5000</Text>
+            </View>
+          </View>
+          <View style={styles.insuranceRight}>
+            <Image
+              source={require('../assets/carwash.png')}
+              style={styles.insuranceImage}
+              resizeMode="contain"
+            />
+          </View>
+        </View>
+
+        {/* Bottom spacing */}
+        <View style={{ height: 100 }} />
+      </ScrollView>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#F5F5F5',
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingBottom: 20,
+  },
+  bannerWrapper: {
+    position: 'relative',
+  },
+  headerWrapper: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 10,
+  },
+  blueBannerSection: {
+    paddingTop: 100,
+    paddingBottom: 40,
+  },
+
+  // Hero Banner Styles
+  heroBanner: {
+    marginHorizontal: 0,
+    marginBottom: 0,
+    height: 220,
+    overflow: 'hidden',
+    position: 'relative',
+  },
+  heroContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 20,
+    flex: 1,
+  },
+  heroLeft: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  locationPinContainer: {
+    marginRight: 12,
+  },
+  locationPin: {
+    width: 70,
+    height: 80,
+    backgroundColor: '#FFF',
+    borderRadius: 35,
+    borderBottomRightRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    transform: [{ rotate: '-15deg' }],
+  },
+  heroTextContainer: {
+    flex: 1,
+  },
+  atYourText: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#000',
+    marginBottom: 4,
+  },
+  timeText: {
+    fontSize: 42,
+    fontWeight: '900',
+    color: '#000',
+    letterSpacing: 2,
+    fontStyle: 'italic',
+  },
+  andText: {
+    fontSize: 32,
+    fontWeight: '600',
+    color: '#000',
+    fontStyle: 'italic',
+  },
+  placeText: {
+    fontSize: 42,
+    fontWeight: '900',
+    color: '#000',
+    letterSpacing: 2,
+    fontStyle: 'italic',
+  },
+  heroRight: {
+    width: width * 0.35,
+    height: 180,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  heroImage: {
+    width: '100%',
+    height: '100%',
+  },
+
+  // Service Cards Styles
+  serviceCardsContainer: {
+    flexDirection: 'row',
+    paddingHorizontal: 16,
+    gap: 12,
+    marginTop: -30,
+    marginBottom: 20,
+  },
+  serviceCard: {
+    flex: 1,
+    backgroundColor: '#FFF',
+    borderRadius: 20,
+    minHeight: 240,
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+  cardContent: {
+    flex: 1,
+    padding: 16,
+    justifyContent: 'space-between',
+  },
+  cardTitle: {
+    fontSize: 16,
+    fontWeight: '900',
+    color: '#000',
+    letterSpacing: 0.5,
+  },
+  offerBadge: {
+    backgroundColor: '#FFF4CC',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+    alignSelf: 'flex-start',
+    marginTop: 8,
+  },
+  offerText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#D4AF37',
+  },
+  cardImageContainer: {
+    height: 120,
+    marginTop: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cardImage: {
+    width: '100%',
+    height: '100%',
+  },
+
+  // Insurance Card Styles
+  insuranceCard: {
+    marginHorizontal: 16,
+    backgroundColor: '#FFF',
+    borderRadius: 20,
+    padding: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    minHeight: 180,
+  },
+  insuranceLeft: {
+    flex: 1,
+    paddingRight: 16,
+  },
+  insuranceTitle: {
+    fontSize: 18,
+    fontWeight: '900',
+    color: '#000',
+    letterSpacing: 0.5,
+    marginBottom: 4,
+  },
+  insuranceSubtitle: {
+    fontSize: 11,
+    color: '#666',
+    marginBottom: 16,
+    letterSpacing: 0.3,
+  },
+  rewardsContainer: {
+    backgroundColor: '#FFF4CC',
+    padding: 12,
+    borderRadius: 12,
+  },
+  rewardsText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#D4AF37',
+    marginBottom: 4,
+  },
+  pointsText: {
+    fontSize: 20,
+    fontWeight: '900',
+    color: '#000',
+  },
+  insuranceRight: {
+    width: width * 0.3,
+    height: 140,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  insuranceImage: {
+    width: '100%',
+    height: '100%',
+  },
+});

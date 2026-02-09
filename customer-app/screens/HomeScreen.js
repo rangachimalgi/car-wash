@@ -501,11 +501,6 @@ const createStyles = theme => StyleSheet.create({
     overflow: 'hidden',
     padding: 16,
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.12,
-    shadowRadius: 14,
-    elevation: 6,
   },
   whyChooseCardBlue: {
     backgroundColor: '#E6F4FF',

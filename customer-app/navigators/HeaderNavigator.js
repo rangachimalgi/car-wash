@@ -11,6 +11,7 @@ import SlotSelectionScreen from '../screens/SlotSelectionScreen';
 import CheckoutScreen from '../screens/CheckoutScreen';
 import LoginScreen from '../screens/LoginScreen';
 import RegisterScreen from '../screens/RegisterScreen';
+import WelcomeScreen from '../screens/WelcomeScreen';
 import AddressesScreen from '../screens/AddressesScreen';
 import VehicleDetailsScreen from '../screens/VehicleDetailsScreen';
 import EmployeeLiveLocationScreen from '../screens/EmployeeLiveLocationScreen';
@@ -26,7 +27,9 @@ export default function HeaderNavigator() {
       try {
         const token = await AsyncStorage.getItem('authToken');
         if (token) {
-          setInitialRoute('MainTabs');
+          // When already logged in, start on Welcome screen first.
+          // Welcome will route users into the main tabs (Home) via the tiles.
+          setInitialRoute('Welcome');
         }
       } catch (error) {
         console.error('Error checking auth:', error);
@@ -62,6 +65,11 @@ export default function HeaderNavigator() {
       <Stack.Screen 
         name="Register" 
         component={RegisterScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen 
+        name="Welcome" 
+        component={WelcomeScreen}
         options={{ headerShown: false }}
       />
       <Stack.Screen 
