@@ -18,8 +18,9 @@ export default function PricingPackages({
   hideSubscriptions = false,
   forceOneTime = false,
   initialSelectedPackage,
+  showOnlyMonthly = false,
 }) {
-  const [expandedSection, setExpandedSection] = useState(null);
+  const [expandedSection, setExpandedSection] = useState(showOnlyMonthly ? 'monthly' : null);
   const [selectedPackage, setSelectedPackage] = useState(initialSelectedPackage ?? 'oneTime'); // Default to one time wash
   const { theme } = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
@@ -30,11 +31,14 @@ export default function PricingPackages({
       if (onSelectionChange) onSelectionChange('oneTime');
       return;
     }
+    if (showOnlyMonthly) {
+      setExpandedSection('monthly');
+    }
     if (initialSelectedPackage !== undefined) {
       setSelectedPackage(initialSelectedPackage ?? 'oneTime');
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [forceOneTime, initialSelectedPackage]);
+  }, [forceOneTime, initialSelectedPackage, showOnlyMonthly]);
 
   const toggleSection = (section) => {
     setExpandedSection(expandedSection === section ? null : section);
@@ -174,43 +178,47 @@ export default function PricingPackages({
             </View>
           )}
 
-          {/* Quarterly Packages */}
-          <TouchableOpacity 
-            style={styles.sectionHeader}
-            onPress={() => toggleSection('quarterly')}
-            activeOpacity={0.7}
-          >
-            <Text style={styles.sectionTitle}>Quarterly Packages</Text>
-            <MaterialCommunityIcons 
-              name={expandedSection === 'quarterly' ? 'chevron-up' : 'chevron-down'} 
-              size={24} 
-              color={theme.textPrimary} 
-            />
-          </TouchableOpacity>
-          {expandedSection === 'quarterly' && (
-            <View style={styles.packagesList}>
-              {quarterlyPackages.map(pkg => renderPackageItem(pkg, 'quarterly'))}
-            </View>
-          )}
+          {!showOnlyMonthly ? (
+            <>
+              {/* Quarterly Packages */}
+              <TouchableOpacity 
+                style={styles.sectionHeader}
+                onPress={() => toggleSection('quarterly')}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.sectionTitle}>Quarterly Packages</Text>
+                <MaterialCommunityIcons 
+                  name={expandedSection === 'quarterly' ? 'chevron-up' : 'chevron-down'} 
+                  size={24} 
+                  color={theme.textPrimary} 
+                />
+              </TouchableOpacity>
+              {expandedSection === 'quarterly' && (
+                <View style={styles.packagesList}>
+                  {quarterlyPackages.map(pkg => renderPackageItem(pkg, 'quarterly'))}
+                </View>
+              )}
 
-          {/* Yearly Packages */}
-          <TouchableOpacity 
-            style={styles.sectionHeader}
-            onPress={() => toggleSection('yearly')}
-            activeOpacity={0.7}
-          >
-            <Text style={styles.sectionTitle}>Yearly Packages</Text>
-            <MaterialCommunityIcons 
-              name={expandedSection === 'yearly' ? 'chevron-up' : 'chevron-down'} 
-              size={24} 
-              color={theme.textPrimary} 
-            />
-          </TouchableOpacity>
-          {expandedSection === 'yearly' && (
-            <View style={styles.packagesList}>
-              {yearlyPackages.map(pkg => renderPackageItem(pkg, 'yearly'))}
-            </View>
-          )}
+              {/* Yearly Packages */}
+              <TouchableOpacity 
+                style={styles.sectionHeader}
+                onPress={() => toggleSection('yearly')}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.sectionTitle}>Yearly Packages</Text>
+                <MaterialCommunityIcons 
+                  name={expandedSection === 'yearly' ? 'chevron-up' : 'chevron-down'} 
+                  size={24} 
+                  color={theme.textPrimary} 
+                />
+              </TouchableOpacity>
+              {expandedSection === 'yearly' && (
+                <View style={styles.packagesList}>
+                  {yearlyPackages.map(pkg => renderPackageItem(pkg, 'yearly'))}
+                </View>
+              )}
+            </>
+          ) : null}
         </>
       )}
 

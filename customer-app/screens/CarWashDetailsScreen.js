@@ -4,6 +4,8 @@ import ServiceDetailsLayout from '../components/ServiceDetailsLayout';
 import { getServiceById } from '../services/serviceApi';
 import { useTheme } from '../theme/ThemeContext';
 
+const FALLBACK_ADDON_IMAGE = require('../assets/carwash.png');
+
 export default function CarWashDetailsScreen({ navigation, route }) {
   const { serviceId, serviceTitle, service: serviceFromRoute } = route.params || {};
   const [service, setService] = useState(serviceFromRoute || null);
@@ -86,10 +88,21 @@ export default function CarWashDetailsScreen({ navigation, route }) {
   // Map API add-on services to component format
   const addOnServices = service?.addOnServices?.map(addon => ({
     imageUri: addon.image || 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=200&h=200&fit=crop',
+    imageSource: !addon.image ? FALLBACK_ADDON_IMAGE : undefined,
     title: addon.name,
     price: addon.basePrice,
     _id: addon._id,
   })) || [];
+
+  // Temporary fallback add-ons for UI (when API doesn't return add-ons yet)
+  const fallbackAddOns = [
+    { _id: 'mock_addon_interior', title: 'Normal Interior Cleaning', price: 119, imageSource: FALLBACK_ADDON_IMAGE },
+    { _id: 'mock_addon_dashboard', title: 'Dashboard Polish', price: 49, imageSource: FALLBACK_ADDON_IMAGE },
+    { _id: 'mock_addon_freshener', title: '30 Days Air Freshener', price: 89, imageSource: FALLBACK_ADDON_IMAGE },
+    { _id: 'mock_addon_dustbin', title: 'Dustbin', price: 59, imageSource: FALLBACK_ADDON_IMAGE },
+    { _id: 'mock_addon_windshield', title: 'Windshield Cleaning Tablet and Refill', price: 39, imageSource: FALLBACK_ADDON_IMAGE },
+  ];
+  const resolvedAddOns = addOnServices.length > 0 ? addOnServices : fallbackAddOns;
 
   // If we have service data, render immediately (even if add-ons are still loading)
   if (service) {
@@ -101,9 +114,11 @@ export default function CarWashDetailsScreen({ navigation, route }) {
         serviceId={service?._id || serviceId}
         getServiceData={getServiceData}
         categoryText={service?.category ? `${service.category.toUpperCase()} SERVICE` : "CAR WASH SERVICE"}
-        showAddOns={false}
-        showPackages={false}
-        addOnServices={[]}
+        showAddOns
+        showPackages
+        showCoverage={false}
+        showOnlyMonthly
+        addOnServices={resolvedAddOns}
       />
     );
   }

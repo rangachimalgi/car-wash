@@ -8,7 +8,9 @@ export default function AddOnServicesList({
   services = [], 
   maxVisible = 4,
   selectedAddOns = [],
-  onToggleAddOn
+  onToggleAddOn,
+  buttonVariant = 'text',
+  containerStyle,
 }) {
   const [showAll, setShowAll] = useState(false);
   const { theme } = useTheme();
@@ -18,19 +20,21 @@ export default function AddOnServicesList({
   const remainingCount = services.length - maxVisible;
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, containerStyle]}>
       <View style={styles.header}>
-        <Text style={styles.title}>Add Ons</Text>
+        <Text style={styles.title}>Add Services</Text>
       </View>
       {visibleServices.map((service, index) => (
         <AddOnServiceItem
           key={service._id || index}
           imageUri={service.imageUri}
+          imageSource={service.imageSource}
           title={service.title}
           price={service.price}
           addOnId={service._id}
           isSelected={selectedAddOns.includes(service._id)}
           onToggle={() => onToggleAddOn && onToggleAddOn(service._id)}
+          buttonVariant={buttonVariant}
         />
       ))}
       
@@ -40,7 +44,7 @@ export default function AddOnServicesList({
           onPress={() => setShowAll(true)}
           activeOpacity={0.8}
         >
-          <Text style={styles.moreText}>+{remainingCount} More</Text>
+          <Text style={styles.moreText}>{remainingCount} More Add Ons</Text>
           <MaterialCommunityIcons name="chevron-down" size={20} color={theme.textPrimary} />
         </TouchableOpacity>
       )}

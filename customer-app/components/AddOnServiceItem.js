@@ -7,11 +7,13 @@ const LIGHT_BLUE = '#85E4FC';
 
 export default function AddOnServiceItem({ 
   imageUri, 
+  imageSource,
   title, 
   price, 
   addOnId,
   isSelected = false,
-  onToggle 
+  onToggle,
+  buttonVariant = 'text', // 'text' | 'plus'
 }) {
   const [imageError, setImageError] = useState(false);
   const { theme } = useTheme();
@@ -19,9 +21,9 @@ export default function AddOnServiceItem({
 
   return (
     <View style={[styles.container, isSelected && styles.containerSelected]}>
-      {imageUri && !imageError ? (
+      {(imageSource || imageUri) && !imageError ? (
         <Image 
-          source={{ uri: imageUri }} 
+          source={imageSource || { uri: imageUri }} 
           style={styles.thumbnail}
           resizeMode="cover"
           onError={() => setImageError(true)}
@@ -35,15 +37,29 @@ export default function AddOnServiceItem({
         <Text style={styles.title}>{title}</Text>
         <Text style={styles.price}>₹{price}</Text>
       </View>
-      <TouchableOpacity 
-        style={[styles.addButton, isSelected && styles.addButtonSelected]}
-        onPress={onToggle}
-        activeOpacity={0.8}
-      >
-        <Text style={[styles.addButtonText, isSelected && styles.addButtonTextSelected]}>
-          {isSelected ? 'Remove' : 'Add'}
-        </Text>
-      </TouchableOpacity>
+      {buttonVariant === 'plus' ? (
+        <TouchableOpacity 
+          style={[styles.plusButton, isSelected && styles.plusButtonSelected]}
+          onPress={onToggle}
+          activeOpacity={0.8}
+        >
+          <MaterialCommunityIcons
+            name={isSelected ? 'minus' : 'plus'}
+            size={18}
+            color={theme.textPrimary}
+          />
+        </TouchableOpacity>
+      ) : (
+        <TouchableOpacity 
+          style={[styles.addButton, isSelected && styles.addButtonSelected]}
+          onPress={onToggle}
+          activeOpacity={0.8}
+        >
+          <Text style={[styles.addButtonText, isSelected && styles.addButtonTextSelected]}>
+            {isSelected ? 'Remove' : 'Add'}
+          </Text>
+        </TouchableOpacity>
+      )}
     </View>
   );
 }
@@ -109,5 +125,19 @@ const createStyles = theme => StyleSheet.create({
   },
   addButtonTextSelected: {
     color: '#FFFFFF',
+  },
+  plusButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: theme.cardBorder,
+    backgroundColor: theme.cardBackground,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  plusButtonSelected: {
+    borderColor: theme.accent,
+    backgroundColor: theme.accentSoft,
   },
 });

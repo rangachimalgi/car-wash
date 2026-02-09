@@ -21,6 +21,8 @@ export default function ServiceDetailsLayout({
   addOnServices = [],
   showAddOns = true,
   showPackages = true,
+  showCoverage = true,
+  showOnlyMonthly = false,
 }) {
   const insets = useSafeAreaInsets();
   const { serviceTitle, price, duration } = route?.params || {};
@@ -178,6 +180,16 @@ export default function ServiceDetailsLayout({
               </View>
             </View> */}
             
+            {/* Add-On Services List */}
+            {showAddOns && addOnServices.length > 0 && (
+              <AddOnServicesList 
+                services={addOnServices}
+                maxVisible={4}
+                selectedAddOns={selectedAddOns}
+                onToggleAddOn={toggleAddOn}
+              />
+            )}
+
             {/* Pricing Packages */}
             <PricingPackages
               oneTimePrice={oneTimePrice}
@@ -189,23 +201,16 @@ export default function ServiceDetailsLayout({
               packages={serviceData?.packages}
               hideSubscriptions={!showPackages}
               forceOneTime={!showPackages}
+              showOnlyMonthly={showOnlyMonthly}
             />
             
             {/* Service Coverage Table */}
-            <ServiceCoverage 
-              included={data.included || []}
-              notIncluded={data.notIncluded || []}
-            />
-            
-            {/* Add-On Services List */}
-            {showAddOns && addOnServices.length > 0 && (
-              <AddOnServicesList 
-                services={addOnServices}
-                maxVisible={4}
-                selectedAddOns={selectedAddOns}
-                onToggleAddOn={toggleAddOn}
+            {showCoverage ? (
+              <ServiceCoverage 
+                included={data.included || []}
+                notIncluded={data.notIncluded || []}
               />
-            )}
+            ) : null}
         </BottomSheetScrollView>
       </ServiceDetailsBottomSheet>
     </View>

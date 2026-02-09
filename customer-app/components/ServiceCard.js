@@ -7,6 +7,7 @@ const { width } = Dimensions.get('window');
 
 export default function ServiceCard({
   imageUri,
+  imageSource,
   title,
   description,
   price,
@@ -16,6 +17,9 @@ export default function ServiceCard({
   onReadMore,
   onBookService,
   onCardPress,
+  showViewDetailsButton = false,
+  viewDetailsLabel = 'View Details',
+  onViewDetails,
 }) {
   const [imageError, setImageError] = useState(false);
   const { theme } = useTheme();
@@ -54,13 +58,22 @@ export default function ServiceCard({
           <Text style={styles.cardTitle} numberOfLines={1}>
             {titleLabel}
           </Text>
+          {showViewDetailsButton ? (
+            <TouchableOpacity
+              style={styles.viewDetailsButton}
+              onPress={onViewDetails || onCardPress}
+              activeOpacity={0.85}
+            >
+              <Text style={styles.viewDetailsText}>{viewDetailsLabel}</Text>
+            </TouchableOpacity>
+          ) : null}
         </View>
       </View>
 
       <View style={styles.imageContainer}>
         {!imageError ? (
           <Image 
-            source={{ uri: imageUri }}
+            source={imageSource || { uri: imageUri }}
             style={styles.serviceImage}
             resizeMode="cover"
             onError={() => setImageError(true)}
@@ -218,6 +231,17 @@ const createStyles = theme => StyleSheet.create({
   cardButtons: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+  },
+  viewDetailsButton: {
+    backgroundColor: theme.accent,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+  },
+  viewDetailsText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#0B0B0B',
   },
   readMoreButton: {
     flex: 1,

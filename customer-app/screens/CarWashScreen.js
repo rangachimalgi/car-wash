@@ -3,14 +3,29 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator
 import { StatusBar } from 'expo-status-bar';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import BackHeader from '../components/BackHeader';
-import ServiceCard from '../components/ServiceCard';
-import { getServicesByCategory } from '../services/serviceApi';
+import ServiceAccordionCard from '../components/ServiceAccordionCard';
+import { getServiceById, getServicesByCategory } from '../services/serviceApi';
 import { useTheme } from '../theme/ThemeContext';
+
+const FALLBACK_CAR_IMAGE = require('../assets/carImage.jpeg');
+const FALLBACK_ADDON_IMAGE = require('../assets/carwash.png');
+
+const FALLBACK_ADD_ONS = [
+  { _id: 'mock_addon_interior', title: 'Normal Interior Cleaning', price: 119, imageSource: FALLBACK_ADDON_IMAGE },
+  { _id: 'mock_addon_dashboard', title: 'Dashboard Polish', price: 49, imageSource: FALLBACK_ADDON_IMAGE },
+  { _id: 'mock_addon_freshener', title: '30 Days Air Freshener', price: 89, imageSource: FALLBACK_ADDON_IMAGE },
+  { _id: 'mock_addon_dustbin', title: 'Dustbin', price: 59, imageSource: FALLBACK_ADDON_IMAGE },
+  { _id: 'mock_addon_windshield', title: 'Windshield Cleaning Tablet and Refill', price: 39, imageSource: FALLBACK_ADDON_IMAGE },
+];
 
 export default function CarWashScreen({ navigation }) {
   const [services, setServices] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [expandedServiceId, setExpandedServiceId] = useState(null);
+  const [serviceDetailsById, setServiceDetailsById] = useState({});
+  const [loadingDetailsId, setLoadingDetailsId] = useState(null);
+  const [selectedAddOnsByServiceId, setSelectedAddOnsByServiceId] = useState({});
   const { theme, isLightMode } = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
 
@@ -53,6 +68,40 @@ export default function CarWashScreen({ navigation }) {
       price: formatPrice(service.basePrice),
       duration: service.duration,
       service: service, // Pass full service object
+    });
+  };
+
+  const toggleService = async (service) => {
+    const id = service?._id;
+    if (!id) return;
+
+    setExpandedServiceId(prev => (prev === id ? null : id));
+
+    // Fetch full details (add-ons/packages) only when expanding and if we don't have them cached
+    if (expandedServiceId === id) return; // collapsing
+    if (serviceDetailsById[id]) return;
+
+    try {
+      setLoadingDetailsId(id);
+      const response = await getServiceById(id);
+      if (response?.success) {
+        setServiceDetailsById(prev => ({ ...prev, [id]: response.data }));
+      }
+    } catch (e) {
+      console.error('Error fetching service details for accordion:', e);
+    } finally {
+      setLoadingDetailsId(null);
+    }
+  };
+
+  const toggleAddOn = (serviceId, addOnId) => {
+    if (!serviceId || !addOnId) return;
+    setSelectedAddOnsByServiceId(prev => {
+      const current = prev[serviceId] || [];
+      const next = current.includes(addOnId)
+        ? current.filter(id => id !== addOnId)
+        : [...current, addOnId];
+      return { ...prev, [serviceId]: next };
     });
   };
 
@@ -114,17 +163,18 @@ export default function CarWashScreen({ navigation }) {
           ) : (
             services.map((service) => (
               <View key={service._id} style={styles.serviceSection}>
-                <ServiceCard
-                  imageUri={service.image || 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=800&h=400&fit=crop'}
-                  title={service.name}
-                  description={service.description}
-                  price={formatPrice(service.basePrice)}
-                  duration={service.duration}
-                  showActions={false}
-                  showDescription={false}
-                  // onReadMore={() => handleServicePress(service)} // not needed here
-                  // onBookService={() => handleServicePress(service)} // not needed here
-                  onCardPress={() => handleServicePress(service)}
+                <ServiceAccordionCard
+                  serviceSummary={service}
+                  serviceDetails={serviceDetailsById[service._id]}
+                  expanded={expandedServiceId === service._id}
+                  isLoadingDetails={loadingDetailsId === service._id}
+                  onToggle={() => toggleService(service)}
+                  onViewDetails={() => handleServicePress(serviceDetailsById[service._id] || service)}
+                  selectedAddOns={selectedAddOnsByServiceId[service._id] || []}
+                  onToggleAddOn={(addOnId) => toggleAddOn(service._id, addOnId)}
+                  navigation={navigation}
+                  fallbackImageSource={FALLBACK_CAR_IMAGE}
+                  fallbackAddOns={FALLBACK_ADD_ONS}
                 />
               </View>
             ))
