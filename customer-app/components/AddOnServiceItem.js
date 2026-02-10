@@ -21,18 +21,7 @@ export default function AddOnServiceItem({
 
   return (
     <View style={[styles.container, isSelected && styles.containerSelected]}>
-      {(imageSource || imageUri) && !imageError ? (
-        <Image 
-          source={imageSource || { uri: imageUri }} 
-          style={styles.thumbnail}
-          resizeMode="cover"
-          onError={() => setImageError(true)}
-        />
-      ) : (
-        <View style={[styles.thumbnail, styles.placeholderImage]}>
-          <MaterialCommunityIcons name="image-outline" size={24} color={theme.textSecondary} />
-        </View>
-      )}
+      {/* Thumbnails hidden for compact design */}
       <View style={styles.content}>
         <Text style={styles.title}>{title}</Text>
         <Text style={styles.price}>₹{price}</Text>
@@ -43,11 +32,9 @@ export default function AddOnServiceItem({
           onPress={onToggle}
           activeOpacity={0.8}
         >
-          <MaterialCommunityIcons
-            name={isSelected ? 'minus' : 'plus'}
-            size={18}
-            color={theme.textPrimary}
-          />
+          <Text style={[styles.plusButtonText, isSelected && styles.plusButtonTextSelected]}>
+            {isSelected ? '−' : '+'}
+          </Text>
         </TouchableOpacity>
       ) : (
         <TouchableOpacity 
@@ -68,43 +55,36 @@ const createStyles = theme => StyleSheet.create({
   container: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: theme.cardBackground,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.cardBorder,
+    backgroundColor: 'transparent',
+    paddingVertical: 8,
+    paddingHorizontal: 0,
+    borderBottomWidth: 0,
   },
   containerSelected: {
-    backgroundColor: theme.accentSoft,
-    borderLeftWidth: 3,
-    borderLeftColor: theme.accent,
+    backgroundColor: 'transparent',
+    borderLeftWidth: 0,
   },
   thumbnail: {
-    width: 60,
-    height: 60,
-    borderRadius: 8,
-    marginRight: 12,
-    borderWidth: 1,
-    borderColor: theme.cardBorder,
+    width: 0,
+    height: 0,
+    display: 'none',
   },
   placeholderImage: {
-    backgroundColor: theme.accentSoft,
-    alignItems: 'center',
-    justifyContent: 'center',
+    display: 'none',
   },
   content: {
     flex: 1,
   },
   title: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '600',
     color: theme.textPrimary,
-    marginBottom: 4,
+    marginBottom: 2,
   },
   price: {
     fontSize: 14,
-    fontWeight: '500',
-    color: theme.textSecondary,
+    fontWeight: '600',
+    color: theme.textPrimary,
   },
   addButton: {
     backgroundColor: LIGHT_BLUE,
@@ -127,17 +107,27 @@ const createStyles = theme => StyleSheet.create({
     color: '#FFFFFF',
   },
   plusButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 8,
-    borderWidth: 1,
+    width: 32,
+    height: 32,
+    borderRadius: 6,
+    borderWidth: 1.5,
     borderColor: theme.cardBorder,
     backgroundColor: theme.cardBackground,
     alignItems: 'center',
     justifyContent: 'center',
+    marginLeft: 12,
   },
   plusButtonSelected: {
     borderColor: theme.accent,
-    backgroundColor: theme.accentSoft,
+    backgroundColor: theme.accent,
+  },
+  plusButtonText: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: theme.textPrimary,
+    lineHeight: 20,
+  },
+  plusButtonTextSelected: {
+    color: '#FFFFFF',
   },
 });

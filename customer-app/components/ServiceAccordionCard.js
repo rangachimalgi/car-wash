@@ -130,41 +130,45 @@ export default function ServiceAccordionCard({
           </View>
         </View>
 
-        <View style={styles.imageContainer}>
-          {!imageError ? (
-            <Image
-              source={
-                fallbackImageSource && !service?.image && !serviceSummary?.image
-                  ? fallbackImageSource
-                  : { uri: imageUri }
-              }
-              style={styles.serviceImage}
-              resizeMode="cover"
-              onError={() => setImageError(true)}
-            />
-          ) : (
-            <View style={[styles.serviceImage, styles.placeholderImage]}>
-              <MaterialCommunityIcons name="image-outline" size={48} color={theme.accent} />
+        {!expanded ? (
+          <>
+            <View style={styles.imageContainer}>
+              {!imageError ? (
+                <Image
+                  source={
+                    fallbackImageSource && !service?.image && !serviceSummary?.image
+                      ? fallbackImageSource
+                      : { uri: imageUri }
+                  }
+                  style={styles.serviceImage}
+                  resizeMode="cover"
+                  onError={() => setImageError(true)}
+                />
+              ) : (
+                <View style={[styles.serviceImage, styles.placeholderImage]}>
+                  <MaterialCommunityIcons name="image-outline" size={48} color={theme.accent} />
+                </View>
+              )}
             </View>
-          )}
-        </View>
 
-        <View style={styles.cardContent}>
-          <View style={styles.cardInfoRow}>
-            <Text style={styles.cardPriceLine} numberOfLines={1}>
-              <Text style={styles.cardPricePrefix}>Starting </Text>
-              <Text style={styles.cardPriceValue}>₹{Math.round(oneTimePrice)}</Text>
-            </Text>
-            {!!durationLabel ? (
-              <View style={styles.durationRowInline}>
-                <MaterialCommunityIcons name="clock-outline" size={16} color={theme.textSecondary} />
-                <Text style={styles.durationText}>{durationLabel}</Text>
+            <View style={styles.cardContent}>
+              <View style={styles.cardInfoRow}>
+                <Text style={styles.cardPriceLine} numberOfLines={1}>
+                  <Text style={styles.cardPricePrefix}>Starting </Text>
+                  <Text style={styles.cardPriceValue}>₹{Math.round(oneTimePrice)}</Text>
+                </Text>
+                {!!durationLabel ? (
+                  <View style={styles.durationRowInline}>
+                    <MaterialCommunityIcons name="clock-outline" size={16} color={theme.textSecondary} />
+                    <Text style={styles.durationText}>{durationLabel}</Text>
+                  </View>
+                ) : (
+                  <View />
+                )}
               </View>
-            ) : (
-              <View />
-            )}
-          </View>
-        </View>
+            </View>
+          </>
+        ) : null}
       </TouchableOpacity>
 
       {expanded ? (
@@ -195,9 +199,14 @@ export default function ServiceAccordionCard({
           <View style={styles.divider} />
 
           <View style={styles.oneTimeRow}>
-            <View>
+            <View style={styles.oneTimeLeft}>
               <Text style={styles.oneTimeLabel}>1 - Time Wash</Text>
-              <Text style={styles.oneTimePrice}>₹{Math.round(oneTimePrice)}</Text>
+              <View style={styles.priceRow}>
+                <Text style={styles.oneTimePrice}>₹{Math.round(oneTimePrice)}</Text>
+                {oneTimePrice < oneTimePrice * 2 ? (
+                  <Text style={styles.strikethroughPrice}>₹{Math.round(oneTimePrice * 2)}</Text>
+                ) : null}
+              </View>
             </View>
             <TouchableOpacity style={styles.bookButton} onPress={handleBookOneTime} activeOpacity={0.85}>
               <Text style={styles.bookText}>Book</Text>
@@ -213,22 +222,28 @@ export default function ServiceAccordionCard({
             ) : null}
           </View>
 
-          {monthlyPackages.map((pkg) => (
-            <View key={pkg.id} style={styles.monthlyItem}>
-              <View style={styles.monthlyLeft}>
-                <View style={styles.totalPill}>
-                  <Text style={styles.totalPillText}>Total ₹{Math.round(pkg.price)}</Text>
+          {monthlyPackages.map((pkg) => {
+            const originalPrice = oneTimePrice * pkg.times;
+            return (
+              <View key={pkg.id} style={styles.monthlyItem}>
+                <View style={styles.monthlyLeft}>
+                  <View style={styles.totalPill}>
+                    <Text style={styles.totalPillText}>Total ₹{Math.round(pkg.price)}</Text>
+                  </View>
+                  <Text style={styles.monthlyTimes}>{pkg.times} Wash/Month</Text>
                 </View>
-                <Text style={styles.monthlyTimes}>{pkg.times} Wash/Month</Text>
+                <View style={styles.monthlyRight}>
+                  <View style={styles.priceRow}>
+                    <Text style={styles.perWashText}>₹{Math.round(pkg.perWash)}/wash</Text>
+                    <Text style={styles.strikethroughPrice}>₹{Math.round(originalPrice / pkg.times)}/Wash</Text>
+                  </View>
+                  <TouchableOpacity style={styles.bookButton} onPress={() => handleBookMonthly(pkg)} activeOpacity={0.85}>
+                    <Text style={styles.bookText}>Book</Text>
+                  </TouchableOpacity>
+                </View>
               </View>
-              <View style={styles.monthlyRight}>
-                <Text style={styles.perWashText}>₹{Math.round(pkg.perWash)}/wash</Text>
-                <TouchableOpacity style={styles.bookButton} onPress={() => handleBookMonthly(pkg)} activeOpacity={0.85}>
-                  <Text style={styles.bookText}>Book</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          ))}
+            );
+          })}
         </View>
       ) : null}
     </View>
@@ -330,7 +345,12 @@ const createStyles = (theme) =>
     expandedArea: {
       paddingHorizontal: 16,
       paddingBottom: 16,
-      paddingTop: 0,
+      paddingTop: 12,
+      backgroundColor: theme.cardBackground, // White background
+      marginTop: 0,
+      borderTopWidth: 1,
+      borderTopColor: theme.cardBorder,
+      borderStyle: 'dashed',
     },
     expandedTopRow: {
       flexDirection: 'row',
@@ -367,13 +387,16 @@ const createStyles = (theme) =>
       fontSize: 12,
     },
     addOnsInline: {
-      marginTop: 10,
+      marginTop: 8,
+      marginBottom: 8,
     },
     divider: {
       height: 1,
-      backgroundColor: theme.cardBorder,
-      marginVertical: 14,
-      opacity: 0.7,
+      borderStyle: 'dashed',
+      borderWidth: 1,
+      borderColor: theme.cardBorder,
+      marginVertical: 12,
+      opacity: 0.5,
     },
     oneTimeRow: {
       flexDirection: 'row',
@@ -384,31 +407,45 @@ const createStyles = (theme) =>
       borderRadius: 12,
       borderWidth: 1,
       borderColor: theme.cardBorder,
-      backgroundColor: theme.background,
-      marginBottom: 14,
+      backgroundColor: theme.cardBackground,
+      marginBottom: 10,
+    },
+    oneTimeLeft: {
+      flex: 1,
     },
     oneTimeLabel: {
       fontSize: 14,
       fontWeight: '700',
       color: theme.textPrimary,
-      marginBottom: 6,
+      marginBottom: 4,
+    },
+    priceRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
     },
     oneTimePrice: {
-      fontSize: 20,
+      fontSize: 18,
       fontWeight: '900',
       color: theme.textPrimary,
     },
+    strikethroughPrice: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: theme.textSecondary,
+      textDecorationLine: 'line-through',
+    },
     bookButton: {
       backgroundColor: theme.accent,
-      borderRadius: 10,
-      paddingVertical: 10,
-      paddingHorizontal: 18,
+      borderRadius: 8,
+      paddingVertical: 8,
+      paddingHorizontal: 16,
       alignItems: 'center',
       justifyContent: 'center',
-      minWidth: 84,
+      minWidth: 70,
     },
     bookText: {
-      fontSize: 14,
+      fontSize: 13,
       fontWeight: '900',
       color: '#0B0B0B',
     },
@@ -416,23 +453,23 @@ const createStyles = (theme) =>
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
-      marginBottom: 10,
+      marginBottom: 8,
     },
     monthlyTitle: {
-      fontSize: 18,
+      fontSize: 16,
       fontWeight: '900',
       color: theme.textPrimary,
     },
     offPill: {
       backgroundColor: '#2E7D32',
-      paddingHorizontal: 10,
-      paddingVertical: 6,
-      borderRadius: 10,
+      paddingHorizontal: 8,
+      paddingVertical: 4,
+      borderRadius: 8,
     },
     offPillText: {
       color: '#FFFFFF',
       fontWeight: '900',
-      fontSize: 12,
+      fontSize: 11,
     },
     monthlyItem: {
       flexDirection: 'row',
@@ -440,7 +477,7 @@ const createStyles = (theme) =>
       justifyContent: 'space-between',
       borderWidth: 1,
       borderColor: theme.cardBorder,
-      backgroundColor: theme.background,
+      backgroundColor: theme.cardBackground,
       borderRadius: 12,
       padding: 12,
       marginBottom: 10,
@@ -451,25 +488,25 @@ const createStyles = (theme) =>
     },
     totalPill: {
       alignSelf: 'flex-start',
-      backgroundColor: '#0B0B0B',
-      paddingHorizontal: 10,
-      paddingVertical: 6,
-      borderRadius: 10,
-      marginBottom: 8,
+      backgroundColor: 'transparent',
+      paddingHorizontal: 0,
+      paddingVertical: 0,
+      borderRadius: 0,
+      marginBottom: 6,
     },
     totalPillText: {
-      color: '#FFFFFF',
+      color: theme.textPrimary,
       fontWeight: '900',
-      fontSize: 12,
+      fontSize: 14,
     },
     monthlyTimes: {
-      fontSize: 16,
-      fontWeight: '800',
+      fontSize: 14,
+      fontWeight: '700',
       color: theme.textPrimary,
     },
     monthlyRight: {
       alignItems: 'flex-end',
-      gap: 8,
+      gap: 6,
     },
     perWashText: {
       fontSize: 14,

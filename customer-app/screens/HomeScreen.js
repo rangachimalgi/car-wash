@@ -106,15 +106,7 @@ export default function HomeScreen({ navigation }) {
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
-      >
-        {/* Special For You Section */}
-        <View style={styles.specialForYouSection}>
-          <Text style={styles.specialForYouTitle}>#WooshSpecialForYou</Text>
-          {/* <TouchableOpacity>
-            <Text style={styles.seeAllText}>See All</Text>
-          </TouchableOpacity> */}
-        </View>
-
+      >       
         {/* Woosh Special Slider */}
         <View style={styles.sliderWrap}>
           <ScrollView 
@@ -284,19 +276,7 @@ const createStyles = theme => StyleSheet.create({
   scrollContent: {
     paddingBottom: 100,
   },
-  specialForYouSection: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingTop: 20,
-    paddingBottom: 12,
-  },
-  specialForYouTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: theme.textPrimary,
-  },
+ 
   seeAllText: {
     fontSize: 14,
     color: theme.accent,
