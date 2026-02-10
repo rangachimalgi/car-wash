@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Alert, RefreshControl } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Alert, RefreshControl, Dimensions } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
@@ -11,6 +11,8 @@ import PricingPackages, { AddToCartButton } from '../components/PricingPackages'
 import ServiceCoverage from '../components/ServiceCoverage';
 import { getServiceById, getServicesByCategory } from '../services/serviceApi';
 import { useTheme } from '../theme/ThemeContext';
+
+const { height } = Dimensions.get('window');
 
 const FALLBACK_CAR_IMAGE = require('../assets/carImage.jpeg');
 const FALLBACK_ADDON_IMAGE = require('../assets/carwash.png');
@@ -179,6 +181,12 @@ export default function CarWashScreen({ navigation }) {
     );
   };
 
+  const handleCloseSheet = () => {
+    setSheetService(null);
+    setSheetSelectedPackage('oneTime');
+    setSheetSelectedAddOns([]);
+  };
+
   if (loading) {
     return (
       <View style={styles.container}>
@@ -258,93 +266,111 @@ export default function CarWashScreen({ navigation }) {
 
       {/* Bottom sheet for "View Details" – only sheet, no hero image */}
       {sheetService && (
-        <ServiceDetailsBottomSheet
-          ref={bottomSheetRef}
-          footer={
-            <View style={styles.addToCartFooter}>
-              <AddToCartButton
-                selectedPackage={sheetSelectedPackage}
+        <>
+          <View style={styles.sheetBackdrop} />
+
+          <View style={styles.closeSheetButtonContainer}>
+            <TouchableOpacity
+              onPress={handleCloseSheet}
+              style={styles.closeSheetButton}
+              activeOpacity={0.8}
+            >
+              <MaterialCommunityIcons
+                name="close"
+                size={20}
+                color={theme.textPrimary}
+              />
+            </TouchableOpacity>
+          </View>
+
+          <ServiceDetailsBottomSheet
+            ref={bottomSheetRef}
+            footer={
+              <View style={styles.addToCartFooter}>
+                <AddToCartButton
+                  selectedPackage={sheetSelectedPackage}
+                  oneTimePrice={oneTimeSheetPrice}
+                  totalPrice={sheetTotalPrice}
+                  duration={getSheetData()?.specs?.duration}
+                  serviceId={sheetService._id}
+                  serviceTitle={sheetService.name}
+                  serviceImage={getSheetData()?.imageUri}
+                  selectedAddOns={sheetSelectedAddOns}
+                  addOnServices={getSheetAddOns()}
+                  navigation={navigation}
+                  action="add_to_cart"
+                />
+              </View>
+            }
+          >
+            <BottomSheetScrollView
+              contentContainerStyle={styles.bottomSheetContent}
+              showsVerticalScrollIndicator={false}
+            >
+              <Text style={styles.categoryText}>
+                {(sheetService.category || 'CarWash').toUpperCase()} SERVICE
+              </Text>
+              <View style={styles.titleRow}>
+                <Text style={styles.serviceTitle}>{sheetService.name}</Text>
+              </View>
+              {sheetService.description ? (
+                <Text style={styles.serviceDescription}>
+                  {sheetService.description}
+                </Text>
+              ) : null}
+              <View style={styles.ratingRow}>
+                {[...Array(5)].map((_, i) => {
+                  const data = getSheetData();
+                  const rating = parseFloat(data?.specs?.rating || 0);
+                  const filledStars = Math.floor(rating);
+                  const hasHalfStar = rating % 1 >= 0.5;
+                  let iconName = 'star-outline';
+                  if (i < filledStars) {
+                    iconName = 'star';
+                  } else if (i === filledStars && hasHalfStar) {
+                    iconName = 'star-half-full';
+                  }
+                  return (
+                    <MaterialCommunityIcons
+                      key={i}
+                      name={iconName}
+                      size={20}
+                      color="#FFD700"
+                    />
+                  );
+                })}
+              </View>
+
+              {/* Add-On Services List */}
+              <AddOnServicesList
+                services={getSheetAddOns()}
+                maxVisible={4}
+                selectedAddOns={sheetSelectedAddOns}
+                onToggleAddOn={handleToggleSheetAddOn}
+              />
+
+              {/* Pricing Packages */}
+              <PricingPackages
                 oneTimePrice={oneTimeSheetPrice}
-                totalPrice={sheetTotalPrice}
-                duration={getSheetData()?.specs?.duration}
-                serviceId={sheetService._id}
                 serviceTitle={sheetService.name}
                 serviceImage={getSheetData()?.imageUri}
-                selectedAddOns={sheetSelectedAddOns}
-                addOnServices={getSheetAddOns()}
+                duration={getSheetData()?.specs?.duration}
                 navigation={navigation}
-                action="add_to_cart"
+                onSelectionChange={setSheetSelectedPackage}
+                packages={sheetService.packages}
+                hideSubscriptions={false}
+                forceOneTime={false}
+                showOnlyMonthly
               />
-            </View>
-          }
-        >
-          <BottomSheetScrollView
-            contentContainerStyle={styles.bottomSheetContent}
-            showsVerticalScrollIndicator={false}
-          >
-            <Text style={styles.categoryText}>
-              {(sheetService.category || 'CarWash').toUpperCase()} SERVICE
-            </Text>
-            <View style={styles.titleRow}>
-              <Text style={styles.serviceTitle}>{sheetService.name}</Text>
-            </View>
-            {sheetService.description ? (
-              <Text style={styles.serviceDescription}>
-                {sheetService.description}
-              </Text>
-            ) : null}
-            <View style={styles.ratingRow}>
-              {[...Array(5)].map((_, i) => {
-                const data = getSheetData();
-                const rating = parseFloat(data?.specs?.rating || 0);
-                const filledStars = Math.floor(rating);
-                const hasHalfStar = rating % 1 >= 0.5;
-                let iconName = 'star-outline';
-                if (i < filledStars) {
-                  iconName = 'star';
-                } else if (i === filledStars && hasHalfStar) {
-                  iconName = 'star-half-full';
-                }
-                return (
-                  <MaterialCommunityIcons
-                    key={i}
-                    name={iconName}
-                    size={20}
-                    color="#FFD700"
-                  />
-                );
-              })}
-            </View>
 
-            {/* Add-On Services List */}
-            <AddOnServicesList
-              services={getSheetAddOns()}
-              maxVisible={4}
-              selectedAddOns={sheetSelectedAddOns}
-              onToggleAddOn={handleToggleSheetAddOn}
-            />
-
-            {/* Pricing Packages */}
-            <PricingPackages
-              oneTimePrice={oneTimeSheetPrice}
-              serviceTitle={sheetService.name}
-              serviceImage={getSheetData()?.imageUri}
-              duration={getSheetData()?.specs?.duration}
-              navigation={navigation}
-              onSelectionChange={setSheetSelectedPackage}
-              packages={sheetService.packages}
-              hideSubscriptions={false}
-              forceOneTime={false}
-              showOnlyMonthly
-            />
-
-            {/* Service Coverage */}
-            <ServiceCoverage
-              included={getSheetData()?.included || []}
-              notIncluded={getSheetData()?.notIncluded || []}
-            />
-          </BottomSheetScrollView>
-        </ServiceDetailsBottomSheet>
+              {/* Service Coverage */}
+              <ServiceCoverage
+                included={getSheetData()?.included || []}
+                notIncluded={getSheetData()?.notIncluded || []}
+              />
+            </BottomSheetScrollView>
+          </ServiceDetailsBottomSheet>
+        </>
       )}
     </View>
   );
@@ -415,6 +441,27 @@ const createStyles = theme => StyleSheet.create({
   ratingRow: {
     flexDirection: 'row',
     marginBottom: 20,
+  },
+  sheetBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0, 0, 0, 0.25)',
+  },
+  closeSheetButtonContainer: {
+    position: 'absolute',
+    top: height * 0.25 - 24,
+    right: 24,
+    zIndex: 30,
+    elevation: 30,
+  },
+  closeSheetButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: theme.cardBackground,
+    borderWidth: 1,
+    borderColor: theme.cardBorder,
   },
   loadingContainer: {
     flex: 1,

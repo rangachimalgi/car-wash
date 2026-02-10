@@ -18,10 +18,9 @@ const ServiceDetailsBottomSheet = forwardRef(({
   const { theme } = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
 
-  // Bottom sheet snap points - using absolute values to ensure max 70%
+  // Bottom sheet snap points - single snap at 70% height
   const snapPoints = useMemo(() => [
-    height * 0.35, // 35% of screen
-    height * 0.70, // 70% of screen (max)
+    height * 0.70, // 70% of screen (fixed height)
   ], []);
 
   // Expose methods to parent component
@@ -56,6 +55,8 @@ const ServiceDetailsBottomSheet = forwardRef(({
       onChange={handleSheetChanges}
       enablePanDownToClose={false}
       enableOverDrag={false}
+      enableContentPanningGesture={false}
+      enableHandlePanningGesture={false}
       maxDynamicContentSize={height * 0.7}
       backgroundStyle={styles.bottomSheetBackground}
       handleIndicatorStyle={styles.bottomSheetHandle}
