@@ -6,6 +6,7 @@ import CarWashScreen from '../screens/CarWashScreen';
 import CarWashDetailsScreen from '../screens/CarWashDetailsScreen';
 import BikeWashScreen from '../screens/BikeWashScreen';
 import BikeWashDetailsScreen from '../screens/BikeWashDetailsScreen';
+import ServiceDetailsScreen from '../screens/ServiceDetailsScreen';
 import CartScreen from '../screens/CartScreen';
 import SlotSelectionScreen from '../screens/SlotSelectionScreen';
 import CheckoutScreen from '../screens/CheckoutScreen';
@@ -85,6 +86,11 @@ export default function HeaderNavigator() {
       <Stack.Screen 
         name="CarWashDetails" 
         component={CarWashDetailsScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen 
+        name="ServiceDetails" 
+        component={ServiceDetailsScreen}
         options={{ headerShown: false }}
       />
       <Stack.Screen 
