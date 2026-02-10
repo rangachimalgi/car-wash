@@ -362,7 +362,8 @@ export default function BikeWashScreen({ navigation }) {
                 onToggleAddOn={handleToggleSheetAddOn}
               />
 
-              {/* Pricing Packages */}
+              {/* Pricing Packages - commented out in bottom sheet */}
+              {/*
               <PricingPackages
                 oneTimePrice={oneTimeSheetPrice}
                 serviceTitle={sheetService.name}
@@ -376,6 +377,7 @@ export default function BikeWashScreen({ navigation }) {
                 showOnlyMonthly
                 initialSelectedPackage={sheetSelectedPackage}
               />
+              */}
             </BottomSheetScrollView>
           </ServiceDetailsBottomSheet>
         </>

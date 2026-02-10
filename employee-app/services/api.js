@@ -12,7 +12,7 @@ const getBaseURL = () => {
   if (Platform.OS === 'android') {
     return `http://${COMPUTER_IP}:8000/api`;
   }
-
+a
   return 'http://localhost:8000/api';
 };
 

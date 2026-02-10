@@ -1,13 +1,10 @@
-import React, { useMemo, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
+import React, { useMemo } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { useTheme } from '../theme/ThemeContext';
 
 const LIGHT_BLUE = '#85E4FC';
 
 export default function AddOnServiceItem({ 
-  imageUri, 
-  imageSource,
   title, 
   price, 
   addOnId,
@@ -15,76 +12,71 @@ export default function AddOnServiceItem({
   onToggle,
   buttonVariant = 'text', // 'text' | 'plus'
 }) {
-  const [imageError, setImageError] = useState(false);
   const { theme } = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
 
   return (
     <View style={[styles.container, isSelected && styles.containerSelected]}>
-      {/* Thumbnails hidden for compact design */}
-      <View style={styles.content}>
-        <Text style={styles.title}>{title}</Text>
-        <Text style={styles.price}>₹{price}</Text>
+      <View style={styles.contentRow}>
+        <View style={styles.content}>
+          <Text style={styles.title}>{title}</Text>
+          <Text style={styles.price}>₹{price}</Text>
+        </View>
+        {buttonVariant === 'plus' ? (
+          <TouchableOpacity 
+            style={[styles.plusButton, isSelected && styles.plusButtonSelected]}
+            onPress={onToggle}
+            activeOpacity={0.8}
+          >
+            <Text style={[styles.plusButtonText, isSelected && styles.plusButtonTextSelected]}>
+              {isSelected ? '−' : '+'}
+            </Text>
+          </TouchableOpacity>
+        ) : (
+          <TouchableOpacity 
+            style={[styles.addButton, isSelected && styles.addButtonSelected]}
+            onPress={onToggle}
+            activeOpacity={0.8}
+          >
+            <Text style={[styles.addButtonText, isSelected && styles.addButtonTextSelected]}>
+              {isSelected ? 'Remove' : 'Add'}
+            </Text>
+          </TouchableOpacity>
+        )}
       </View>
-      {buttonVariant === 'plus' ? (
-        <TouchableOpacity 
-          style={[styles.plusButton, isSelected && styles.plusButtonSelected]}
-          onPress={onToggle}
-          activeOpacity={0.8}
-        >
-          <Text style={[styles.plusButtonText, isSelected && styles.plusButtonTextSelected]}>
-            {isSelected ? '−' : '+'}
-          </Text>
-        </TouchableOpacity>
-      ) : (
-        <TouchableOpacity 
-          style={[styles.addButton, isSelected && styles.addButtonSelected]}
-          onPress={onToggle}
-          activeOpacity={0.8}
-        >
-          <Text style={[styles.addButtonText, isSelected && styles.addButtonTextSelected]}>
-            {isSelected ? 'Remove' : 'Add'}
-          </Text>
-        </TouchableOpacity>
-      )}
     </View>
   );
 }
 
 const createStyles = theme => StyleSheet.create({
   container: {
-    flexDirection: 'row',
-    alignItems: 'center',
     backgroundColor: 'transparent',
-    paddingVertical: 8,
+    paddingVertical: 10,
     paddingHorizontal: 0,
     borderBottomWidth: 0,
   },
   containerSelected: {
     backgroundColor: 'transparent',
-    borderLeftWidth: 0,
   },
-  thumbnail: {
-    width: 0,
-    height: 0,
-    display: 'none',
-  },
-  placeholderImage: {
-    display: 'none',
+  contentRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
   },
   content: {
     flex: 1,
   },
   title: {
     fontSize: 14,
-    fontWeight: '600',
-    color: theme.textPrimary,
+    fontWeight: '800',
+    color: '#000000',
     marginBottom: 2,
   },
   price: {
     fontSize: 14,
-    fontWeight: '600',
-    color: theme.textPrimary,
+    fontWeight: '800',
+    color: '#000000',
   },
   addButton: {
     backgroundColor: LIGHT_BLUE,
@@ -107,15 +99,15 @@ const createStyles = theme => StyleSheet.create({
     color: '#FFFFFF',
   },
   plusButton: {
-    width: 32,
-    height: 32,
+    width: 30,
+    height: 30,
     borderRadius: 6,
     borderWidth: 1.5,
     borderColor: theme.cardBorder,
     backgroundColor: theme.cardBackground,
     alignItems: 'center',
     justifyContent: 'center',
-    marginLeft: 12,
+    marginLeft: -4,
   },
   plusButtonSelected: {
     borderColor: theme.accent,

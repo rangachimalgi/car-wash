@@ -61,13 +61,18 @@ export default function ServiceAccordionCard({
   const addOnServices =
     (service?.addOnServices || []).map((addon) => ({
       _id: addon._id,
-      title: addon.name,
+      title: toTitleCase(addon.name),
       price: addon.basePrice,
       imageUri: addon.image,
       imageSource: !addon.image ? fallbackImageSource : undefined,
     })) || [];
 
-  const resolvedAddOns = addOnServices.length > 0 ? addOnServices : fallbackAddOns;
+  const resolvedAddOns = (addOnServices.length > 0 ? addOnServices : fallbackAddOns).map(
+    (addon) => ({
+      ...addon,
+      title: toTitleCase(addon.title || addon.name),
+    })
+  );
 
   const oneTimePrice = Number(service?.basePrice || serviceSummary?.basePrice || 0);
   const monthlyPackages = computeMonthlyPackages(oneTimePrice, service?.packages);
@@ -162,20 +167,28 @@ export default function ServiceAccordionCard({
               )}
             </View>
 
+            <View style={styles.imageDivider} />
+
             <View style={styles.cardContent}>
               <View style={styles.cardInfoRow}>
-                <Text style={styles.cardPriceLine} numberOfLines={1}>
-                  <Text style={styles.cardPricePrefix}>Starting </Text>
-                  <Text style={styles.cardPriceValue}>₹{Math.round(oneTimePrice)}</Text>
-                </Text>
                 {!!durationLabel ? (
                   <View style={styles.durationRowInline}>
-                    <MaterialCommunityIcons name="clock-outline" size={16} color={theme.textSecondary} />
+                    <MaterialCommunityIcons
+                      name="clock-outline"
+                      size={16}
+                      color={theme.textSecondary}
+                    />
                     <Text style={styles.durationText}>{durationLabel}</Text>
                   </View>
                 ) : (
                   <View />
                 )}
+                <View style={styles.priceBox}>
+                  <Text style={styles.cardPriceLine} numberOfLines={1}>
+                    <Text style={styles.cardPricePrefix}>Starting </Text>
+                    <Text style={styles.cardPriceValue}>₹{Math.round(oneTimePrice)}</Text>
+                  </Text>
+                </View>
               </View>
             </View>
           </>
@@ -188,76 +201,74 @@ export default function ServiceAccordionCard({
             <Text style={styles.expandedHeading}>Car Wash & Care</Text>
             <TouchableOpacity style={styles.viewDetailsButton} onPress={onViewDetails} activeOpacity={0.85}>
               <Text style={styles.viewDetailsText}>View Details</Text>
+              <MaterialCommunityIcons name="arrow-right" size={14} color="#0B0B0B" />
             </TouchableOpacity>
           </View>
 
+          <View style={styles.sectionRule} />
+
           {isLoadingDetails ? (
             <View style={styles.loadingRow}>
-              <ActivityIndicator color={theme.accent} />
+              <ActivityIndicator color={theme.accent} size="small" />
               <Text style={styles.loadingText}>Loading add-ons & packages...</Text>
             </View>
           ) : null}
 
           <AddOnServicesList
             services={resolvedAddOns}
-            maxVisible={4}
+            maxVisible={5}
             selectedAddOns={selectedAddOns}
             onToggleAddOn={onToggleAddOn}
             buttonVariant="plus"
             containerStyle={styles.addOnsInline}
+            fallbackImageSource={fallbackImageSource}
           />
 
-          <View style={styles.divider} />
+          <View style={styles.sectionRule} />
 
-          <View style={styles.oneTimeRow}>
-            <View style={styles.oneTimeLeft}>
-              <Text style={styles.oneTimeLabel}>1 - Time Wash</Text>
-              <View style={styles.priceRow}>
-                <Text style={styles.oneTimePrice}>₹{Math.round(oneTimePrice + addOnsTotal)}</Text>
-                {oneTimePrice < oneTimePrice * 2 ? (
-                  <Text style={styles.strikethroughPrice}>₹{Math.round(oneTimePrice * 2)}</Text>
-                ) : null}
-              </View>
+          <View style={styles.sectionDivider}>
+            <View style={styles.dividerLine} />
+            <Text style={styles.dividerText}>Pricing</Text>
+            <View style={styles.dividerLine} />
+          </View>
+
+          <View style={styles.oneTimeCard}>
+            <View style={styles.oneTimeContent}>
+              <Text style={styles.oneTimeLabel}>1-Time Wash</Text>
+              <Text style={styles.oneTimePrice}>₹{Math.round(oneTimePrice + addOnsTotal)}</Text>
             </View>
-            <TouchableOpacity style={styles.bookButton} onPress={handleBookOneTime} activeOpacity={0.85}>
-              <Text style={styles.bookText}>Book</Text>
+            <TouchableOpacity style={styles.bookButtonPrimary} onPress={handleBookOneTime} activeOpacity={0.85}>
+              <Text style={styles.bookTextPrimary}>Book</Text>
             </TouchableOpacity>
           </View>
 
-          <View style={styles.monthlyHeader}>
-            <Text style={styles.monthlyTitle}>Monthly Packages</Text>
-            {maxOff > 0 ? (
-              <View style={styles.offPill}>
-                <Text style={styles.offPillText}>{maxOff}% OFF</Text>
-              </View>
-            ) : null}
-          </View>
-
-          {monthlyPackages.map((pkg) => {
-            const originalPrice = oneTimePrice * pkg.times;
-            const addOnsForPackage = addOnsTotal * pkg.times; // Multiply add-ons by number of washes
-            const totalWithAddOns = pkg.price + addOnsForPackage;
-            const perWashWithAddOns = (pkg.price + addOnsForPackage) / pkg.times;
-            return (
-              <View key={pkg.id} style={styles.monthlyItem}>
-                <View style={styles.monthlyLeft}>
-                  <View style={styles.totalPill}>
-                    <Text style={styles.totalPillText}>Total ₹{Math.round(totalWithAddOns)}</Text>
-                  </View>
-                  <Text style={styles.monthlyTimes}>{pkg.times} Wash/Month</Text>
+          <View style={styles.monthlySection}>
+            <View style={styles.monthlyHeader}>
+              <Text style={styles.monthlyTitle}>Monthly Packages</Text>
+              {maxOff > 0 ? (
+                <View style={styles.offPill}>
+                  <Text style={styles.offPillText}>UP TO {maxOff}% OFF</Text>
                 </View>
-                <View style={styles.monthlyRight}>
-                  <View style={styles.priceRow}>
-                    <Text style={styles.perWashText}>₹{Math.round(perWashWithAddOns)}/wash</Text>
-                    <Text style={styles.strikethroughPrice}>₹{Math.round(originalPrice / pkg.times)}/Wash</Text>
+              ) : null}
+            </View>
+
+            {monthlyPackages.map((pkg) => {
+              const addOnsForPackage = addOnsTotal * pkg.times;
+              const totalWithAddOns = pkg.price + addOnsForPackage;
+              const perWashWithAddOns = (pkg.price + addOnsForPackage) / pkg.times;
+              return (
+                <View key={pkg.id} style={styles.monthlyCard}>
+                  <View style={styles.monthlyContent}>
+                    <Text style={styles.monthlyTimes}>{pkg.times}x Wash/Month</Text>
+                    <Text style={styles.monthlyTotalPrice}>₹{Math.round(totalWithAddOns)} • ₹{Math.round(perWashWithAddOns)}/wash</Text>
                   </View>
-                  <TouchableOpacity style={styles.bookButton} onPress={() => handleBookMonthly(pkg)} activeOpacity={0.85}>
-                    <Text style={styles.bookText}>Book</Text>
+                  <TouchableOpacity style={styles.bookButtonSecondary} onPress={() => handleBookMonthly(pkg)} activeOpacity={0.85}>
+                    <Text style={styles.bookTextSecondary}>Book</Text>
                   </TouchableOpacity>
                 </View>
-              </View>
-            );
-          })}
+              );
+            })}
+          </View>
         </View>
       ) : null}
     </View>
@@ -298,7 +309,7 @@ const createStyles = (theme) =>
     cardTitle: {
       flex: 1,
       fontSize: 20,
-      fontWeight: '700',
+      fontWeight: '600',
       color: '#0B0B0B',
     },
     imageContainer: {
@@ -329,6 +340,12 @@ const createStyles = (theme) =>
       marginBottom: 12,
       gap: 12,
     },
+    priceBox: {
+      paddingVertical: 6,
+      paddingHorizontal: 10,
+      borderRadius: 999,
+      backgroundColor: '#E0F2FE', // light blue box
+    },
     cardPriceLine: {
       fontSize: 15,
       fontWeight: '700',
@@ -355,76 +372,115 @@ const createStyles = (theme) =>
       color: theme.textSecondary,
     },
 
-    // Expanded section (inline)
+    // Expanded section (enhanced design)
     expandedArea: {
-      paddingHorizontal: 16,
-      paddingBottom: 16,
-      paddingTop: 12,
-      backgroundColor: theme.cardBackground, // White background
+      paddingHorizontal: 20,
+      paddingBottom: 20,
+      paddingTop: 20,
+      backgroundColor: theme.cardBackground,
       marginTop: 0,
-      borderTopWidth: 1,
-      borderTopColor: theme.cardBorder,
-      borderStyle: 'dashed',
     },
     expandedTopRow: {
       flexDirection: 'row',
       justifyContent: 'space-between',
       alignItems: 'center',
-      paddingTop: 4,
-      paddingBottom: 6,
+      marginBottom: 20,
     },
     expandedHeading: {
-      fontSize: 12,
-      fontWeight: '700',
-      color: theme.textSecondary,
+      fontSize: 20,
+      fontWeight: '800',
+      color: theme.textPrimary,
+      letterSpacing: 0.3,
     },
     viewDetailsButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
       backgroundColor: theme.accent,
-      paddingVertical: 8,
-      paddingHorizontal: 12,
-      borderRadius: 8,
+      paddingVertical: 10,
+      paddingHorizontal: 16,
+      borderRadius: 10,
+      shadowColor: theme.accent,
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.2,
+      shadowRadius: 4,
+      elevation: 3,
     },
     viewDetailsText: {
-      fontSize: 12,
-      fontWeight: '700',
+      fontSize: 13,
+      fontWeight: '800',
       color: '#0B0B0B',
+      letterSpacing: 0.2,
     },
     loadingRow: {
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 10,
-      paddingVertical: 10,
+      gap: 12,
+      paddingVertical: 16,
+      paddingHorizontal: 4,
     },
     loadingText: {
       color: theme.textSecondary,
       fontWeight: '600',
-      fontSize: 12,
+      fontSize: 13,
     },
     addOnsInline: {
-      marginTop: 8,
+      marginTop: 4,
+      marginBottom: 20,
+    },
+    addServicesHeaderRow: {
+      marginTop: 4,
       marginBottom: 8,
     },
-    divider: {
-      height: 1,
-      borderStyle: 'dashed',
-      borderWidth: 1,
-      borderColor: theme.cardBorder,
-      marginVertical: 12,
-      opacity: 0.5,
+    addServicesLabel: {
+      fontSize: 16,
+      fontWeight: '700',
+      color: theme.textPrimary,
     },
-    oneTimeRow: {
+    sectionRule: {
+      height: 1,
+      backgroundColor: theme.cardBorder,
+      opacity: 0.4,
+      marginVertical: 10,
+    },
+    sectionDivider: {
       flexDirection: 'row',
-      justifyContent: 'space-between',
       alignItems: 'center',
-      paddingVertical: 12,
-      paddingHorizontal: 12,
+      marginVertical: 24,
+      gap: 12,
+    },
+    dividerLine: {
+      flex: 1,
+      height: 1,
+      backgroundColor: theme.cardBorder,
+      opacity: 0.3,
+    },
+    dividerText: {
+      fontSize: 12,
+      fontWeight: '700',
+      color: theme.textSecondary,
+      textTransform: 'uppercase',
+      letterSpacing: 1,
+    },
+    imageDivider: {
+      height: 1,
+      backgroundColor: theme.cardBorder,
+      opacity: 0.4,
+      marginHorizontal: 16,
+    },
+    oneTimeCard: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      backgroundColor: theme.accent + '15',
       borderRadius: 12,
       borderWidth: 1,
-      borderColor: theme.cardBorder,
-      backgroundColor: theme.cardBackground,
-      marginBottom: 10,
+      borderColor: theme.accent + '40',
+      paddingVertical: 14,
+      paddingHorizontal: 16,
+      marginBottom: 12,
     },
-    oneTimeLeft: {
+    oneTimeContent: {
       flex: 1,
     },
     oneTimeLabel: {
@@ -433,99 +489,100 @@ const createStyles = (theme) =>
       color: theme.textPrimary,
       marginBottom: 4,
     },
-    priceRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 8,
-    },
     oneTimePrice: {
-      fontSize: 18,
+      fontSize: 20,
       fontWeight: '900',
       color: theme.textPrimary,
+      letterSpacing: -0.3,
     },
-    strikethroughPrice: {
-      fontSize: 14,
-      fontWeight: '600',
-      color: theme.textSecondary,
-      textDecorationLine: 'line-through',
-    },
-    bookButton: {
+    bookButtonPrimary: {
       backgroundColor: theme.accent,
       borderRadius: 8,
-      paddingVertical: 8,
-      paddingHorizontal: 16,
-      alignItems: 'center',
-      justifyContent: 'center',
-      minWidth: 70,
+      paddingVertical: 10,
+      paddingHorizontal: 20,
     },
-    bookText: {
-      fontSize: 13,
-      fontWeight: '900',
+    bookTextPrimary: {
+      fontSize: 14,
+      fontWeight: '800',
       color: '#0B0B0B',
+    },
+    monthlySection: {
+      marginTop: 8,
     },
     monthlyHeader: {
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
-      marginBottom: 8,
+      marginBottom: 16,
+    },
+    monthlyHeaderLeft: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 10,
     },
     monthlyTitle: {
-      fontSize: 16,
+      fontSize: 18,
       fontWeight: '900',
       color: theme.textPrimary,
+      letterSpacing: 0.3,
     },
     offPill: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
       backgroundColor: '#2E7D32',
-      paddingHorizontal: 8,
-      paddingVertical: 4,
-      borderRadius: 8,
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      borderRadius: 20,
+      shadowColor: '#2E7D32',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.3,
+      shadowRadius: 4,
+      elevation: 3,
     },
     offPillText: {
       color: '#FFFFFF',
       fontWeight: '900',
       fontSize: 11,
+      letterSpacing: 0.5,
     },
-    monthlyItem: {
+    monthlyCard: {
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
-      borderWidth: 1,
-      borderColor: theme.cardBorder,
       backgroundColor: theme.cardBackground,
       borderRadius: 12,
-      padding: 12,
+      borderWidth: 1,
+      borderColor: theme.cardBorder,
+      paddingVertical: 14,
+      paddingHorizontal: 16,
       marginBottom: 10,
-      gap: 10,
     },
-    monthlyLeft: {
+    monthlyContent: {
       flex: 1,
-    },
-    totalPill: {
-      alignSelf: 'flex-start',
-      backgroundColor: 'transparent',
-      paddingHorizontal: 0,
-      paddingVertical: 0,
-      borderRadius: 0,
-      marginBottom: 6,
-    },
-    totalPillText: {
-      color: theme.textPrimary,
-      fontWeight: '900',
-      fontSize: 14,
     },
     monthlyTimes: {
       fontSize: 14,
       fontWeight: '700',
       color: theme.textPrimary,
+      marginBottom: 4,
     },
-    monthlyRight: {
-      alignItems: 'flex-end',
-      gap: 6,
-    },
-    perWashText: {
-      fontSize: 14,
+    monthlyTotalPrice: {
+      fontSize: 16,
       fontWeight: '800',
       color: theme.textPrimary,
+      letterSpacing: -0.2,
+    },
+    bookButtonSecondary: {
+      backgroundColor: theme.accent,
+      borderRadius: 8,
+      paddingVertical: 10,
+      paddingHorizontal: 20,
+    },
+    bookTextSecondary: {
+      fontSize: 14,
+      fontWeight: '800',
+      color: '#0B0B0B',
     },
     addOnsPriceText: {
       fontSize: 11,
