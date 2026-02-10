@@ -79,6 +79,16 @@ export default function ServiceAccordionCard({
       .filter(Boolean);
   };
 
+  // Calculate total add-on price
+  const calculateAddOnsTotal = () => {
+    return selectedAddOns.reduce((total, addOnId) => {
+      const addOn = resolvedAddOns.find((a) => a._id === addOnId);
+      return total + (Number(addOn?.price) || 0);
+    }, 0);
+  };
+
+  const addOnsTotal = calculateAddOnsTotal();
+
   const handleBookOneTime = () => {
     const addOns = resolveSelectedAddOnsDetails();
     const item = {
@@ -98,6 +108,7 @@ export default function ServiceAccordionCard({
 
   const handleBookMonthly = (pkg) => {
     const addOns = resolveSelectedAddOnsDetails();
+    const addOnsTotalForPackage = addOns.reduce((t, a) => t + (Number(a.price) || 0), 0) * pkg.times;
     const item = {
       id: `pkg_${pkg.id}_${Date.now()}`,
       serviceId: service?._id || serviceSummary?._id,
@@ -105,7 +116,7 @@ export default function ServiceAccordionCard({
       title: `${service?.name || serviceSummary?.name} - Monthly (${pkg.times}x/month)`,
       image: imageUri,
       basePrice: Math.round(Number(pkg.price || 0)),
-      price: Math.round(Number(pkg.price || 0)),
+      price: Math.round(Number(pkg.price || 0) + addOnsTotalForPackage),
       quantity: 1,
       addOns,
       packageType: 'Monthly',
@@ -202,7 +213,7 @@ export default function ServiceAccordionCard({
             <View style={styles.oneTimeLeft}>
               <Text style={styles.oneTimeLabel}>1 - Time Wash</Text>
               <View style={styles.priceRow}>
-                <Text style={styles.oneTimePrice}>₹{Math.round(oneTimePrice)}</Text>
+                <Text style={styles.oneTimePrice}>₹{Math.round(oneTimePrice + addOnsTotal)}</Text>
                 {oneTimePrice < oneTimePrice * 2 ? (
                   <Text style={styles.strikethroughPrice}>₹{Math.round(oneTimePrice * 2)}</Text>
                 ) : null}
@@ -224,17 +235,20 @@ export default function ServiceAccordionCard({
 
           {monthlyPackages.map((pkg) => {
             const originalPrice = oneTimePrice * pkg.times;
+            const addOnsForPackage = addOnsTotal * pkg.times; // Multiply add-ons by number of washes
+            const totalWithAddOns = pkg.price + addOnsForPackage;
+            const perWashWithAddOns = (pkg.price + addOnsForPackage) / pkg.times;
             return (
               <View key={pkg.id} style={styles.monthlyItem}>
                 <View style={styles.monthlyLeft}>
                   <View style={styles.totalPill}>
-                    <Text style={styles.totalPillText}>Total ₹{Math.round(pkg.price)}</Text>
+                    <Text style={styles.totalPillText}>Total ₹{Math.round(totalWithAddOns)}</Text>
                   </View>
                   <Text style={styles.monthlyTimes}>{pkg.times} Wash/Month</Text>
                 </View>
                 <View style={styles.monthlyRight}>
                   <View style={styles.priceRow}>
-                    <Text style={styles.perWashText}>₹{Math.round(pkg.perWash)}/wash</Text>
+                    <Text style={styles.perWashText}>₹{Math.round(perWashWithAddOns)}/wash</Text>
                     <Text style={styles.strikethroughPrice}>₹{Math.round(originalPrice / pkg.times)}/Wash</Text>
                   </View>
                   <TouchableOpacity style={styles.bookButton} onPress={() => handleBookMonthly(pkg)} activeOpacity={0.85}>
@@ -512,6 +526,12 @@ const createStyles = (theme) =>
       fontSize: 14,
       fontWeight: '800',
       color: theme.textPrimary,
+    },
+    addOnsPriceText: {
+      fontSize: 11,
+      fontWeight: '600',
+      color: theme.textSecondary,
+      marginTop: 4,
     },
   });
 

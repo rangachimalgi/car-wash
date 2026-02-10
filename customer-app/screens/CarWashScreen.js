@@ -154,12 +154,18 @@ export default function CarWashScreen({ navigation }) {
     if (!sheetService) return 0;
 
     let basePrice = 0;
+    let multiplier = 1; // For monthly packages, multiply add-ons by number of washes
+    
     if (sheetSelectedPackage === 'oneTime') {
       basePrice = oneTimeSheetPrice;
+      multiplier = 1;
     } else if (sheetSelectedPackage && sheetSelectedPackage.price) {
       basePrice = sheetSelectedPackage.price;
+      // For monthly packages, add-ons are applied per wash
+      multiplier = sheetSelectedPackage.times || 1;
     } else {
       basePrice = oneTimeSheetPrice;
+      multiplier = 1;
     }
 
     const addOnsList = getSheetAddOns();
@@ -168,7 +174,8 @@ export default function CarWashScreen({ navigation }) {
       return total + (addOn?.price || 0);
     }, 0);
 
-    return basePrice + addOnsTotal;
+    // Multiply add-ons by multiplier (1 for one-time, times for monthly packages)
+    return basePrice + (addOnsTotal * multiplier);
   };
 
   const sheetTotalPrice = calculateSheetTotalPrice();
@@ -341,6 +348,12 @@ export default function CarWashScreen({ navigation }) {
                 })}
               </View>
 
+              {/* Service Coverage */}
+              <ServiceCoverage
+                included={getSheetData()?.included || []}
+                notIncluded={getSheetData()?.notIncluded || []}
+              />
+
               {/* Add-On Services List */}
               <AddOnServicesList
                 services={getSheetAddOns()}
@@ -361,12 +374,7 @@ export default function CarWashScreen({ navigation }) {
                 hideSubscriptions={false}
                 forceOneTime={false}
                 showOnlyMonthly
-              />
-
-              {/* Service Coverage */}
-              <ServiceCoverage
-                included={getSheetData()?.included || []}
-                notIncluded={getSheetData()?.notIncluded || []}
+                initialSelectedPackage={sheetSelectedPackage}
               />
             </BottomSheetScrollView>
           </ServiceDetailsBottomSheet>

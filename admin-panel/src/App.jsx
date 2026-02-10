@@ -4,7 +4,7 @@ import './App.css'
 // API configuration
 // For local development: use your computer's IP address
 // Find it with: ipconfig getifaddr en0 (Mac) or ipconfig (Windows)
-const COMPUTER_IP = '192.168.1.22'
+const COMPUTER_IP = '192.168.1.3'
 const API_BASE_URL = `http://${COMPUTER_IP}:8000/api`
 // For production, uncomment the line below and comment the line above:
 // const API_BASE_URL = 'https://car-wash-vbry.onrender.com/api'
