@@ -9,15 +9,14 @@ import SeeTheTransformations from '../components/SeeTheTransformations';
 import { useTheme } from '../theme/ThemeContext';
 // import { getPopularServices } from '../services/serviceApi';
 
-const { width } = Dimensions.get('window');
-const cardWidth = (width - 48) / 3; // 3 cards with padding
+const sliderCardWidth = Dimensions.get('window').width;
+const cardWidth = (sliderCardWidth - 48) / 3; // 3 cards with padding
 const sliderImages = [
-  { uri: 'https://images.unsplash.com/photo-1502877338535-766e1452684a?w=1200&h=800&fit=crop&auto=format', key: 'special1' },
-  { uri: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=1200&h=800&fit=crop&auto=format', key: 'special2' },
-  { uri: 'https://images.unsplash.com/photo-1503376780353-7e6692767b70?w=1200&h=800&fit=crop&auto=format', key: 'special3' },
-  { uri: 'https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?w=1200&h=800&fit=crop&auto=format', key: 'special4' },
+  { source: require('../assets/carbanner.jpeg'), key: 'special1' },
+  { source: require('../assets/carbannertwo.jpeg'), key: 'special2' },
+  { source: require('../assets/carbanner.jpeg'), key: 'special3' },
+  { source: require('../assets/carbannertwo.jpeg'), key: 'special4' },
 ];
-const sliderCardWidth = width;
 
 export default function HomeScreen({ navigation }) {
   const [imageErrors, setImageErrors] = useState({});
@@ -32,19 +31,29 @@ export default function HomeScreen({ navigation }) {
     setImageErrors(prev => ({ ...prev, [key]: true }));
   };
 
-  const ServiceImage = ({ uri, style, imageKey }) => {
+  const ServiceImage = ({ uri, source, style, imageKey }) => {
     if (imageErrors[imageKey]) {
       return (
-        <View style={[style, { backgroundColor: theme.cardBackground, alignItems: 'center', justifyContent: 'center' }]}>
-          <MaterialCommunityIcons name="image-outline" size={32} color={theme.textSecondary} />
+        <View style={{
+          width: sliderCardWidth,
+          height: 260,
+          backgroundColor: theme.cardBackground,
+          alignItems: 'center',
+          justifyContent: 'center'
+        }}>
+          <MaterialCommunityIcons 
+            name="image-outline" 
+            size={32} 
+            color={theme.textSecondary} 
+          />
         </View>
       );
     }
     return (
       <Image 
-        source={{ uri }}
+        source={source || { uri }}
         style={style}
-        resizeMode="cover"
+        resizeMode="contain"
         onError={() => handleImageError(imageKey)}
       />
     );
@@ -122,10 +131,10 @@ export default function HomeScreen({ navigation }) {
           >
             {sliderImages.map(item => (
               <View key={item.key} style={styles.sliderCard}>
-                <ServiceImage 
-                  uri={item.uri}
+                <Image 
+                  source={item.source}
                   style={styles.sliderImage}
-                  imageKey={item.key}
+                  resizeMode="cover"
                 />
               </View>
             ))}
@@ -165,7 +174,7 @@ export default function HomeScreen({ navigation }) {
               <Text style={styles.halfCardTitle}>& CARE</Text>
               <View style={styles.halfCardImageWrap}>
                 <Image
-                  source={require('../assets/carwash.png')}
+                  source={require('../assets/carpicseven.png')}
                   style={styles.halfCardImage}
                   resizeMode="contain"
                 />
@@ -184,7 +193,7 @@ export default function HomeScreen({ navigation }) {
               </View>
               <View style={styles.halfCardImageWrap}>
                 <Image
-                  source={require('../assets/carImage.jpeg')}
+                  source={require('../assets/carpicnine.png')}
                   style={styles.halfCardImage}
                   resizeMode="contain"
                 />
@@ -200,7 +209,7 @@ export default function HomeScreen({ navigation }) {
           >
             <View style={styles.wideBikeImageWrap}>
               <Image
-                source={require('../assets/carwash.png')}
+                source={require('../assets/carpiceight.png')}
                 style={styles.wideBikeImage}
                 resizeMode="contain"
               />
@@ -292,13 +301,10 @@ const createStyles = theme => StyleSheet.create({
     paddingHorizontal: 0,
   },
   sliderCard: {
-    width: width,
-    height: 240,
+    width: sliderCardWidth,
+    height: 300,
     backgroundColor: theme.cardBackground,
-    borderRadius: 0,
-    marginRight: 0,
     overflow: 'hidden',
-    position: 'relative',
   },
   sliderImage: {
     width: '100%',
@@ -382,7 +388,7 @@ const createStyles = theme => StyleSheet.create({
     borderColor: theme.cardBorder,
     overflow: 'hidden',
     // ~40% shorter than before (190 -> 114)
-    minHeight: 114,
+    minHeight: 180,
   },
   halfCardTitle: {
     fontSize: 18,
@@ -411,8 +417,8 @@ const createStyles = theme => StyleSheet.create({
     justifyContent: 'center',
   },
   halfCardImage: {
-    width: '110%',
-    height: 80,
+    width: '120%',
+    height: 140,
   },
   wideBikeCard: {
     marginTop: 14,
@@ -529,7 +535,7 @@ const createStyles = theme => StyleSheet.create({
     paddingHorizontal: 16,
   },
   whyChooseCard: {
-    width: width - 64,
+    width: sliderCardWidth - 64,
     height: 120,
     borderRadius: 20,
     marginRight: 16,

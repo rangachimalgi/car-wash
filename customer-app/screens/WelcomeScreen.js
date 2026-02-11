@@ -48,13 +48,11 @@ export default function WelcomeScreen({ navigation }) {
                     <Text style={styles.placeText}>PLACE</Text>
                   </View>
                 </View>
-                <View style={styles.heroRight}>
-                  <Image
-                    source={require('../assets/carwash.png')}
-                    style={styles.heroImage}
-                    resizeMode="contain"
-                  />
-                </View>
+                <Image
+                  source={require('../assets/carpicsix.jpeg')}
+                  style={styles.heroImage}
+                  resizeMode="contain"
+                />
               </View>
             </View>
           </LinearGradient>
@@ -78,7 +76,7 @@ export default function WelcomeScreen({ navigation }) {
               <Text style={styles.cardTitle}>& CARE</Text>
               <View style={styles.cardImageContainer}>
                 <Image
-                  source={require('../assets/carwash.png')}
+                  source={require('../assets/carpicOne.png')}
                   style={styles.cardImage}
                   resizeMode="contain"
                 />
@@ -95,12 +93,12 @@ export default function WelcomeScreen({ navigation }) {
             <View style={styles.cardContent}>
               <Text style={styles.cardTitle}>BIKE WASH</Text>
               <Text style={styles.cardTitle}>& CARE</Text>
-              <View style={styles.offerBadge}>
+              {/* <View style={styles.offerBadge}>
                 <Text style={styles.offerText}>Upto 50% Off</Text>
-              </View>
+              </View> */}
               <View style={styles.cardImageContainer}>
                 <Image
-                  source={require('../assets/carwash.png')}
+                  source={require('../assets/carpictwo.png')}
                   style={styles.cardImage}
                   resizeMode="contain"
                 />
@@ -115,10 +113,10 @@ export default function WelcomeScreen({ navigation }) {
             <Text style={styles.insuranceTitle}>CAR / BIKE INSURANCE</Text>
             <Text style={styles.insuranceSubtitle}>EXPLORE OUR INSURANCE PARTNERS</Text>
             
-            <View style={styles.rewardsContainer}>
+            {/* <View style={styles.rewardsContainer}>
               <Text style={styles.rewardsText}>Get Hoora Points Rewards</Text>
               <Text style={styles.pointsText}>Upto 5000</Text>
-            </View>
+            </View> */}
           </View>
           <View style={styles.insuranceRight}>
             <Image
@@ -223,15 +221,10 @@ const styles = StyleSheet.create({
     letterSpacing: 2,
     fontStyle: 'italic',
   },
-  heroRight: {
+  heroImage: {
     width: width * 0.35,
     height: 180,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  heroImage: {
-    width: '100%',
-    height: '100%',
+    backgroundColor: 'transparent',
   },
 
   // Service Cards Styles
@@ -255,14 +248,15 @@ const styles = StyleSheet.create({
   },
   cardContent: {
     flex: 1,
-    padding: 16,
-    justifyContent: 'space-between',
+    padding: 8,
+    justifyContent: 'flex-start',
   },
   cardTitle: {
-    fontSize: 16,
+    fontSize: 12,
     fontWeight: '900',
     color: '#000',
     letterSpacing: 0.5,
+    marginBottom: 2,
   },
   offerBadge: {
     backgroundColor: '#FFF4CC',
@@ -278,10 +272,11 @@ const styles = StyleSheet.create({
     color: '#D4AF37',
   },
   cardImageContainer: {
-    height: 120,
-    marginTop: 12,
+    height: 170,
+    marginTop: 4,
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
   },
   cardImage: {
     width: '100%',

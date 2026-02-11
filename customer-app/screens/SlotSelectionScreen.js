@@ -759,8 +759,8 @@ const createStyles = theme => StyleSheet.create({
     paddingTop: 8,
   },
   dateCardSelected: {
-    backgroundColor: theme.accent,
-    borderColor: theme.accent,
+    backgroundColor: '#000000',
+    borderColor: '#000000',
   },
   dateDay: {
     fontSize: 12,
@@ -768,7 +768,7 @@ const createStyles = theme => StyleSheet.create({
     marginBottom: 4,
   },
   dateDaySelected: {
-    color: '#000000',
+    color: '#FFFFFF',
   },
   dateNumber: {
     fontSize: 20,
@@ -777,14 +777,14 @@ const createStyles = theme => StyleSheet.create({
     marginBottom: 2,
   },
   dateNumberSelected: {
-    color: '#000000',
+    color: '#FFFFFF',
   },
   dateMonth: {
     fontSize: 11,
     color: theme.textSecondary,
   },
   dateMonthSelected: {
-    color: '#000000',
+    color: '#FFFFFF',
   },
   todayBadge: {
     position: 'absolute',
@@ -822,8 +822,8 @@ const createStyles = theme => StyleSheet.create({
     justifyContent: 'center',
   },
   timeSlotCardSelected: {
-    backgroundColor: theme.accent,
-    borderColor: theme.accent,
+    backgroundColor: '#000000',
+    borderColor: '#000000',
   },
   timeSlotText: {
     fontSize: 14,
@@ -831,7 +831,7 @@ const createStyles = theme => StyleSheet.create({
     color: theme.textPrimary,
   },
   timeSlotTextSelected: {
-    color: '#000000',
+    color: '#FFFFFF',
   },
   generatedSlotsSection: {
     marginTop: 24,
@@ -906,8 +906,8 @@ const createStyles = theme => StyleSheet.create({
     backgroundColor: theme.cardBackground,
   },
   editDateCardSelected: {
-    backgroundColor: theme.accent,
-    borderColor: theme.accent,
+    backgroundColor: '#000000',
+    borderColor: '#000000',
   },
   editDateCardDisabled: {
     opacity: 0.4,
@@ -918,7 +918,7 @@ const createStyles = theme => StyleSheet.create({
     color: theme.textPrimary,
   },
   editDateTextSelected: {
-    color: '#000000',
+    color: '#FFFFFF',
   },
   editTimeSlotsGrid: {
     flexDirection: 'row',
@@ -936,8 +936,8 @@ const createStyles = theme => StyleSheet.create({
     backgroundColor: theme.cardBackground,
   },
   editTimeSlotCardSelected: {
-    backgroundColor: theme.accent,
-    borderColor: theme.accent,
+    backgroundColor: '#000000',
+    borderColor: '#000000',
   },
   editTimeSlotText: {
     fontSize: 12,
@@ -945,7 +945,7 @@ const createStyles = theme => StyleSheet.create({
     color: theme.textPrimary,
   },
   editTimeSlotTextSelected: {
-    color: '#000000',
+    color: '#FFFFFF',
   },
   totalSection: {
     backgroundColor: theme.cardBackground,
@@ -981,7 +981,7 @@ const createStyles = theme => StyleSheet.create({
   },
   checkoutButton: {
     flexDirection: 'row',
-    backgroundColor: theme.accent,
+    backgroundColor: '#000000',
     paddingVertical: 16,
     borderRadius: 12,
     justifyContent: 'center',
@@ -993,7 +993,7 @@ const createStyles = theme => StyleSheet.create({
   checkoutButtonText: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#000000',
+    color: '#ffffff',
     marginRight: 8,
   },
   checkoutButtonTextDisabled: {
