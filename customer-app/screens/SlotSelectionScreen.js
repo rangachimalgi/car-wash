@@ -8,9 +8,6 @@ import * as Location from 'expo-location';
 import { useTheme } from '../theme/ThemeContext';
 
 const { width } = Dimensions.get('window');
-const LIGHT_BLUE = '#85E4FC';
-const LIGHT_BLUE_SOFT = 'rgba(133, 228, 252, 0.18)';
-const SELECTOR_GREY = '#64748B';
 
 export default function SlotSelectionScreen({ navigation, route }) {
   const pendingItem = route?.params?.pendingItem || null;
@@ -383,7 +380,7 @@ export default function SlotSelectionScreen({ navigation, route }) {
         {/* Service at Section */}
         <View style={styles.serviceAtSection}>
           <View style={styles.locationHeader}>
-            <MaterialCommunityIcons name="map-marker" size={20} color={LIGHT_BLUE} />
+            <MaterialCommunityIcons name="map-marker" size={20} color={theme.accent} />
             <Text style={styles.serviceAtTitle}>Service at</Text>
           </View>
           <Text style={styles.addressText}>
@@ -503,7 +500,7 @@ export default function SlotSelectionScreen({ navigation, route }) {
                           <MaterialCommunityIcons 
                             name={isEditing ? "close" : "pencil"} 
                             size={18} 
-                            color={LIGHT_BLUE} 
+                            color={theme.accent} 
                           />
                         </TouchableOpacity>
                       </View>
@@ -713,7 +710,7 @@ const createStyles = theme => StyleSheet.create({
   },
   changeAddressText: {
     fontSize: 14,
-    color: '#0B0B0B',
+    color: theme.accent,
     fontWeight: '600',
   },
   dateSection: {
@@ -741,7 +738,7 @@ const createStyles = theme => StyleSheet.create({
   slotCount: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#0B0B0B',
+    color: theme.accent,
   },
   datesScrollView: {
     marginHorizontal: -16,
@@ -762,8 +759,8 @@ const createStyles = theme => StyleSheet.create({
     paddingTop: 8,
   },
   dateCardSelected: {
-    backgroundColor: SELECTOR_GREY,
-    borderColor: SELECTOR_GREY,
+    backgroundColor: theme.accent,
+    borderColor: theme.accent,
   },
   dateDay: {
     fontSize: 12,
@@ -771,7 +768,7 @@ const createStyles = theme => StyleSheet.create({
     marginBottom: 4,
   },
   dateDaySelected: {
-    color: '#FFFFFF',
+    color: '#000000',
   },
   dateNumber: {
     fontSize: 20,
@@ -780,27 +777,27 @@ const createStyles = theme => StyleSheet.create({
     marginBottom: 2,
   },
   dateNumberSelected: {
-    color: '#FFFFFF',
+    color: '#000000',
   },
   dateMonth: {
     fontSize: 11,
     color: theme.textSecondary,
   },
   dateMonthSelected: {
-    color: '#FFFFFF',
+    color: '#000000',
   },
   todayBadge: {
     position: 'absolute',
     top: 4,
     right: 4,
-    backgroundColor: SELECTOR_GREY,
+    backgroundColor: theme.accent,
     paddingHorizontal: 4,
     paddingVertical: 2,
     borderRadius: 4,
   },
   todayBadgeText: {
     fontSize: 8,
-    color: '#FFFFFF',
+    color: '#000000',
     fontWeight: '600',
   },
   timeSlotsSection: {
@@ -825,8 +822,8 @@ const createStyles = theme => StyleSheet.create({
     justifyContent: 'center',
   },
   timeSlotCardSelected: {
-    backgroundColor: SELECTOR_GREY,
-    borderColor: SELECTOR_GREY,
+    backgroundColor: theme.accent,
+    borderColor: theme.accent,
   },
   timeSlotText: {
     fontSize: 14,
@@ -834,7 +831,7 @@ const createStyles = theme => StyleSheet.create({
     color: theme.textPrimary,
   },
   timeSlotTextSelected: {
-    color: '#FFFFFF',
+    color: '#000000',
   },
   generatedSlotsSection: {
     marginTop: 24,
@@ -856,7 +853,7 @@ const createStyles = theme => StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: SELECTOR_GREY,
+    backgroundColor: theme.accent,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 12,
@@ -864,7 +861,7 @@ const createStyles = theme => StyleSheet.create({
   slotNumberText: {
     fontSize: 14,
     fontWeight: 'bold',
-    color: '#FFFFFF',
+    color: '#000000',
   },
   slotInfo: {
     flex: 1,
@@ -909,8 +906,8 @@ const createStyles = theme => StyleSheet.create({
     backgroundColor: theme.cardBackground,
   },
   editDateCardSelected: {
-    backgroundColor: SELECTOR_GREY,
-    borderColor: SELECTOR_GREY,
+    backgroundColor: theme.accent,
+    borderColor: theme.accent,
   },
   editDateCardDisabled: {
     opacity: 0.4,
@@ -921,7 +918,7 @@ const createStyles = theme => StyleSheet.create({
     color: theme.textPrimary,
   },
   editDateTextSelected: {
-    color: '#FFFFFF',
+    color: '#000000',
   },
   editTimeSlotsGrid: {
     flexDirection: 'row',
@@ -939,8 +936,8 @@ const createStyles = theme => StyleSheet.create({
     backgroundColor: theme.cardBackground,
   },
   editTimeSlotCardSelected: {
-    backgroundColor: SELECTOR_GREY,
-    borderColor: SELECTOR_GREY,
+    backgroundColor: theme.accent,
+    borderColor: theme.accent,
   },
   editTimeSlotText: {
     fontSize: 12,
@@ -948,7 +945,7 @@ const createStyles = theme => StyleSheet.create({
     color: theme.textPrimary,
   },
   editTimeSlotTextSelected: {
-    color: '#FFFFFF',
+    color: '#000000',
   },
   totalSection: {
     backgroundColor: theme.cardBackground,
@@ -972,7 +969,7 @@ const createStyles = theme => StyleSheet.create({
   totalAmount: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#0B0B0B',
+    color: theme.accent,
   },
   checkoutButtonContainer: {
     paddingHorizontal: 16,
@@ -984,7 +981,7 @@ const createStyles = theme => StyleSheet.create({
   },
   checkoutButton: {
     flexDirection: 'row',
-    backgroundColor: LIGHT_BLUE,
+    backgroundColor: theme.accent,
     paddingVertical: 16,
     borderRadius: 12,
     justifyContent: 'center',

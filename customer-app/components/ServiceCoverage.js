@@ -12,13 +12,11 @@ export default function ServiceCoverage({ included = [], notIncluded = [] }) {
 
   const renderItem = (item, isIncluded) => (
     <View key={item} style={[styles.itemRow, isIncluded && styles.includedItemRow]}>
-      <View style={[styles.iconContainer, isIncluded ? styles.includedIcon : styles.notIncludedIcon]}>
-        {isIncluded ? (
-          <MaterialCommunityIcons name="check" size={16} color="#FFFFFF" />
-        ) : (
-          <MaterialCommunityIcons name="information" size={16} color="#000000" />
-        )}
-      </View>
+      {isIncluded ? (
+        <MaterialCommunityIcons name="check" size={18} color="#22C55E" style={styles.checkIcon} />
+      ) : (
+        <MaterialCommunityIcons name="information" size={18} color="#6B7280" style={styles.infoIcon} />
+      )}
       <Text style={styles.itemText}>{item}</Text>
     </View>
   );
@@ -34,9 +32,7 @@ export default function ServiceCoverage({ included = [], notIncluded = [] }) {
         {/* What's Included Column */}
         <View style={[styles.column, styles.includedColumn]}>
           <View style={[styles.columnHeader, styles.includedHeader]}>
-            <View style={[styles.headerIcon, styles.includedHeaderIcon]}>
-              <MaterialCommunityIcons name="check" size={18} color="#FFFFFF" />
-            </View>
+            <MaterialCommunityIcons name="check" size={18} color="#22C55E" style={styles.headerCheckIcon} />
             <Text style={styles.columnHeaderText}>What's Included</Text>
           </View>
           <View style={styles.itemsContainer}>
@@ -53,9 +49,7 @@ export default function ServiceCoverage({ included = [], notIncluded = [] }) {
         {/* Not Included Column */}
         <View style={[styles.column, styles.notIncludedColumn, { borderRightWidth: 0 }]}>
           <View style={[styles.columnHeader, styles.notIncludedHeader]}>
-            <View style={[styles.headerIcon, styles.notIncludedHeaderIcon]}>
-              <MaterialCommunityIcons name="information" size={18} color="#FFFFFF" />
-            </View>
+            <MaterialCommunityIcons name="information" size={18} color="#6B7280" style={styles.headerInfoIcon} />
             <Text style={styles.columnHeaderText}>Not Included</Text>
           </View>
           <View style={styles.itemsContainer}>
@@ -126,19 +120,17 @@ const createStyles = theme => StyleSheet.create({
   notIncludedHeader: {
     backgroundColor: '#F1F5F9',
   },
-  headerIcon: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
+  headerCheckIcon: {
     marginRight: 8,
   },
-  includedHeaderIcon: {
-    backgroundColor: '#0B0B0B',
+  headerInfoIcon: {
+    marginRight: 8,
   },
-  notIncludedHeaderIcon: {
-    backgroundColor: '#0B0B0B',
+  checkIcon: {
+    marginRight: 10,
+  },
+  infoIcon: {
+    marginRight: 10,
   },
   columnHeaderText: {
     fontSize: 14,
@@ -161,20 +153,6 @@ const createStyles = theme => StyleSheet.create({
   },
   includedItemRow: {
     backgroundColor: '#FFFFFF', // included rows as white bg
-  },
-  iconContainer: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 10,
-  },
-  includedIcon: {
-    backgroundColor: '#0B0B0B',
-  },
-  notIncludedIcon: {
-    backgroundColor: theme.cardBorder,
   },
   itemText: {
     flex: 1,
