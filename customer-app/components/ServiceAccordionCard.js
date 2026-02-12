@@ -130,6 +130,10 @@ export default function ServiceAccordionCard({
     navigation?.navigate('Cart', { addItem: item });
   };
 
+  // Hardcoded ratings for now
+  const hardcodedRating = 3.9;
+  const hardcodedRatingsCount = 2530;
+
   return (
     <View style={styles.serviceCard}>
       <TouchableOpacity onPress={onToggle} activeOpacity={0.9}>
@@ -150,16 +154,33 @@ export default function ServiceAccordionCard({
           <>
             <View style={styles.imageContainer}>
               {!imageError ? (
-                <Image
-                  source={
-                    fallbackImageSource && !service?.image && !serviceSummary?.image
-                      ? fallbackImageSource
-                      : { uri: imageUri }
-                  }
-                  style={styles.serviceImage}
-                  resizeMode="cover"
-                  onError={() => setImageError(true)}
-                />
+                <View style={styles.splitImageContainer}>
+                  <View style={styles.imageLeftWrapper}>
+                    <Image
+                      source={
+                        fallbackImageSource && !service?.image && !serviceSummary?.image
+                          ? fallbackImageSource
+                          : { uri: imageUri }
+                      }
+                      style={styles.imageLeft}
+                      resizeMode="cover"
+                      onError={() => setImageError(true)}
+                    />
+                  </View>
+                  <View style={styles.imageRightWrapper}>
+                    <Image
+                      source={
+                        fallbackImageSource && !service?.image && !serviceSummary?.image
+                          ? fallbackImageSource
+                          : { uri: imageUri }
+                      }
+                      style={styles.imageRight}
+                      resizeMode="cover"
+                      onError={() => setImageError(true)}
+                    />
+                  </View>
+                  <View style={styles.diagonalOverlay} />
+                </View>
               ) : (
                 <View style={[styles.serviceImage, styles.placeholderImage]}>
                   <MaterialCommunityIcons name="image-outline" size={48} color={theme.accent} />
@@ -167,28 +188,18 @@ export default function ServiceAccordionCard({
               )}
             </View>
 
-            <View style={styles.imageDivider} />
-
-            <View style={styles.cardContent}>
-              <View style={styles.cardInfoRow}>
-                {!!durationLabel ? (
-                  <View style={styles.durationRowInline}>
-                    <MaterialCommunityIcons
-                      name="clock-outline"
-                      size={16}
-                      color={theme.textSecondary}
-                    />
-                    <Text style={styles.durationText}>{durationLabel}</Text>
-                  </View>
-                ) : (
-                  <View />
-                )}
-                <View style={styles.priceBox}>
-                  <Text style={styles.cardPriceLine} numberOfLines={1}>
-                    <Text style={styles.cardPricePrefix}>Starting </Text>
-                    <Text style={styles.cardPriceValue}>₹{Math.round(oneTimePrice)}</Text>
-                  </Text>
-                </View>
+            <View style={styles.cardBottomSection}>
+              <View style={styles.ratingSection}>
+                <MaterialCommunityIcons name="star" size={18} color="#FFD700" />
+                <Text style={styles.ratingValue}>{hardcodedRating}</Text>
+                <View style={styles.ratingDot} />
+                <Text style={styles.ratingsCount}>{hardcodedRatingsCount.toLocaleString()} Ratings</Text>
+              </View>
+              <View style={styles.priceSection}>
+                <Text style={styles.cardPriceLine} numberOfLines={1}>
+                  <Text style={styles.cardPricePrefix}>Starting </Text>
+                  <Text style={styles.cardPriceValue}>₹{Math.round(oneTimePrice)}</Text>
+                </Text>
               </View>
             </View>
           </>
@@ -295,10 +306,10 @@ const createStyles = (theme) =>
     cardHeader: {
       paddingHorizontal: 16,
       paddingTop: 16,
-      paddingBottom: 10,
-      backgroundColor: '#536263',
-      borderBottomWidth: 1,
-      borderBottomColor: theme.cardBorder,
+      paddingBottom: 12,
+      backgroundColor: '#66abf1',
+      borderTopLeftRadius: 16,
+      borderTopRightRadius: 16,
     },
     cardHeaderRow: {
       flexDirection: 'row',
@@ -308,20 +319,66 @@ const createStyles = (theme) =>
     },
     cardTitle: {
       flex: 1,
-      fontSize: 20,
-      fontWeight: '600',
-      color: '#ffffff',
+      fontSize: 18,
+      fontWeight: '700',
+      color: '#000000',
     },
     imageContainer: {
       position: 'relative',
       marginHorizontal: 0,
-      marginBottom: 12,
+      marginBottom: 0,
       borderRadius: 0,
       overflow: 'hidden',
+      height: 200,
+    },
+    splitImageContainer: {
+      flexDirection: 'row',
+      height: '100%',
+      width: '100%',
+      overflow: 'hidden',
+      position: 'relative',
+    },
+    imageLeftWrapper: {
+      position: 'absolute',
+      left: 0,
+      top: 0,
+      width: '55%',
+      height: '100%',
+      overflow: 'hidden',
+      zIndex: 1,
+    },
+    imageLeft: {
+      width: '100%',
+      height: '100%',
+    },
+    imageRightWrapper: {
+      position: 'absolute',
+      right: 0,
+      top: 0,
+      width: '55%',
+      height: '100%',
+      overflow: 'hidden',
+      zIndex: 2,
+    },
+    imageRight: {
+      width: '100%',
+      height: '100%',
+    },
+    diagonalOverlay: {
+      position: 'absolute',
+      top: 0,
+      right: '45%',
+      width: 2,
+      height: '100%',
+      backgroundColor: 'transparent',
+      zIndex: 3,
+      borderLeftWidth: 1,
+      borderLeftColor: 'rgba(255, 255, 255, 0.3)',
+      transform: [{ rotate: '15deg' }, { translateX: -1 }],
     },
     serviceImage: {
       width: '100%',
-      height: 165,
+      height: 200,
       borderRadius: 0,
     },
     placeholderImage: {
@@ -329,22 +386,43 @@ const createStyles = (theme) =>
       alignItems: 'center',
       justifyContent: 'center',
     },
-    cardContent: {
-      padding: 16,
-      paddingTop: 0,
-    },
-    cardInfoRow: {
+    cardBottomSection: {
       flexDirection: 'row',
       alignItems: 'center',
-      justifyContent: 'space-between',
-      marginBottom: 12,
-      gap: 12,
+      height: 60,
     },
-    priceBox: {
-      paddingVertical: 6,
-      paddingHorizontal: 10,
-      borderRadius: 999,
-      backgroundColor: '#E0F2FE', // light blue box
+    ratingSection: {
+      flex: 1,
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: '#FFFFFF',
+      paddingHorizontal: 16,
+      height: '100%',
+      gap: 6,
+    },
+    ratingValue: {
+      fontSize: 16,
+      fontWeight: '700',
+      color: '#000000',
+    },
+    ratingDot: {
+      width: 4,
+      height: 4,
+      borderRadius: 2,
+      backgroundColor: '#666666',
+    },
+    ratingsCount: {
+      fontSize: 14,
+      fontWeight: '500',
+      color: '#000000',
+    },
+    priceSection: {
+      flex: 1,
+      backgroundColor: '#66abf1',
+      paddingHorizontal: 16,
+      height: '100%',
+      justifyContent: 'center',
+      alignItems: 'flex-end',
     },
     cardPriceLine: {
       fontSize: 15,
@@ -354,22 +432,12 @@ const createStyles = (theme) =>
     cardPricePrefix: {
       fontSize: 15,
       fontWeight: '700',
-      color: theme.textSecondary,
-    },
-    cardPriceValue: {
-      fontSize: 22,
-      fontWeight: '900',
       color: '#0B0B0B',
     },
-    durationRowInline: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 6,
-    },
-    durationText: {
-      fontSize: 13,
-      fontWeight: '700',
-      color: theme.textSecondary,
+    cardPriceValue: {
+      fontSize: 18,
+      fontWeight: '900',
+      color: '#0B0B0B',
     },
 
     // Expanded section (enhanced design)
@@ -396,7 +464,7 @@ const createStyles = (theme) =>
       flexDirection: 'row',
       alignItems: 'center',
       gap: 6,
-      backgroundColor: theme.accent,
+      backgroundColor: '#000000',
       paddingVertical: 10,
       paddingHorizontal: 16,
       borderRadius: 10,
@@ -409,7 +477,7 @@ const createStyles = (theme) =>
     viewDetailsText: {
       fontSize: 13,
       fontWeight: '800',
-      color: '#0B0B0B',
+      color: '#ffffff',
       letterSpacing: 0.2,
     },
     loadingRow: {
@@ -461,12 +529,6 @@ const createStyles = (theme) =>
       color: theme.textSecondary,
       textTransform: 'uppercase',
       letterSpacing: 1,
-    },
-    imageDivider: {
-      height: 1,
-      backgroundColor: theme.cardBorder,
-      opacity: 0.4,
-      marginHorizontal: 16,
     },
     oneTimeCard: {
       flexDirection: 'row',
