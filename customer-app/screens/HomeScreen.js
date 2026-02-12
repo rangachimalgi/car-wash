@@ -232,7 +232,7 @@ export default function HomeScreen({ navigation }) {
           >
             <View style={[styles.whyChooseCard, styles.whyChooseCardBlue]}>
               <ServiceImage 
-                uri="https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=300&h=200&fit=crop&auto=format"
+                source={require('../assets/whychoose.jpeg')}
                 style={styles.whyChooseImage}
                 imageKey="whyChoose1"
               />
@@ -243,7 +243,7 @@ export default function HomeScreen({ navigation }) {
             </View>
             <View style={[styles.whyChooseCard, styles.whyChooseCardGreen]}>
               <ServiceImage 
-                uri="https://images.unsplash.com/photo-1558981806-ec527fa84c39?w=300&h=200&fit=crop&auto=format"
+                source={require('../assets/whychooseone.jpeg')}
                 style={styles.whyChooseImage}
                 imageKey="whyChoose2"
               />
@@ -254,7 +254,7 @@ export default function HomeScreen({ navigation }) {
             </View>
             <View style={[styles.whyChooseCard, styles.whyChooseCardPurple]}>
               <ServiceImage 
-                uri="https://images.unsplash.com/photo-1502877338535-766e1452684a?w=300&h=200&fit=crop&auto=format"
+                source={require('../assets/whychoose.jpeg')}
                 style={styles.whyChooseImage}
                 imageKey="whyChoose3"
               />

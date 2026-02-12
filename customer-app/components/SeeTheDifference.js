@@ -9,19 +9,19 @@ const DEFAULT_SLIDES = [
     id: 'foam',
     title: 'Foam Wash',
     bullets: ['Prevent swirl Marks', 'Lifts Dirt'],
-    image: require('../assets/carImage.jpeg'),
+    image: require('../assets/carbannerfour.jpeg'),
   },
   {
     id: 'interior',
     title: 'Interior Cleaning',
     bullets: ['Deep vacuum', 'Odour removal'],
-    image: require('../assets/carImage.jpeg'),
+    image: require('../assets/carbannerfour.jpeg'),
   },
   {
     id: 'shine',
     title: 'Final Shine',
     bullets: ['Gloss finish', 'Tyre dressing'],
-    image: require('../assets/carImage.jpeg'),
+    image: require('../assets/carbannerfour.jpeg'),
   },
 ];
 
