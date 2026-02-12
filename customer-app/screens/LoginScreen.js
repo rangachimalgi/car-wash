@@ -173,25 +173,16 @@ export default function LoginScreen({ navigation }) {
             {/* Banner Section with Image */}
             <View style={styles.bannerContainer}>
               <Image 
-                source={require('../assets/carImage.jpeg')} 
+                source={require('../assets/carbannerthree.jpeg')} 
                 style={styles.bannerImage}
                 resizeMode="cover"
               />
-              <View style={styles.bannerOverlay}>
-                <View style={styles.bannerBadge}>
-                  <MaterialCommunityIcons name="check" size={16} color="#FFFFFF" />
-                  <Text style={styles.bannerBadgeText}>At Your Time</Text>
-                </View>
-                <View style={[styles.bannerBadge, styles.bannerBadgeBottom]}>
-                  <Text style={styles.bannerBadgeText}>At Your Place</Text>
-                  <MaterialCommunityIcons name="map-marker" size={16} color="#FFFFFF" />
-                </View>
-              </View>
+              
             </View>
 
             {/* App Description */}
             <View style={styles.appDescription}>
-              <Text style={styles.appDescriptionTop}>India's #1</Text>
+              <Text style={styles.appDescriptionTop}>India's </Text>
               <Text style={styles.appDescriptionBottom}>Car & Bike Care App</Text>
             </View>
           </>
