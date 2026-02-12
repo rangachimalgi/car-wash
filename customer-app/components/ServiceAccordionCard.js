@@ -558,7 +558,7 @@ const createStyles = (theme) =>
       letterSpacing: -0.3,
     },
     bookButtonPrimary: {
-      backgroundColor: theme.accent,
+      backgroundColor: '#000000',
       borderRadius: 8,
       paddingVertical: 10,
       paddingHorizontal: 20,
@@ -566,7 +566,7 @@ const createStyles = (theme) =>
     bookTextPrimary: {
       fontSize: 14,
       fontWeight: '800',
-      color: '#0B0B0B',
+      color: '#ffffff',
     },
     monthlySection: {
       marginTop: 8,
@@ -636,7 +636,7 @@ const createStyles = (theme) =>
       letterSpacing: -0.2,
     },
     bookButtonSecondary: {
-      backgroundColor: theme.accent,
+      backgroundColor: '#000000',
       borderRadius: 8,
       paddingVertical: 10,
       paddingHorizontal: 20,
@@ -644,7 +644,7 @@ const createStyles = (theme) =>
     bookTextSecondary: {
       fontSize: 14,
       fontWeight: '800',
-      color: '#0B0B0B',
+      color: '#ffffff',
     },
     addOnsPriceText: {
       fontSize: 11,

@@ -454,7 +454,7 @@ const createStyles = theme => StyleSheet.create({
   addToCartButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: LIGHT_BLUE,
+    backgroundColor: '#000000',
     borderRadius: 8,
     paddingVertical: 14,
     paddingHorizontal: 24,
@@ -463,6 +463,6 @@ const createStyles = theme => StyleSheet.create({
   addToCartButtonText: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#000000',
+    color: '#ffffff',
   },
 });

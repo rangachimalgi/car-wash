@@ -426,7 +426,7 @@ export default function CheckoutScreen({ navigation, route }) {
         {/* Apply Coupon Section */}
         <View style={styles.couponSection}>
           <View style={styles.couponHeader}>
-            <MaterialCommunityIcons name="ticket-percent" size={20} color={LIGHT_BLUE} />
+            <MaterialCommunityIcons name="ticket-percent" size={20} color={'LIGHT_BLUE'} />
             <Text style={styles.sectionTitle}>Apply Coupon</Text>
           </View>
           {appliedCoupon ? (
@@ -612,7 +612,7 @@ const createStyles = theme => StyleSheet.create({
     color: theme.textPrimary,
   },
   applyButton: {
-    backgroundColor: LIGHT_BLUE,
+    backgroundColor: '#000000',
     borderLeftWidth: 1,
     borderLeftColor: theme.cardBorder,
     paddingHorizontal: 24,
@@ -622,7 +622,7 @@ const createStyles = theme => StyleSheet.create({
   applyButtonText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#000000',
+    color: '#ffffff',
   },
   appliedCouponContainer: {
     backgroundColor: theme.cardBackground,
@@ -732,7 +732,7 @@ const createStyles = theme => StyleSheet.create({
   },
   payNowButton: {
     flexDirection: 'row',
-    backgroundColor: LIGHT_BLUE,
+    backgroundColor: '#000000',
     paddingVertical: 16,
     borderRadius: 12,
     justifyContent: 'center',
@@ -741,7 +741,7 @@ const createStyles = theme => StyleSheet.create({
   payNowButtonText: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#000000',
+    color: '#ffffff',
     marginRight: 8,
   },
   toastContainer: {

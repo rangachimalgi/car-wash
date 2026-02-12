@@ -79,7 +79,7 @@ const createStyles = theme => StyleSheet.create({
     color: '#000000',
   },
   addButton: {
-    backgroundColor: LIGHT_BLUE,
+    backgroundColor: '#000000',
     paddingVertical: 10,
     paddingHorizontal: 24,
     borderRadius: 8,
@@ -93,7 +93,7 @@ const createStyles = theme => StyleSheet.create({
   addButtonText: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#000000',
+    color: '#ffffff',
   },
   addButtonTextSelected: {
     color: '#FFFFFF',
