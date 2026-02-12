@@ -8,9 +8,7 @@ import {
   TouchableOpacity, 
   Image 
 } from 'react-native';
-import { MaterialIcons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
-import { LinearGradient } from 'expo-linear-gradient';
 import CustomHeader from '../components/CustomHeader';
 
 const { width } = Dimensions.get('window');
@@ -26,36 +24,15 @@ export default function WelcomeScreen({ navigation }) {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* Blue Banner Section */}
+        {/* Banner Section */}
         <View style={styles.bannerWrapper}>
-          <LinearGradient
-            colors={['#36A0E2', '#4DB5F5', '#5DC1F7']}
-            style={styles.blueBannerSection}
-          >
-            {/* Hero Banner */}
-            <View style={styles.heroBanner}>
-              <View style={styles.heroContent}>
-                <View style={styles.heroLeft}>
-                  <View style={styles.locationPinContainer}>
-                    <View style={styles.locationPin}>
-                      <MaterialIcons name="location-on" size={40} color="#FFD700" />
-                    </View>
-                  </View>
-                  <View style={styles.heroTextContainer}>
-                    <Text style={styles.atYourText}>At Your</Text>
-                    <Text style={styles.timeText}>TIME</Text>
-                    <Text style={styles.andText}>&</Text>
-                    <Text style={styles.placeText}>PLACE</Text>
-                  </View>
-                </View>
-                <Image
-                  source={require('../assets/carpicsix.jpeg')}
-                  style={styles.heroImage}
-                  resizeMode="contain"
-                />
-              </View>
-            </View>
-          </LinearGradient>
+          <View style={styles.heroBanner}>
+            <Image
+              source={require('../assets/welcomebanner.jpeg')}
+              style={styles.heroImage}
+              resizeMode="cover"
+            />
+          </View>
           
           {/* Header on top of banner */}
           <View style={styles.headerWrapper}>
@@ -76,7 +53,7 @@ export default function WelcomeScreen({ navigation }) {
               <Text style={styles.cardTitle}>& CARE</Text>
               <View style={styles.cardImageContainer}>
                 <Image
-                  source={require('../assets/carpicOne.png')}
+                  source={require('../assets/carpicseven.png')}
                   style={styles.cardImage}
                   resizeMode="contain"
                 />
@@ -98,7 +75,7 @@ export default function WelcomeScreen({ navigation }) {
               </View> */}
               <View style={styles.cardImageContainer}>
                 <Image
-                  source={require('../assets/carpictwo.png')}
+                  source={require('../assets/carpiceight.png')}
                   style={styles.cardImage}
                   resizeMode="contain"
                 />
@@ -120,7 +97,7 @@ export default function WelcomeScreen({ navigation }) {
           </View>
           <View style={styles.insuranceRight}>
             <Image
-              source={require('../assets/carwash.png')}
+              source={require('../assets/insurance.png')}
               style={styles.insuranceImage}
               resizeMode="contain"
             />
@@ -155,76 +132,17 @@ const styles = StyleSheet.create({
     right: 0,
     zIndex: 10,
   },
-  blueBannerSection: {
-    paddingTop: 100,
-    paddingBottom: 40,
-  },
-
   // Hero Banner Styles
   heroBanner: {
-    marginHorizontal: 0,
-    marginBottom: 0,
-    height: 220,
+    width: '100%',
+    height: 400,
     overflow: 'hidden',
     position: 'relative',
-  },
-  heroContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 20,
-    flex: 1,
-  },
-  heroLeft: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  locationPinContainer: {
-    marginRight: 12,
-  },
-  locationPin: {
-    width: 70,
-    height: 80,
-    backgroundColor: '#FFF',
-    borderRadius: 35,
-    borderBottomRightRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-    transform: [{ rotate: '-15deg' }],
-  },
-  heroTextContainer: {
-    flex: 1,
-  },
-  atYourText: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#000',
-    marginBottom: 4,
-  },
-  timeText: {
-    fontSize: 42,
-    fontWeight: '900',
-    color: '#000',
-    letterSpacing: 2,
-    fontStyle: 'italic',
-  },
-  andText: {
-    fontSize: 32,
-    fontWeight: '600',
-    color: '#000',
-    fontStyle: 'italic',
-  },
-  placeText: {
-    fontSize: 42,
-    fontWeight: '900',
-    color: '#000',
-    letterSpacing: 2,
-    fontStyle: 'italic',
+    paddingTop: 100,
   },
   heroImage: {
-    width: width * 0.35,
-    height: 180,
-    backgroundColor: 'transparent',
+    width: '100%',
+    height: '100%',
   },
 
   // Service Cards Styles
@@ -232,8 +150,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     paddingHorizontal: 16,
     gap: 12,
-    marginTop: -30,
+    marginTop: -40,
     marginBottom: 20,
+    zIndex: 5,
   },
   serviceCard: {
     flex: 1,
@@ -339,6 +258,6 @@ const styles = StyleSheet.create({
   },
   insuranceImage: {
     width: '100%',
-    height: '100%',
+    height: '120%',
   },
 });

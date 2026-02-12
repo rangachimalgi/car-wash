@@ -4,11 +4,11 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../theme/ThemeContext';
 
-export default function CustomHeader({ navigation }) {
+export default function CustomHeader({ navigation, transparent = false }) {
   const insets = useSafeAreaInsets();
   const { theme } = useTheme();
   const colors = {
-    background: theme.headerBackground,
+    background: transparent ? 'transparent' : theme.headerBackground,
     text: theme.textPrimary,
   };
 
