@@ -1,23 +1,74 @@
-import React, { useMemo, useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Dimensions, Alert } from 'react-native';
+import React, { useMemo, useState, useEffect, useCallback } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Dimensions, Alert, FlatList } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import BackHeader from '../components/BackHeader';
-import PricingPackages from '../components/PricingPackages';
-import AddOnServicesList from '../components/AddOnServicesList';
+import AddOnCard from '../components/AddOnCard';
+import MonthlyPackageCard from '../components/MonthlyPackageCard';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTheme } from '../theme/ThemeContext';
 import { getServiceById } from '../services/serviceApi';
+import { useFocusEffect } from '@react-navigation/native';
 
 const { width } = Dimensions.get('window');
-const LIGHT_BLUE = '#85E4FC';
+const FALLBACK_IMAGE = require('../assets/carwash.png');
 
 export default function CartScreen({ navigation, route }) {
   const [cartItems, setCartItems] = useState([]);
   const [cartLoaded, setCartLoaded] = useState(false);
   const [serviceDetailsById, setServiceDetailsById] = useState({});
+  const [expandedServiceId, setExpandedServiceId] = useState(null);
+  const [address, setAddress] = useState(null);
+  const [vehicle, setVehicle] = useState(null);
   const { theme, isLightMode } = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
+
+  const loadAddressAndVehicle = useCallback(async () => {
+    try {
+      const [storedAddress, storedPhone, storedLat, storedLng] = await Promise.all([
+        AsyncStorage.getItem('currentAddress'),
+        AsyncStorage.getItem('authPhone'),
+        AsyncStorage.getItem('currentLat'),
+        AsyncStorage.getItem('currentLng'),
+      ]);
+
+      if (storedAddress) {
+        setAddress({
+          address: storedAddress,
+          latitude: storedLat ? Number(storedLat) : null,
+          longitude: storedLng ? Number(storedLng) : null,
+        });
+      } else {
+        setAddress(null);
+      }
+
+      if (storedPhone) {
+        const [storedVehicleType, storedVehicleModel] = await Promise.all([
+          AsyncStorage.getItem(`userVehicleType:${storedPhone}`),
+          AsyncStorage.getItem(`userVehicleModel:${storedPhone}`),
+        ]);
+
+        if (storedVehicleType && storedVehicleModel) {
+          setVehicle({
+            type: storedVehicleType,
+            model: storedVehicleModel,
+          });
+        } else {
+          setVehicle(null);
+        }
+      } else {
+        setVehicle(null);
+      }
+    } catch (error) {
+      console.error('Error loading address/vehicle:', error);
+    }
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadAddressAndVehicle();
+    }, [loadAddressAndVehicle])
+  );
 
   const loadCart = async () => {
     try {
@@ -94,52 +145,22 @@ export default function CartScreen({ navigation, route }) {
     }
   }, [cartItems, cartLoaded]);
 
-  const getSlotKey = (item) => {
-    const timeSlot = item?.selectedTimeSlot?.time || item?.selectedTimeSlot || '';
-    return `${item?.selectedDate || ''}|${timeSlot}`;
-  };
-
-  const isSameCartLine = (existingItem, incomingItem) => {
-    const sameService = existingItem?.serviceId && incomingItem?.serviceId
-      ? existingItem.serviceId === incomingItem.serviceId
-      : existingItem?.title === incomingItem?.title;
-    return sameService && getSlotKey(existingItem) === getSlotKey(incomingItem);
-  };
-
   // Handle adding items from navigation params
   useEffect(() => {
     if (route?.params?.addItem) {
       const newItem = route.params.addItem;
       setCartItems(prevItems => {
-        // Merge only if same service AND same slot
-        const existingIndex = prevItems.findIndex(item => isSameCartLine(item, newItem));
+        const existingIndex = prevItems.findIndex(item => item.id === newItem.id);
         if (existingIndex >= 0) {
           const updated = [...prevItems];
           updated[existingIndex].quantity += 1;
           return updated;
         }
-        // Add new item as a separate line for a different slot
         return [...prevItems, newItem];
       });
-      // Clear the route params to prevent re-adding on re-render
       navigation.setParams({ addItem: undefined });
     }
   }, [route?.params?.addItem, navigation]);
-
-  // Handle updating an existing cart line (e.g., slot re-selection after changing package/add-ons)
-  useEffect(() => {
-    if (route?.params?.updateItem) {
-      const updatedItem = route.params.updateItem;
-      setCartItems(prevItems => {
-        const idx = prevItems.findIndex(i => i?.id === updatedItem?.id);
-        if (idx < 0) return prevItems;
-        const next = [...prevItems];
-        next[idx] = { ...next[idx], ...updatedItem };
-        return next;
-      });
-      navigation.setParams({ updateItem: undefined });
-    }
-  }, [route?.params?.updateItem, navigation]);
 
   const getServiceName = (item) => {
     if (item?.serviceName) return item.serviceName;
@@ -153,7 +174,8 @@ export default function CartScreen({ navigation, route }) {
     const s = serviceDetailsById?.[serviceId];
     const list = s?.addOnServices || [];
     return list.map(addon => ({
-      imageUri: addon.image || 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=200&h=200&fit=crop',
+      imageUri: addon.image,
+      imageSource: !addon.image ? FALLBACK_IMAGE : undefined,
       title: addon.name,
       price: addon.basePrice,
       _id: addon._id,
@@ -169,12 +191,6 @@ export default function CartScreen({ navigation, route }) {
     if (item?.basePrice !== undefined && item?.basePrice !== null) return Number(item.basePrice);
     const inferred = Number(item?.price || 0) - addOnsTotal;
     return Math.max(0, inferred);
-  };
-
-  const recomputeLinePrice = (item) => {
-    const base = getBasePrice(item);
-    const addOnsTotal = getAddOnsTotal(item);
-    return Math.round(base + addOnsTotal);
   };
 
   const handleToggleAddOn = (item, addOnId) => {
@@ -202,7 +218,7 @@ export default function CartScreen({ navigation, route }) {
     }));
   };
 
-  const handlePackageSelectionChange = (item, selection) => {
+  const handlePackageSelectionChange = (item, packageData) => {
     if (!item?.id || !item?.serviceId) return;
 
     const serviceDetails = serviceDetailsById?.[item.serviceId];
@@ -210,16 +226,11 @@ export default function CartScreen({ navigation, route }) {
     const addOns = Array.isArray(item.addOns) ? item.addOns : [];
     const addOnsTotal = getAddOnsTotal(item);
 
-    const nextPackageType = selection === 'oneTime' ? 'OneTime' : selection?.type;
-    const nextPackageTimes = selection === 'oneTime' ? 1 : Number(selection?.times || 1);
-    const nextBasePrice = selection === 'oneTime'
+    const nextPackageType = packageData.type || 'OneTime';
+    const nextPackageTimes = Number(packageData.times || 1);
+    const nextBasePrice = packageData.type === 'OneTime'
       ? Number(serviceDetails?.basePrice ?? getBasePrice(item))
-      : Math.round(Number(selection?.price ?? (serviceDetails?.basePrice || 0) * nextPackageTimes));
-
-    const isNoop =
-      (item.packageType || 'OneTime') === nextPackageType &&
-      Number(item.packageTimes || 1) === nextPackageTimes;
-    if (isNoop) return;
+      : Math.round(Number(packageData.price ?? (serviceDetails?.basePrice || 0) * nextPackageTimes));
 
     const nextTitle = nextPackageType === 'OneTime'
       ? `${serviceName} - 1 Time Wash`
@@ -234,7 +245,6 @@ export default function CartScreen({ navigation, route }) {
       basePrice: nextBasePrice,
       addOns,
       price: Math.round(nextBasePrice + addOnsTotal),
-      // Clear any previous schedule so user re-selects correct slots
       selectedDate: undefined,
       selectedTimeSlot: undefined,
       scheduledSlots: undefined,
@@ -269,73 +279,49 @@ export default function CartScreen({ navigation, route }) {
     });
   };
 
-  const renderItemOptions = (item) => {
-    if (!item?.serviceId) return null;
-
-    const s = serviceDetailsById?.[item.serviceId];
-    if (!s) {
-      return (
-        <Text style={styles.optionsLoadingText}>
-          Loading packages and add ons...
-        </Text>
-      );
-    }
-
-    const oneTimePrice = Number(s?.basePrice ?? getBasePrice(item) ?? 0);
-    const initialSelected =
-      (item?.packageType || 'OneTime') === 'OneTime'
-        ? 'oneTime'
-        : {
-            section: String(item.packageType).toLowerCase(),
-            times: Number(item.packageTimes || 1),
-            type: item.packageType,
-          };
-    const mappedAddOns = getMappedAddOns(item.serviceId);
-    const selectedAddOnIds = (item?.addOns || []).map(a => a?._id || a).filter(Boolean);
-
-    return (
-      <>
-        <PricingPackages
-          oneTimePrice={oneTimePrice}
-          serviceTitle={getServiceName(item)}
-          serviceImage={item.image}
-          duration={item.duration}
-          onSelectionChange={(sel) => handlePackageSelectionChange(item, sel)}
-          packages={s?.packages || null}
-          initialSelectedPackage={initialSelected}
-        />
-
-        {mappedAddOns.length > 0 && (
-          <AddOnServicesList
-            services={mappedAddOns}
-            maxVisible={4}
-            selectedAddOns={selectedAddOnIds}
-            onToggleAddOn={(addOnId) => handleToggleAddOn(item, addOnId)}
-          />
-        )}
-      </>
-    );
-  };
-
-  const updateQuantity = (id, change) => {
-    setCartItems(items =>
-      items.map(item => {
-        if (item.id === id) {
-          const newQuantity = Math.max(1, item.quantity + change);
-          return { ...item, quantity: newQuantity };
-        }
-        return item;
-      })
-    );
-  };
-
   const removeItem = (id) => {
     setCartItems(items => items.filter(item => item.id !== id));
   };
 
+  const toggleServiceExpanded = (itemId) => {
+    setExpandedServiceId(prev => prev === itemId ? null : itemId);
+  };
+
+  const getMonthlyPackages = (serviceId) => {
+    const s = serviceDetailsById?.[serviceId];
+    if (!s?.packages?.monthly) return [];
+    return s.packages.monthly.map((pkg, index) => ({
+      id: `m${index + 1}`,
+      ...pkg,
+    }));
+  };
+
+  const getCurrentItem = () => {
+    return cartItems.length > 0 ? cartItems[0] : null;
+  };
+
+  const currentItem = getCurrentItem();
+  const serviceDetails = currentItem ? serviceDetailsById?.[currentItem.serviceId] : null;
+  const mappedAddOns = currentItem ? getMappedAddOns(currentItem.serviceId) : [];
+  const selectedAddOnIds = currentItem ? (currentItem?.addOns || []).map(a => a?._id || a).filter(Boolean) : [];
+  const monthlyPackages = currentItem ? getMonthlyPackages(currentItem.serviceId) : [];
+  const oneTimePrice = currentItem ? Number(serviceDetails?.basePrice ?? getBasePrice(currentItem) ?? 0) : 0;
+  const currentPackageType = currentItem?.packageType || 'OneTime';
+  const currentPackageTimes = currentItem?.packageTimes || 1;
+
   const subtotal = cartItems.reduce((sum, item) => sum + Number(item.price || 0) * Number(item.quantity || 1), 0);
-  const tax = subtotal * 0.18; // 18% tax
+  const tax = subtotal * 0.18;
   const total = subtotal + tax;
+  const duration = serviceDetails?.duration || '23 mins';
+
+  if (!cartLoaded) {
+    return (
+      <View style={styles.container}>
+        <StatusBar style={isLightMode ? 'dark' : 'light'} />
+        <BackHeader navigation={navigation} title="Cart" />
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -359,97 +345,161 @@ export default function CartScreen({ navigation, route }) {
           </View>
         ) : (
           <>
-            <View style={styles.itemsContainer}>
-              {cartItems.map(item => (
-                <View key={item.id}>
-                  <View style={styles.cartItem}>
-                    <Image 
-                      source={{ uri: item.image }} 
-                      style={styles.itemImage}
-                      resizeMode="cover"
+            {monthlyPackages.length > 0 && (
+                  <View style={styles.packagesSection}>
+                    <Text style={styles.packagesTitle}>Monthly Packages</Text>
+                    <FlatList
+                      data={monthlyPackages}
+                      horizontal
+                      showsHorizontalScrollIndicator={false}
+                      keyExtractor={(item) => item.id}
+                      renderItem={({ item }) => {
+                        const isSelected = currentPackageType === 'Monthly' && currentPackageTimes === item.times;
+                        return (
+                          <MonthlyPackageCard
+                            title={`${item.times}x Wash/Month`}
+                            price={item.price}
+                            perWashPrice={item.perWash}
+                            times={item.times}
+                            discount={item.discount}
+                            packageId={item.id}
+                            isSelected={isSelected}
+                            onSelect={() => handlePackageSelectionChange(currentItem, {
+                              type: 'Monthly',
+                              times: item.times,
+                              price: item.price,
+                            })}
+                          />
+                        );
+                      }}
+                      contentContainerStyle={styles.packagesList}
                     />
-                    <View style={styles.itemDetails}>
-                      <Text style={styles.itemTitle}>{item.title}</Text>
-                      <Text style={styles.itemPrice}>₹{item.price}</Text>
-                      {Array.isArray(item?.addOns) && item.addOns.length > 0 && (
-                        <Text style={styles.addOnsText}>
-                          Add Ons: {item.addOns.length} • +₹{getAddOnsTotal(item)}
-                        </Text>
-                      )}
-                      <View style={styles.quantityContainer}>
-                        <TouchableOpacity 
-                          style={styles.quantityButton}
-                          onPress={() => updateQuantity(item.id, -1)}
-                        >
-                          <MaterialCommunityIcons name="minus" size={18} color={theme.textPrimary} />
-                        </TouchableOpacity>
-                        <Text style={styles.quantityText}>{item.quantity}</Text>
-                        <TouchableOpacity 
-                          style={styles.quantityButton}
-                          onPress={() => updateQuantity(item.id, 1)}
-                        >
-                          <MaterialCommunityIcons name="plus" size={18} color={theme.textPrimary} />
-                        </TouchableOpacity>
-                      </View>
-                    </View>
-                    <View style={styles.itemRightSection}>
-                      <Text style={styles.itemTotalPrice}>
-                        ₹{Number(item.price || 0) * Number(item.quantity || 1)}
-                      </Text>
-                      <TouchableOpacity 
-                        style={styles.removeButton}
-                        onPress={() => removeItem(item.id)}
-                      >
-                        <MaterialCommunityIcons name="delete-outline" size={20} color={theme.danger} />
-                      </TouchableOpacity>
-                    </View>
                   </View>
+                )}
 
-                  {/* Always show options per line item (no toggle button) */}
-                  {item?.serviceId ? (
-                    <View style={styles.optionsContainer}>
-                      <Text style={styles.optionsTitle}>Customize: {getServiceName(item)}</Text>
-                      {renderItemOptions(item)}
-                    </View>
-                  ) : null}
+            {/* Vehicle Header */}
+            {vehicle && (
+              <View style={styles.vehicleHeader}>
+                <View style={styles.vehicleInfo}>
+                  <Image 
+                    source={FALLBACK_IMAGE}
+                    style={styles.vehicleImage}
+                    resizeMode="cover"
+                  />
+                  <Text style={styles.vehicleName}>{vehicle.type} - {vehicle.model}</Text>
                 </View>
-              ))}
-            </View>
+                <TouchableOpacity onPress={() => navigation.navigate('VehicleDetails', { returnTo: 'Cart' })}>
+                  <MaterialCommunityIcons name="delete-outline" size={24} color="#FF4444" />
+                </TouchableOpacity>
+              </View>
+            )}
 
-            <View style={styles.summaryContainer}>
-              <View style={styles.summaryRow}>
-                <Text style={styles.summaryLabel}>Subtotal</Text>
-                <Text style={styles.summaryValue}>₹{subtotal}</Text>
-              </View>
-              <View style={styles.summaryRow}>
-                <Text style={styles.summaryLabel}>Tax (18%)</Text>
-                <Text style={styles.summaryValue}>₹{tax.toFixed(2)}</Text>
-              </View>
-              <View style={[styles.summaryRow, styles.totalRow]}>
-                <Text style={styles.totalLabel}>Total</Text>
-                <Text style={styles.totalValue}>₹{total.toFixed(2)}</Text>
-              </View>
-            </View>
+            {/* Service Items Section */}
+            {currentItem && (
+              <View style={styles.serviceItemsSection}>
+                <View style={styles.serviceItemsHeader}>
+                  <Text style={styles.serviceItemsTitle}>Service Items</Text>
+                  <TouchableOpacity onPress={() => toggleServiceExpanded(currentItem.id)}>
+                    <View style={styles.collapseButton}>
+                      <Text style={styles.collapseText}>Collapse</Text>
+                      <MaterialCommunityIcons 
+                        name={expandedServiceId === currentItem.id ? 'chevron-down' : 'chevron-up'} 
+                        size={18} 
+                        color="#007AFF" 
+                      />
+                    </View>
+                  </TouchableOpacity>
+                </View>
+                
+                {expandedServiceId !== currentItem.id && (
+                  <View style={styles.serviceItemCard}>
+                    <Text style={styles.serviceItemName}>
+                      ({currentPackageType === 'OneTime' ? 'Bucket Wash' : 'Monthly Package'}) {getServiceName(currentItem)}
+                      {currentPackageType !== 'OneTime' && ` & ${currentPackageType === 'Monthly' ? 'Tyre Polish Only' : ''}`}
+                    </Text>
+                    <Text style={styles.serviceItemPrice}>₹{currentItem.price}</Text>
+                  </View>
+                )}
 
-            <TouchableOpacity 
-              style={styles.checkoutButton}
-              onPress={() => {
-                const incomplete = cartItems.find(i => !isScheduleComplete(i));
-                if (incomplete) {
-                  openSlotSelection(incomplete);
-                  return;
-                }
-                navigation.navigate('Checkout', { cartItems, subtotal, tax, total });
-              }}
-            >
-              <Text style={styles.checkoutButtonText}>
-                {cartItems.find(i => !isScheduleComplete(i)) ? 'Select Slot(s)' : 'Checkout'}
-              </Text>
-              <MaterialCommunityIcons name="arrow-right" size={20} color="#000000" />
-            </TouchableOpacity>
+                {/* Add Ons Section */}
+                {mappedAddOns.length > 0 && (
+                  <View style={styles.addOnsSection}>
+                    <Text style={styles.addOnsTitle}>Add Ons</Text>
+                    <FlatList
+                      data={mappedAddOns}
+                      horizontal
+                      showsHorizontalScrollIndicator={false}
+                      keyExtractor={(item) => item._id || item.title}
+                      renderItem={({ item }) => (
+                        <AddOnCard
+                          title={item.title}
+                          price={item.price}
+                          imageUri={item.imageUri}
+                          imageSource={item.imageSource}
+                          addOnId={item._id}
+                          isSelected={selectedAddOnIds.includes(item._id)}
+                          onToggle={() => handleToggleAddOn(currentItem, item._id)}
+                        />
+                      )}
+                      contentContainerStyle={styles.addOnsList}
+                    />
+                  </View>
+                )}
+
+                {/* Monthly Packages Section */}
+                
+              </View>
+            )}
+
+            {/* Delivery Address Section */}
+            <View style={styles.deliverySection}>
+              <View style={styles.deliveryHeader}>
+                <Text style={styles.deliveryLabel}>Delivering service at</Text>
+                <TouchableOpacity onPress={() => navigation.navigate('Addresses', { returnTo: 'Cart' })}>
+                  <Text style={styles.editButton}>Edit</Text>
+                </TouchableOpacity>
+              </View>
+              {address ? (
+                <View style={styles.addressRow}>
+                  <MaterialCommunityIcons name="home" size={20} color="#000000" />
+                  <Text style={styles.addressText}>{address.address}</Text>
+                </View>
+              ) : (
+                <TouchableOpacity 
+                  style={styles.addAddressButton}
+                  onPress={() => navigation.navigate('Addresses', { returnTo: 'Cart' })}
+                >
+                  <Text style={styles.addAddressText}>Add Address</Text>
+                </TouchableOpacity>
+              )}
+            </View>
           </>
         )}
       </ScrollView>
+
+      {/* Bottom Action Bar */}
+      {cartItems.length > 0 && (
+        <View style={styles.bottomBar}>
+          <View style={styles.priceSection}>
+            <Text style={styles.priceAmount}>₹{total.toFixed(0)}</Text>
+            <Text style={styles.durationText}>{duration}</Text>
+          </View>
+          <TouchableOpacity 
+            style={styles.selectSlotButton}
+            onPress={() => {
+              const incomplete = cartItems.find(i => !isScheduleComplete(i));
+              if (incomplete) {
+                openSlotSelection(incomplete);
+              } else {
+                navigation.navigate('Checkout', { cartItems, subtotal, tax, total });
+              }
+            }}
+          >
+            <Text style={styles.selectSlotText}>Select Slot</Text>
+            <MaterialCommunityIcons name="chevron-right" size={20} color="#FFFFFF" />
+          </TouchableOpacity>
+        </View>
+      )}
     </View>
   );
 }
@@ -457,7 +507,7 @@ export default function CartScreen({ navigation, route }) {
 const createStyles = theme => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: theme.background,
+    backgroundColor: '#FFFFFF',
   },
   scrollView: {
     flex: 1,
@@ -488,148 +538,181 @@ const createStyles = theme => StyleSheet.create({
     fontWeight: '600',
     color: '#000000',
   },
-  itemsContainer: {
+  deliverySection: {
     paddingHorizontal: 16,
-    paddingTop: 16,
+    paddingTop: 20,
+    paddingBottom: 16,
   },
-  cartItem: {
+  deliveryHeader: {
     flexDirection: 'row',
-    backgroundColor: theme.cardBackground,
-    borderRadius: 12,
-    padding: 12,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: theme.cardBorder,
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
   },
-  itemImage: {
-    width: 80,
-    height: 80,
-    borderRadius: 8,
-    marginRight: 12,
+  deliveryLabel: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#000000',
   },
-  itemDetails: {
+  editButton: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#007AFF',
+  },
+  addressRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  addressText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#000000',
     flex: 1,
   },
-  itemTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: theme.textPrimary,
-    marginBottom: 4,
+  addAddressButton: {
+    paddingVertical: 8,
   },
-  itemPrice: {
+  addAddressText: {
     fontSize: 14,
-    color: '#0B0B0B',
-    marginBottom: 8,
+    fontWeight: '700',
+    color: '#007AFF',
   },
-  addOnsText: {
-    fontSize: 12,
-    color: theme.textSecondary,
-    marginBottom: 6,
+  vehicleHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderTopWidth: 1,
+    borderBottomWidth: 1,
+    borderColor: '#E5E5E5',
   },
-  quantityContainer: {
+  vehicleInfo: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 12,
   },
-  quantityButton: {
-    width: 28,
-    height: 28,
-    borderRadius: 6,
-    backgroundColor: theme.cardBorder,
-    justifyContent: 'center',
-    alignItems: 'center',
+  vehicleImage: {
+    width: 40,
+    height: 40,
+    borderRadius: 8,
   },
-  quantityText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: theme.textPrimary,
-    marginHorizontal: 12,
-    minWidth: 20,
-    textAlign: 'center',
-  },
-  itemRightSection: {
-    alignItems: 'flex-end',
-    justifyContent: 'space-between',
-  },
-  optionsContainer: {
-    marginHorizontal: 16,
-    marginTop: 8,
-    marginBottom: 14,
-  },
-  optionsTitle: {
+  vehicleName: {
     fontSize: 16,
     fontWeight: '700',
-    color: theme.textPrimary,
-    marginBottom: 10,
+    color: '#000000',
   },
-  optionsLoadingText: {
-    fontSize: 13,
-    color: theme.textSecondary,
-    marginBottom: 10,
+  serviceItemsSection: {
+    paddingHorizontal: 16,
+    paddingTop: 20,
   },
-  itemTotalPrice: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#0B0B0B',
-    marginBottom: 8,
-  },
-  removeButton: {
-    padding: 4,
-  },
-  summaryContainer: {
-    backgroundColor: theme.cardBackground,
-    marginHorizontal: 16,
-    marginTop: 16,
-    padding: 16,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: theme.cardBorder,
-  },
-  summaryRow: {
+  serviceItemsHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 12,
   },
-  summaryLabel: {
-    fontSize: 14,
-    color: theme.textSecondary,
+  serviceItemsTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#007AFF',
   },
-  summaryValue: {
-    fontSize: 14,
-    color: '#0B0B0B',
-    fontWeight: '600',
-  },
-  totalRow: {
-    borderTopWidth: 1,
-    borderTopColor: theme.cardBorder,
-    paddingTop: 12,
-    marginTop: 4,
-    marginBottom: 0,
-  },
-  totalLabel: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: theme.textPrimary,
-  },
-  totalValue: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#0B0B0B',
-  },
-  checkoutButton: {
+  collapseButton: {
     flexDirection: 'row',
-    backgroundColor: LIGHT_BLUE,
-    marginHorizontal: 16,
-    marginTop: 16,
-    paddingVertical: 16,
-    borderRadius: 12,
-    justifyContent: 'center',
     alignItems: 'center',
+    gap: 4,
   },
-  checkoutButtonText: {
-    fontSize: 18,
-    fontWeight: 'bold',
+  collapseText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#007AFF',
+  },
+  serviceItemCard: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 12,
+  },
+  serviceItemName: {
+    fontSize: 14,
+    fontWeight: '600',
     color: '#000000',
-    marginRight: 8,
+    flex: 1,
+    marginRight: 12,
+  },
+  serviceItemPrice: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#000000',
+  },
+  addOnsSection: {
+    marginTop: 20,
+    marginBottom: 20,
+  },
+  addOnsTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#000000',
+    marginBottom: 12,
+  },
+  addOnsList: {
+    paddingRight: 16,
+  },
+  packagesSection: {
+    marginTop: 20,
+    marginBottom: 20,
+  },
+  packagesTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#000000',
+    marginBottom: 12,
+  },
+  packagesList: {
+    paddingRight: 16,
+  },
+  bottomBar: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: '#FFFFFF',
+    borderTopWidth: 1,
+    borderTopColor: '#E5E5E5',
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  priceSection: {
+    flex: 1,
+  },
+  priceAmount: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#007AFF',
+    marginBottom: 4,
+  },
+  durationText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#666666',
+  },
+  selectSlotButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#000000',
+    paddingVertical: 14,
+    paddingHorizontal: 24,
+    borderRadius: 8,
+    gap: 8,
+  },
+  selectSlotText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#FFFFFF',
   },
 });
