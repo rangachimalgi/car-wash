@@ -6,9 +6,9 @@ import { useTheme } from '../theme/ThemeContext';
 const { width } = Dimensions.get('window');
 
 const DEFAULT_ITEMS = [
-  { id: 'aad1', name: 'Aadarsh', image: require('../assets/carImage.jpeg') },
-  { id: 'dol1', name: 'Dolly Parma', image: require('../assets/carImage.jpeg') },
-  { id: 'par1', name: 'Parth', image: require('../assets/carImage.jpeg') },
+  { id: 'aad1', name: 'Rohit', image: require('../assets/cartestimonial.jpeg') },
+  { id: 'dol1', name: 'Elizebeth', image: require('../assets/cartestimonialone.jpeg') },
+  { id: 'par1', name: 'Ron', image: require('../assets/cartestimonialtwo.jpeg') },
 ];
 
 export default function CustomerTestimonials({
