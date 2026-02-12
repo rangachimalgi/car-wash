@@ -14,8 +14,8 @@ const cardWidth = (sliderCardWidth - 48) / 3; // 3 cards with padding
 const sliderImages = [
   { source: require('../assets/carbanner.jpeg'), key: 'special1' },
   { source: require('../assets/carbannertwo.jpeg'), key: 'special2' },
-  { source: require('../assets/carbanner.jpeg'), key: 'special3' },
-  { source: require('../assets/carbannertwo.jpeg'), key: 'special4' },
+  { source: require('../assets/carbannerthree.jpeg'), key: 'special3' },
+  { source: require('../assets/carbannerfour.jpeg'), key: 'special4' },
 ];
 
 export default function HomeScreen({ navigation }) {
@@ -170,8 +170,8 @@ export default function HomeScreen({ navigation }) {
               onPress={() => navigation.navigate('CarWash')}
               activeOpacity={0.9}
             >
-              <Text style={styles.halfCardTitle}>CAR WASH</Text>
-              <Text style={styles.halfCardTitle}>& CARE</Text>
+              <Text style={styles.halfCardTitle}>Car Wash</Text>
+              <Text style={styles.halfCardTitle}>& Care</Text>
               <View style={styles.halfCardImageWrap}>
                 <Image
                   source={require('../assets/carpicseven.png')}
@@ -186,11 +186,11 @@ export default function HomeScreen({ navigation }) {
               onPress={() => navigation.navigate('CarWash')}
               activeOpacity={0.9}
             >
-              <Text style={styles.halfCardTitle}>CAR WASH</Text>
-              <Text style={styles.halfCardTitle}>PACKAGES</Text>
-              <View style={styles.offerPill}>
+              <Text style={styles.halfCardTitle}>Monthly Packages</Text>
+              {/* <Text style={styles.halfCardTitle}>PACKAGES</Text> */}
+              {/* <View style={styles.offerPill}>
                 <Text style={styles.offerPillText}>EXTRA 50% OFF</Text>
-              </View>
+              </View> */}
               <View style={styles.halfCardImageWrap}>
                 <Image
                   source={require('../assets/carpicnine.png')}
@@ -215,7 +215,7 @@ export default function HomeScreen({ navigation }) {
               />
             </View>
             <View style={styles.wideBikeTextWrap}>
-              <Text style={styles.wideBikeTitle}>BIKE WASH & CARE</Text>
+              <Text style={styles.wideBikeTitle}>Bike Wash & Care</Text>
               <Text style={styles.wideBikeSubtitle}>Bike / Scooter Wash</Text>
             </View>
           </TouchableOpacity>
