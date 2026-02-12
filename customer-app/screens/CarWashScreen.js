@@ -14,7 +14,7 @@ import { useTheme } from '../theme/ThemeContext';
 
 const { height } = Dimensions.get('window');
 
-const FALLBACK_CAR_IMAGE = require('../assets/carImage.jpeg');
+const FALLBACK_CAR_IMAGE = require('../assets/cartestimonial.jpeg');
 const FALLBACK_ADDON_IMAGE = require('../assets/carwash.png');
 
 const FALLBACK_ADD_ONS = [

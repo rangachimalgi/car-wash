@@ -296,7 +296,7 @@ const createStyles = (theme) =>
       paddingHorizontal: 16,
       paddingTop: 16,
       paddingBottom: 10,
-      backgroundColor: '#CBD5E1',
+      backgroundColor: '#536263',
       borderBottomWidth: 1,
       borderBottomColor: theme.cardBorder,
     },
@@ -310,7 +310,7 @@ const createStyles = (theme) =>
       flex: 1,
       fontSize: 20,
       fontWeight: '600',
-      color: '#0B0B0B',
+      color: '#ffffff',
     },
     imageContainer: {
       position: 'relative',
