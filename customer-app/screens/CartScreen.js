@@ -45,11 +45,21 @@ export default function CartScreen({ navigation, route }) {
   const isVehicleValidForService = useCallback((vehicleType, serviceCategory) => {
     if (!serviceCategory || !vehicleType) return true; // Allow if unknown
     
+    const vehicleTypeLower = vehicleType?.toLowerCase() || '';
+    
     if (serviceCategory === 'CarWash') {
-      return vehicleType === 'Car' && !vehicleType.toLowerCase().includes('bike');
+      // Only allow 4-wheelers (cars)
+      return vehicleTypeLower === '4wheeler' || 
+             vehicleTypeLower === 'car' ||
+             (vehicleTypeLower.includes('4') && vehicleTypeLower.includes('wheeler')) ||
+             (!vehicleTypeLower.includes('2') && !vehicleTypeLower.includes('bike'));
     }
     if (serviceCategory === 'BikeWash') {
-      return vehicleType === 'Bike' || vehicleType.toLowerCase().includes('bike');
+      // Only allow 2-wheelers (bikes)
+      return vehicleTypeLower === '2wheeler' || 
+             vehicleTypeLower === 'bike' ||
+             vehicleTypeLower.includes('bike') ||
+             (vehicleTypeLower.includes('2') && vehicleTypeLower.includes('wheeler'));
     }
     return true;
   }, []);
@@ -397,18 +407,38 @@ export default function CartScreen({ navigation, route }) {
     if (!serviceCategory) return allVehicles;
     
     if (serviceCategory === 'CarWash') {
-      return allVehicles.filter(v => 
-        v.vehicleType === 'Car' && 
-        !v.vehicleModel?.toLowerCase().includes('bike') &&
-        !v.vehicleType?.toLowerCase().includes('bike')
-      );
+      // Only show 4-wheelers (cars)
+      return allVehicles.filter(v => {
+        const vehicleType = (v.vehicleType || '').toLowerCase();
+        const vehicleModel = (v.vehicleModel || '').toLowerCase();
+        
+        // Check if it's a 4-wheeler
+        const is4Wheeler = vehicleType === '4wheeler' || 
+                          vehicleType === 'car' ||
+                          (vehicleType.includes('4') && vehicleType.includes('wheeler'));
+        
+        // Exclude bikes
+        const isBike = vehicleType.includes('2wheeler') ||
+                      vehicleType.includes('bike') ||
+                      vehicleType.includes('2') && vehicleType.includes('wheeler') ||
+                      vehicleModel.includes('bike');
+        
+        return is4Wheeler && !isBike;
+      });
     }
     if (serviceCategory === 'BikeWash') {
-      return allVehicles.filter(v => 
-        v.vehicleType === 'Bike' || 
-        v.vehicleModel?.toLowerCase().includes('bike') ||
-        v.vehicleType?.toLowerCase().includes('bike')
-      );
+      // Only show 2-wheelers (bikes)
+      return allVehicles.filter(v => {
+        const vehicleType = (v.vehicleType || '').toLowerCase();
+        const vehicleModel = (v.vehicleModel || '').toLowerCase();
+        
+        // Check if it's a 2-wheeler
+        return vehicleType === '2wheeler' || 
+               vehicleType === 'bike' ||
+               vehicleType.includes('bike') ||
+               (vehicleType.includes('2') && vehicleType.includes('wheeler')) ||
+               vehicleModel.includes('bike');
+      });
     }
     return allVehicles;
   }, [allVehicles, serviceCategory]);

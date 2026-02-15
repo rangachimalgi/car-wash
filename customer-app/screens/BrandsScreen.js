@@ -304,7 +304,7 @@ export default function BrandsScreen({ navigation, route }) {
     
     const query = debouncedSearchQuery.toLowerCase().trim();
     
-    // Search by brand name first (simpler and faster)
+    // Search by brand name
     const allBrands = getAllBrands();
     const brandMatches = allBrands
       .filter(brand => brand.name.toLowerCase().includes(query))
@@ -314,18 +314,33 @@ export default function BrandsScreen({ navigation, route }) {
         logoUrl: getBrandLogoUrl(brand.name),
       }));
     
-    // If no brand matches, then search by model name (more expensive)
-    if (brandMatches.length === 0) {
-      const modelMatches = searchBrandsByModel(debouncedSearchQuery);
-      const modelMatchesWithLogos = modelMatches.map(brand => ({
-        ...brand,
-        type: 'brand',
-        logoUrl: getBrandLogoUrl(brand.name),
-      }));
+    // Also search by model name to find brands that have matching models
+    const modelMatches = searchBrandsByModel(debouncedSearchQuery);
+    const modelMatchesWithLogos = modelMatches.map(brand => ({
+      ...brand,
+      type: 'brand',
+      logoUrl: getBrandLogoUrl(brand.name),
+    }));
+    
+    // Combine both results and remove duplicates
+    const combinedResults = [...brandMatches];
+    const brandNamesSet = new Set(brandMatches.map(b => b.name.toLowerCase()));
+    
+    // Add model matches that aren't already in brand matches
+    modelMatchesWithLogos.forEach(brand => {
+      if (!brandNamesSet.has(brand.name.toLowerCase())) {
+        combinedResults.push(brand);
+        brandNamesSet.add(brand.name.toLowerCase());
+      }
+    });
+    
+    // If we have results from model search, prioritize them if no direct brand match
+    // Otherwise return combined results
+    if (brandMatches.length === 0 && modelMatchesWithLogos.length > 0) {
       return modelMatchesWithLogos;
     }
     
-    return brandMatches;
+    return combinedResults.length > 0 ? combinedResults : brandMatches;
   }, [debouncedSearchQuery, brandsData]);
   
   const handleBrandSelect = useCallback((brand) => {
@@ -403,7 +418,7 @@ export default function BrandsScreen({ navigation, route }) {
           />
           <TextInput
             style={[styles.searchInput, { color: theme.textPrimary }]}
-            placeholder="Search &quot;Audi A4&quot;"
+            placeholder="Search brand or model (e.g., &quot;Audi&quot; or &quot;A4&quot;)"
             placeholderTextColor={theme.textSecondary}
             value={searchQuery}
             onChangeText={setSearchQuery}
@@ -470,9 +485,9 @@ const styles = StyleSheet.create({
   cantFindButton: {
     backgroundColor: '#FFD700',
     paddingHorizontal: 10,
-    paddingVertical: 6,
+    paddingVertical: 10,
     borderRadius: 6,
-    maxWidth: 130,
+    maxWidth: 140,
   },
   cantFindButtonText: {
     fontSize: 10,
