@@ -31,25 +31,33 @@ export default function CarModelsScreen({ navigation, route }) {
     loadPhone().catch(error => console.warn('Failed to load phone:', error));
   }, []);
 
+  // Track loaded brand to prevent unnecessary reloads
+  const [loadedBrand, setLoadedBrand] = useState('');
+  
+  const loadModels = React.useCallback((brand) => {
+    if (!brand || brand === loadedBrand) return; // Skip if already loaded
+    setLoading(true);
+    setLoadedBrand(brand);
+    // Use requestAnimationFrame for better performance (non-blocking)
+    requestAnimationFrame(() => {
+      try {
+        // Get models from local data (limited to 20)
+        const brandModels = getModelsForBrand(brand, 20);
+        setModels(brandModels);
+      } catch (err) {
+        console.error('Error loading models:', err);
+        setModels([]);
+      } finally {
+        setLoading(false);
+      }
+    });
+  }, [loadedBrand]);
+
   useEffect(() => {
-    if (brandName) {
+    if (brandName && brandName !== loadedBrand) {
       loadModels(brandName);
     }
-  }, [brandName]);
-
-  const loadModels = (brand) => {
-    setLoading(true);
-    try {
-      // Get models from local data (limited to 20)
-      const brandModels = getModelsForBrand(brand, 20);
-      setModels(brandModels);
-    } catch (err) {
-      console.error('Error loading models:', err);
-      setModels([]);
-    } finally {
-      setLoading(false);
-    }
-  };
+  }, [brandName, loadedBrand, loadModels]);
 
   const handleModelSelect = async (modelName) => {
     console.log('Model selected:', modelName, 'for brand:', brandName);
@@ -113,9 +121,21 @@ export default function CarModelsScreen({ navigation, route }) {
 
   const [imageErrors, setImageErrors] = useState({});
 
-  const handleImageError = (modelIndex) => {
-    setImageErrors(prev => ({ ...prev, [modelIndex]: true }));
-  };
+  const handleImageError = React.useCallback((modelIndex) => {
+    setImageErrors(prev => {
+      // Only update if not already in errors (prevent unnecessary re-renders)
+      if (prev[modelIndex]) return prev;
+      return { ...prev, [modelIndex]: true };
+    });
+  }, []);
+
+  // Don't reset image errors on unmount - keep them cached to prevent reloading
+  // Only reset search query on unmount
+  useEffect(() => {
+    return () => {
+      setSearchQuery('');
+    };
+  }, []);
 
   // Filter models based on search query
   const filteredModels = useMemo(() => {

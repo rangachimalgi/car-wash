@@ -38,12 +38,29 @@ export const addVehicle = async (phone, vehicleData) => {
 export const deleteVehicle = async (phone, vehicleId) => {
   try {
     await api.delete(`/users/${phone}/vehicles/${vehicleId}`);
+    // Also update local storage after successful API call
+    const vehicles = await getVehicles(phone);
+    const filtered = vehicles.filter(v => {
+      const id = v._id || v.id;
+      return id && id.toString() !== vehicleId.toString();
+    });
+    await AsyncStorage.setItem(`userVehicles:${phone}`, JSON.stringify(filtered));
+    return true;
   } catch (error) {
     console.warn('Error deleting vehicle from server:', error);
     // Delete locally as fallback
-    const vehicles = await getVehicles(phone);
-    const filtered = vehicles.filter(v => (v._id || v.id) !== vehicleId);
-    await AsyncStorage.setItem(`userVehicles:${phone}`, JSON.stringify(filtered));
+    try {
+      const vehicles = await getVehicles(phone);
+      const filtered = vehicles.filter(v => {
+        const id = v._id || v.id;
+        return id && id.toString() !== vehicleId.toString();
+      });
+      await AsyncStorage.setItem(`userVehicles:${phone}`, JSON.stringify(filtered));
+      return true;
+    } catch (localError) {
+      console.error('Error deleting vehicle locally:', localError);
+      throw localError;
+    }
   }
 };
 

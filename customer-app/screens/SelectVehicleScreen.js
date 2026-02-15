@@ -28,55 +28,122 @@ export default function SelectVehicleScreen({ navigation }) {
     loadPhone().catch(error => console.warn('Failed to load phone:', error));
   }, []);
 
-  const loadVehicles = async () => {
+  const loadVehicles = React.useCallback(async (isCancelledRef) => {
     if (!phone) return;
     
     setLoading(true);
+    
     try {
-      const vehiclesData = await getVehicles(phone);
-      setVehicles(vehiclesData || []);
-      
-      // Load selected vehicle from AsyncStorage
-      const selectedId = await AsyncStorage.getItem(`selectedVehicleId:${phone}`);
-      setSelectedVehicleId(selectedId);
-    } catch (error) {
-      console.error('Error loading vehicles:', error);
-      // Try to load from AsyncStorage as fallback
+      // Try AsyncStorage first (faster)
       try {
         const storedVehicles = await AsyncStorage.getItem(`userVehicles:${phone}`);
         if (storedVehicles) {
-          setVehicles(JSON.parse(storedVehicles));
+          const parsed = JSON.parse(storedVehicles);
+          if (!isCancelledRef.current) {
+            setVehicles(parsed);
+            setLoading(false);
+          }
+          // Load in background from API to sync (only if not cancelled)
+          if (!isCancelledRef.current) {
+            getVehicles(phone).then(vehiclesData => {
+              if (!isCancelledRef.current && vehiclesData && vehiclesData.length > 0) {
+                setVehicles(vehiclesData);
+                AsyncStorage.setItem(`userVehicles:${phone}`, JSON.stringify(vehiclesData));
+              }
+            }).catch(() => {}); // Silent fail
+          }
+        } else {
+          // No local cache, fetch from API
+          const vehiclesData = await getVehicles(phone);
+          if (!isCancelledRef.current) {
+            setVehicles(vehiclesData || []);
+            if (vehiclesData && vehiclesData.length > 0) {
+              AsyncStorage.setItem(`userVehicles:${phone}`, JSON.stringify(vehiclesData));
+            }
+          }
         }
       } catch (e) {
-        console.error('Error loading from AsyncStorage:', e);
+        // Fallback to API
+        if (!isCancelledRef.current) {
+          const vehiclesData = await getVehicles(phone);
+          setVehicles(vehiclesData || []);
+        }
       }
+      
+      // Load selected vehicle from AsyncStorage
+      if (!isCancelledRef.current) {
+        const selectedId = await AsyncStorage.getItem(`selectedVehicleId:${phone}`);
+        setSelectedVehicleId(selectedId);
+      }
+    } catch (error) {
+      console.error('Error loading vehicles:', error);
     } finally {
-      setLoading(false);
+      if (!isCancelledRef.current) {
+        setLoading(false);
+      }
     }
-  };
+  }, [phone]);
 
   useFocusEffect(
     React.useCallback(() => {
-      loadVehicles();
-    }, [phone])
+      const isCancelledRef = { current: false };
+      loadVehicles(isCancelledRef);
+      return () => {
+        isCancelledRef.current = true;
+      };
+    }, [loadVehicles])
   );
 
-  const handleSelectVehicle = async (vehicleId) => {
+  // Reset state on unmount
+  React.useEffect(() => {
+    return () => {
+      setVehicles([]);
+      setSelectedVehicleId(null);
+      setLoading(true);
+    };
+  }, []);
+
+  const handleSelectVehicle = React.useCallback(async (vehicleId) => {
+    if (!phone) return;
+    
+    // Update UI immediately
+    setSelectedVehicleId(vehicleId);
+    await AsyncStorage.setItem(`selectedVehicleId:${phone}`, vehicleId);
+    
+    // Sync to server in background (non-blocking)
+    setSelectedVehicle(phone, vehicleId).catch(error => {
+      console.error('Error syncing selected vehicle:', error);
+    });
+  }, [phone]);
+
+  const reloadVehicles = React.useCallback(async () => {
     if (!phone) return;
     
     try {
-      await setSelectedVehicle(phone, vehicleId);
-      setSelectedVehicleId(vehicleId);
-      await AsyncStorage.setItem(`selectedVehicleId:${phone}`, vehicleId);
+      // Try AsyncStorage first (faster)
+      const storedVehicles = await AsyncStorage.getItem(`userVehicles:${phone}`);
+      if (storedVehicles) {
+        const parsed = JSON.parse(storedVehicles);
+        setVehicles(parsed);
+      }
+      
+      // Sync from API in background
+      getVehicles(phone).then(vehiclesData => {
+        if (vehiclesData && vehiclesData.length >= 0) {
+          setVehicles(vehiclesData);
+          if (vehiclesData.length > 0) {
+            AsyncStorage.setItem(`userVehicles:${phone}`, JSON.stringify(vehiclesData));
+          } else {
+            AsyncStorage.removeItem(`userVehicles:${phone}`);
+          }
+        }
+      }).catch(() => {});
     } catch (error) {
-      console.error('Error selecting vehicle:', error);
-      // Still save locally
-      setSelectedVehicleId(vehicleId);
-      await AsyncStorage.setItem(`selectedVehicleId:${phone}`, vehicleId);
+      console.error('Error reloading vehicles:', error);
     }
-  };
+  }, [phone]);
 
-  const handleDeleteVehicle = (vehicleId) => {
+  const handleDeleteVehicle = React.useCallback((vehicleId) => {
     Alert.alert(
       'Delete Vehicle',
       'Are you sure you want to delete this vehicle?',
@@ -89,24 +156,34 @@ export default function SelectVehicleScreen({ navigation }) {
             if (!phone) return;
             
             try {
+              // Update UI immediately (optimistic update)
+              setVehicles(prev => prev.filter(v => {
+                const id = v._id || v.id;
+                return id && id.toString() !== vehicleId.toString();
+              }));
+              
+              // Delete from server/AsyncStorage
               await deleteVehicle(phone, vehicleId);
-              // Reload vehicles
-              await loadVehicles();
               
               // If deleted vehicle was selected, clear selection
-              if (selectedVehicleId === vehicleId) {
+              if (selectedVehicleId === vehicleId || selectedVehicleId?.toString() === vehicleId.toString()) {
                 setSelectedVehicleId(null);
                 await AsyncStorage.removeItem(`selectedVehicleId:${phone}`);
               }
+              
+              // Reload to ensure sync
+              await reloadVehicles();
             } catch (error) {
               console.error('Error deleting vehicle:', error);
+              // Reload on error to restore correct state
+              await reloadVehicles();
               Alert.alert('Error', 'Failed to delete vehicle. Please try again.');
             }
           },
         },
       ]
     );
-  };
+  }, [phone, selectedVehicleId, reloadVehicles]);
 
   const handleAddNewVehicle = () => {
     navigation.navigate('VehicleDetails');
@@ -121,7 +198,19 @@ export default function SelectVehicleScreen({ navigation }) {
 
   const formatVehicleName = (vehicleModel) => {
     // Parse "Hyundai Elantra" to "Elantra, Hyundai"
+    // But keep "2 wheeler bike" or "2 wheeler / bike" as-is
     if (!vehicleModel) return '';
+    
+    // Check if it's a 2 wheeler bike (don't reformat)
+    if (vehicleModel.toLowerCase().includes('2 wheeler') || vehicleModel.toLowerCase().includes('bike')) {
+      // If it doesn't have the slash, add it for display
+      if (vehicleModel.includes('2 wheeler') && !vehicleModel.includes('/')) {
+        return vehicleModel.replace('2 wheeler bike', '2 wheeler / bike');
+      }
+      return vehicleModel;
+    }
+    
+    // For car models like "Hyundai Elantra", format to "Elantra, Hyundai"
     const parts = vehicleModel.split(' ');
     if (parts.length >= 2) {
       const brand = parts[0];

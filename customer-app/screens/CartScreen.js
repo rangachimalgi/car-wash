@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Dimensions, Alert, FlatList } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Dimensions, Alert, FlatList, Modal } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import BackHeader from '../components/BackHeader';
@@ -9,6 +9,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTheme } from '../theme/ThemeContext';
 import { getServiceById } from '../services/serviceApi';
 import { useFocusEffect } from '@react-navigation/native';
+import { getVehicles } from '../services/vehicleApi';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const { width } = Dimensions.get('window');
 const FALLBACK_IMAGE = require('../assets/carwash.png');
@@ -20,8 +22,37 @@ export default function CartScreen({ navigation, route }) {
   const [expandedServiceId, setExpandedServiceId] = useState(null);
   const [address, setAddress] = useState(null);
   const [vehicle, setVehicle] = useState(null);
+  const [allVehicles, setAllVehicles] = useState([]);
+  const [showVehicleModal, setShowVehicleModal] = useState(false);
   const { theme, isLightMode } = useTheme();
+  const insets = useSafeAreaInsets();
   const styles = useMemo(() => createStyles(theme), [theme]);
+
+  const getCurrentItem = () => {
+    return cartItems.length > 0 ? cartItems[0] : null;
+  };
+
+  const currentItem = getCurrentItem();
+
+  // Get service category from cart items - memoized
+  const serviceCategory = useMemo(() => {
+    if (!cartItems.length || !currentItem) return null;
+    const serviceDetails = serviceDetailsById?.[currentItem.serviceId];
+    return serviceDetails?.category || null;
+  }, [cartItems, currentItem?.serviceId, serviceDetailsById]);
+
+  // Check if vehicle is valid for current service
+  const isVehicleValidForService = useCallback((vehicleType, serviceCategory) => {
+    if (!serviceCategory || !vehicleType) return true; // Allow if unknown
+    
+    if (serviceCategory === 'CarWash') {
+      return vehicleType === 'Car' && !vehicleType.toLowerCase().includes('bike');
+    }
+    if (serviceCategory === 'BikeWash') {
+      return vehicleType === 'Bike' || vehicleType.toLowerCase().includes('bike');
+    }
+    return true;
+  }, []);
 
   const loadAddressAndVehicle = useCallback(async () => {
     try {
@@ -43,16 +74,23 @@ export default function CartScreen({ navigation, route }) {
       }
 
       if (storedPhone) {
+        // Load selected vehicle from AsyncStorage (faster than API)
         const [storedVehicleType, storedVehicleModel] = await Promise.all([
           AsyncStorage.getItem(`userVehicleType:${storedPhone}`),
           AsyncStorage.getItem(`userVehicleModel:${storedPhone}`),
         ]);
-
+        
         if (storedVehicleType && storedVehicleModel) {
-          setVehicle({
-            type: storedVehicleType,
-            model: storedVehicleModel,
-          });
+          // Only set vehicle if it's valid for the current service
+          if (!serviceCategory || isVehicleValidForService(storedVehicleType, serviceCategory)) {
+            setVehicle({
+              type: storedVehicleType,
+              model: storedVehicleModel,
+            });
+          } else {
+            // Vehicle doesn't match service, set to null
+            setVehicle(null);
+          }
         } else {
           setVehicle(null);
         }
@@ -62,6 +100,46 @@ export default function CartScreen({ navigation, route }) {
     } catch (error) {
       console.error('Error loading address/vehicle:', error);
     }
+  }, [serviceCategory, isVehicleValidForService]);
+
+  // Load vehicles separately and only when modal opens (with caching)
+  const loadVehiclesForModal = useCallback(async () => {
+    try {
+      const storedPhone = await AsyncStorage.getItem('authPhone');
+      if (!storedPhone) return;
+      
+      // Try AsyncStorage first (faster)
+      const cachedVehicles = await AsyncStorage.getItem(`userVehicles:${storedPhone}`);
+      if (cachedVehicles) {
+        try {
+          const parsed = JSON.parse(cachedVehicles);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setAllVehicles(parsed);
+            // Still sync from API in background but don't wait
+            getVehicles(storedPhone).then(vehicles => {
+              if (vehicles && Array.isArray(vehicles) && vehicles.length >= 0) {
+                setAllVehicles(vehicles);
+                if (vehicles.length > 0) {
+                  AsyncStorage.setItem(`userVehicles:${storedPhone}`, JSON.stringify(vehicles));
+                }
+              }
+            }).catch(() => {});
+            return; // Return early after setting cached data
+          }
+        } catch (e) {
+          // Invalid cache, continue to API
+        }
+      }
+      
+      // No cache or invalid cache, load from API
+      const vehicles = await getVehicles(storedPhone);
+      setAllVehicles(vehicles || []);
+      if (vehicles && vehicles.length > 0) {
+        AsyncStorage.setItem(`userVehicles:${storedPhone}`, JSON.stringify(vehicles));
+      }
+    } catch (e) {
+      console.warn('Error loading vehicles:', e);
+    }
   }, []);
 
   useFocusEffect(
@@ -69,6 +147,23 @@ export default function CartScreen({ navigation, route }) {
       loadAddressAndVehicle();
     }, [loadAddressAndVehicle])
   );
+
+  // Reload vehicle when service category changes (to filter correctly)
+  // Use a ref to track if we've already loaded for this category
+  const lastCategoryRef = React.useRef(null);
+  useEffect(() => {
+    if (serviceCategory !== lastCategoryRef.current) {
+      lastCategoryRef.current = serviceCategory;
+      loadAddressAndVehicle();
+    }
+  }, [serviceCategory, loadAddressAndVehicle]);
+
+  // Load vehicles when modal opens (only if not already loaded)
+  useEffect(() => {
+    if (showVehicleModal && allVehicles.length === 0) {
+      loadVehiclesForModal();
+    }
+  }, [showVehicleModal, loadVehiclesForModal, allVehicles.length]);
 
   const loadCart = async () => {
     try {
@@ -295,13 +390,75 @@ export default function CartScreen({ navigation, route }) {
       ...pkg,
     }));
   };
+  const serviceDetails = currentItem ? serviceDetailsById?.[currentItem.serviceId] : null;
 
-  const getCurrentItem = () => {
-    return cartItems.length > 0 ? cartItems[0] : null;
+  // Filter vehicles based on service category
+  const filteredVehicles = useMemo(() => {
+    if (!serviceCategory) return allVehicles;
+    
+    if (serviceCategory === 'CarWash') {
+      return allVehicles.filter(v => 
+        v.vehicleType === 'Car' && 
+        !v.vehicleModel?.toLowerCase().includes('bike') &&
+        !v.vehicleType?.toLowerCase().includes('bike')
+      );
+    }
+    if (serviceCategory === 'BikeWash') {
+      return allVehicles.filter(v => 
+        v.vehicleType === 'Bike' || 
+        v.vehicleModel?.toLowerCase().includes('bike') ||
+        v.vehicleType?.toLowerCase().includes('bike')
+      );
+    }
+    return allVehicles;
+  }, [allVehicles, serviceCategory]);
+
+  const handleSelectVehicle = async (selectedVehicle) => {
+    const phone = await AsyncStorage.getItem('authPhone');
+    if (!phone) return;
+
+    const vehicleType = selectedVehicle.vehicleType;
+    const vehicleModel = selectedVehicle.vehicleModel;
+
+    // Save to AsyncStorage
+    await AsyncStorage.setItem(`userVehicleType:${phone}`, vehicleType);
+    await AsyncStorage.setItem(`userVehicleModel:${phone}`, vehicleModel);
+
+    setVehicle({
+      type: vehicleType,
+      model: vehicleModel,
+    });
+
+    setShowVehicleModal(false);
   };
 
-  const currentItem = getCurrentItem();
-  const serviceDetails = currentItem ? serviceDetailsById?.[currentItem.serviceId] : null;
+  const formatVehicleName = (vehicleModel) => {
+    if (!vehicleModel) return '';
+    
+    // Check if it's a 2 wheeler bike (don't reformat)
+    if (vehicleModel.toLowerCase().includes('2 wheeler') || vehicleModel.toLowerCase().includes('bike')) {
+      if (vehicleModel.includes('2 wheeler') && !vehicleModel.includes('/')) {
+        return vehicleModel.replace('2 wheeler bike', '2 wheeler / bike');
+      }
+      return vehicleModel;
+    }
+    
+    // For car models like "Hyundai Elantra", format to "Elantra, Hyundai"
+    const parts = vehicleModel.split(' ');
+    if (parts.length >= 2) {
+      const brand = parts[0];
+      const model = parts.slice(1).join(' ');
+      return `${model}, ${brand}`;
+    }
+    return vehicleModel;
+  };
+
+  const getVehicleImage = (vehicleType) => {
+    if (vehicleType === 'Bike' || vehicleType?.toLowerCase().includes('bike')) {
+      return require('../assets/fallbackBike.png');
+    }
+    return require('../assets/fallback.png');
+  };
   const mappedAddOns = currentItem ? getMappedAddOns(currentItem.serviceId) : [];
   const selectedAddOnIds = currentItem ? (currentItem?.addOns || []).map(a => a?._id || a).filter(Boolean) : [];
   const monthlyPackages = currentItem ? getMonthlyPackages(currentItem.serviceId) : [];
@@ -378,21 +535,47 @@ export default function CartScreen({ navigation, route }) {
                 )}
 
             {/* Vehicle Header */}
-            {vehicle && (
-              <View style={styles.vehicleHeader}>
-                <View style={styles.vehicleInfo}>
-                  <Image 
-                    source={FALLBACK_IMAGE}
-                    style={styles.vehicleImage}
-                    resizeMode="cover"
-                  />
-                  <Text style={styles.vehicleName}>{vehicle.type} - {vehicle.model}</Text>
+            {(() => {
+              const shouldShowVehicle = vehicle && (!serviceCategory || isVehicleValidForService(vehicle.type, serviceCategory));
+              
+              if (!shouldShowVehicle) {
+                return (
+                  <View style={styles.vehicleHeader}>
+                    <View style={styles.vehicleInfo}>
+                      <MaterialCommunityIcons name="car-alert" size={24} color={theme.textSecondary} />
+                      <Text style={styles.vehicleName}>
+                        {serviceCategory === 'CarWash' ? 'Select a car' : serviceCategory === 'BikeWash' ? 'Select a bike' : 'Select a vehicle'}
+                      </Text>
+                    </View>
+                    <TouchableOpacity 
+                      style={styles.changeVehicleButton}
+                      onPress={() => setShowVehicleModal(true)}
+                    >
+                      <Text style={styles.changeVehicleButtonText}>Change Vehicle</Text>
+                    </TouchableOpacity>
+                  </View>
+                );
+              }
+              
+              return (
+                <View style={styles.vehicleHeader}>
+                  <View style={styles.vehicleInfo}>
+                    <Image 
+                      source={FALLBACK_IMAGE}
+                      style={styles.vehicleImage}
+                      resizeMode="cover"
+                    />
+                    <Text style={styles.vehicleName}>{vehicle.type} - {vehicle.model}</Text>
+                  </View>
+                  <TouchableOpacity 
+                    style={styles.changeVehicleButton}
+                    onPress={() => setShowVehicleModal(true)}
+                  >
+                    <Text style={styles.changeVehicleButtonText}>Change Vehicle</Text>
+                  </TouchableOpacity>
                 </View>
-                <TouchableOpacity onPress={() => navigation.navigate('VehicleDetails', { returnTo: 'Cart' })}>
-                  <MaterialCommunityIcons name="delete-outline" size={24} color="#FF4444" />
-                </TouchableOpacity>
-              </View>
-            )}
+              );
+            })()}
 
             {/* Service Items Section */}
             {currentItem && (
@@ -500,6 +683,92 @@ export default function CartScreen({ navigation, route }) {
           </TouchableOpacity>
         </View>
       )}
+
+      {/* Vehicle Selection Modal */}
+      <Modal
+        visible={showVehicleModal}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setShowVehicleModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { paddingBottom: insets.bottom }]}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>
+                {serviceCategory === 'CarWash' ? 'Select Car' : serviceCategory === 'BikeWash' ? 'Select Bike' : 'Select Vehicle'}
+              </Text>
+              <TouchableOpacity onPress={() => setShowVehicleModal(false)}>
+                <MaterialCommunityIcons name="close" size={24} color={theme.textPrimary} />
+              </TouchableOpacity>
+            </View>
+            
+            {filteredVehicles.length === 0 ? (
+              <View style={styles.emptyVehicleContainer}>
+                <MaterialCommunityIcons name="car-off" size={48} color={theme.textSecondary} />
+                <Text style={styles.emptyVehicleText}>
+                  {serviceCategory === 'CarWash' 
+                    ? 'No cars saved. Add a car from the vehicle selection screen.'
+                    : serviceCategory === 'BikeWash'
+                    ? 'No bikes saved. Add a bike from the vehicle selection screen.'
+                    : 'No vehicles saved. Add a vehicle from the vehicle selection screen.'}
+                </Text>
+                <TouchableOpacity 
+                  style={styles.addVehicleButton}
+                  onPress={() => {
+                    setShowVehicleModal(false);
+                    navigation.navigate('VehicleDetails');
+                  }}
+                >
+                  <Text style={styles.addVehicleButtonText}>Add Vehicle</Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <>
+                <ScrollView style={styles.vehicleList}>
+                  {filteredVehicles.map((v) => {
+                    const vehicleName = formatVehicleName(v.vehicleModel);
+                    const isSelected = vehicle && vehicle.type === v.vehicleType && vehicle.model === v.vehicleModel;
+                    
+                    return (
+                      <TouchableOpacity
+                        key={v._id || v.id}
+                        style={[styles.vehicleOption, isSelected && styles.vehicleOptionSelected]}
+                        onPress={() => handleSelectVehicle(v)}
+                      >
+                        <Image 
+                          source={getVehicleImage(v.vehicleType)} 
+                          style={styles.vehicleOptionImage}
+                          resizeMode="contain"
+                        />
+                        <View style={styles.vehicleOptionInfo}>
+                          <Text style={styles.vehicleOptionName}>
+                            {vehicleName || v.vehicleModel || 'Unknown Vehicle'}
+                          </Text>
+                        </View>
+                        {isSelected && (
+                          <MaterialCommunityIcons name="check-circle" size={24} color="#007AFF" />
+                        )}
+                      </TouchableOpacity>
+                    );
+                  })}
+                </ScrollView>
+                <View style={styles.modalFooter}>
+                  <TouchableOpacity 
+                    style={styles.addNewVehicleButton}
+                    onPress={() => {
+                      setShowVehicleModal(false);
+                      navigation.navigate('VehicleDetails');
+                    }}
+                  >
+                    <MaterialCommunityIcons name="plus-circle" size={20} color="#FFFFFF" />
+                    <Text style={styles.addNewVehicleButtonText}>Add New Vehicle</Text>
+                  </TouchableOpacity>
+                </View>
+              </>
+            )}
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -714,5 +983,114 @@ const createStyles = theme => StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
     color: '#FFFFFF',
+  },
+  changeVehicleButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 6,
+    backgroundColor: theme.accent || '#007AFF',
+  },
+  changeVehicleButtonText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: theme.background || '#FFFFFF',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    maxHeight: '80%',
+    paddingTop: 20,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.cardBorder || '#E0E0E0',
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: theme.textPrimary,
+  },
+  vehicleList: {
+    maxHeight: 400,
+  },
+  vehicleOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.cardBorder || '#E0E0E0',
+  },
+  vehicleOptionSelected: {
+    backgroundColor: theme.cardBackground || '#F5F5F5',
+  },
+  vehicleOptionImage: {
+    width: 50,
+    height: 50,
+    borderRadius: 8,
+    marginRight: 12,
+  },
+  vehicleOptionInfo: {
+    flex: 1,
+  },
+  vehicleOptionName: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: theme.textPrimary,
+  },
+  emptyVehicleContainer: {
+    padding: 40,
+    alignItems: 'center',
+  },
+  emptyVehicleText: {
+    marginTop: 16,
+    fontSize: 14,
+    color: theme.textSecondary,
+    textAlign: 'center',
+    marginBottom: 24,
+  },
+  addVehicleButton: {
+    backgroundColor: theme.accent || '#007AFF',
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 8,
+  },
+  addVehicleButtonText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  modalFooter: {
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    paddingBottom: 20,
+    borderTopWidth: 1,
+    borderTopColor: theme.cardBorder || '#E0E0E0',
+  },
+  addNewVehicleButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: theme.accent || '#007AFF',
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    gap: 8,
+  },
+  addNewVehicleButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });

@@ -66,8 +66,21 @@ export const getPopularBrands = () => {
     .filter(Boolean);
 };
 
+// Cache for search results to avoid re-processing
+const searchCache = new Map();
+const CACHE_SIZE_LIMIT = 20; // Reduced cache size to prevent memory issues
+
+// Clear cache periodically to prevent memory buildup
+const clearCacheIfNeeded = () => {
+  if (searchCache.size >= CACHE_SIZE_LIMIT) {
+    // Clear half of the cache (FIFO)
+    const keysToDelete = Array.from(searchCache.keys()).slice(0, Math.floor(CACHE_SIZE_LIMIT / 2));
+    keysToDelete.forEach(key => searchCache.delete(key));
+  }
+};
+
 /**
- * Search brands by model name
+ * Search brands by model name (optimized with caching)
  * @param {string} modelQuery - The model name to search for (e.g., "A4", "Swift")
  * @returns {Array<{id: string, name: string}>} Array of brand objects that have models matching the query
  */
@@ -75,16 +88,28 @@ export const searchBrandsByModel = (modelQuery) => {
   if (!modelQuery || !modelQuery.trim()) return [];
   
   const query = modelQuery.toLowerCase().trim();
+  
+  // Check cache first
+  if (searchCache.has(query)) {
+    return searchCache.get(query);
+  }
+  
   const matchingBrands = [];
+  const queryWords = query.split(' ').filter(w => w.length > 0);
   
   // Search through all brands and their models
   Object.keys(carsData).forEach(brandName => {
     const models = carsData[brandName];
     if (Array.isArray(models)) {
-      // Check if any model matches the query
-      const hasMatchingModel = models.some(model => 
-        model.toLowerCase().includes(query)
-      );
+      // Optimized: Check if any model matches the query (faster with early exit)
+      let hasMatchingModel = false;
+      for (let i = 0; i < models.length && !hasMatchingModel; i++) {
+        const modelLower = models[i].toLowerCase();
+        // Check if query matches model (either full match or word match)
+        if (modelLower.includes(query) || queryWords.some(word => modelLower.includes(word))) {
+          hasMatchingModel = true;
+        }
+      }
       
       if (hasMatchingModel) {
         matchingBrands.push({
@@ -95,7 +120,15 @@ export const searchBrandsByModel = (modelQuery) => {
     }
   });
   
-  return matchingBrands.sort((a, b) => a.name.localeCompare(b.name));
+  const result = matchingBrands.sort((a, b) => a.name.localeCompare(b.name));
+  
+  // Clear cache if needed before adding new entry
+  clearCacheIfNeeded();
+  
+  // Cache the result
+  searchCache.set(query, result);
+  
+  return result;
 };
 
 export default carsData;

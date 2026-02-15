@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useCallback, useRef } from 'react';
 import { StyleSheet, Text, View, ScrollView, TextInput, TouchableOpacity, Image } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -8,44 +8,74 @@ import { getPopularBrands, getAllBrands, searchBrandsByModel } from '../services
 
 const CAR_IMAGE = require('../assets/fallback.png');
 
+// Cache brands data outside component to avoid re-processing
+const CACHED_POPULAR_BRANDS = getPopularBrands();
+const CACHED_ALL_BRANDS = getAllBrands();
+
+
 export default function FourWheelerDetailsScreen({ navigation }) {
   const insets = useSafeAreaInsets();
   const { theme, isLightMode } = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
   const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedQuery, setDebouncedQuery] = useState('');
+  const debounceTimer = useRef(null);
 
-  // Get brands from local data
-  const popularBrands = useMemo(() => getPopularBrands(), []);
-  const allBrands = useMemo(() => getAllBrands(), []);
+  // Debounce search query to avoid processing on every keystroke
+  React.useEffect(() => {
+    if (debounceTimer.current) {
+      clearTimeout(debounceTimer.current);
+    }
+    debounceTimer.current = setTimeout(() => {
+      setDebouncedQuery(searchQuery);
+    }, 300); // 300ms debounce
 
-  // Search brands by model name if search query exists
-  const brandsByModel = useMemo(() => {
-    if (!searchQuery.trim()) return [];
-    return searchBrandsByModel(searchQuery);
+    return () => {
+      if (debounceTimer.current) {
+        clearTimeout(debounceTimer.current);
+        debounceTimer.current = null;
+      }
+    };
   }, [searchQuery]);
+
+  // Cleanup debounce timer on unmount (but keep image errors cached)
+  React.useEffect(() => {
+    return () => {
+      if (debounceTimer.current) {
+        clearTimeout(debounceTimer.current);
+        debounceTimer.current = null;
+      }
+    };
+  }, []);
+
+  // Search brands by model name if search query exists (using debounced query)
+  const brandsByModel = useMemo(() => {
+    if (!debouncedQuery.trim()) return [];
+    return searchBrandsByModel(debouncedQuery);
+  }, [debouncedQuery]);
 
   // Filter brands based on search query (brand name or model name)
   const filteredPopularBrands = useMemo(() => {
-    if (!searchQuery.trim()) return popularBrands;
-    const query = searchQuery.toLowerCase();
+    if (!debouncedQuery.trim()) return CACHED_POPULAR_BRANDS;
+    const query = debouncedQuery.toLowerCase();
     
     // First, try to find brands by model name
     if (brandsByModel.length > 0) {
       // Filter popular brands that match the model search
-      return popularBrands.filter(brand => 
+      return CACHED_POPULAR_BRANDS.filter(brand => 
         brandsByModel.some(b => b.name === brand.name)
       );
     }
     
     // Fallback to brand name search
-    return popularBrands.filter(brand => 
+    return CACHED_POPULAR_BRANDS.filter(brand => 
       brand.name.toLowerCase().includes(query)
     );
-  }, [popularBrands, searchQuery, brandsByModel]);
+  }, [debouncedQuery, brandsByModel]);
 
   const filteredAllBrands = useMemo(() => {
-    if (!searchQuery.trim()) return allBrands;
-    const query = searchQuery.toLowerCase();
+    if (!debouncedQuery.trim()) return CACHED_ALL_BRANDS;
+    const query = debouncedQuery.toLowerCase();
     
     // First, try to find brands by model name
     if (brandsByModel.length > 0) {
@@ -54,21 +84,22 @@ export default function FourWheelerDetailsScreen({ navigation }) {
     }
     
     // Fallback to brand name search
-    return allBrands.filter(brand => 
+    return CACHED_ALL_BRANDS.filter(brand => 
       brand.name.toLowerCase().includes(query)
     );
-  }, [allBrands, searchQuery, brandsByModel]);
+  }, [debouncedQuery, brandsByModel]);
 
-  const handleBrandPress = (brand) => {
+  const handleBrandPress = useCallback((brand) => {
     navigation.navigate('CarModels', { brandName: brand.name });
-  };
+  }, [navigation]);
 
   const handleCantFindVehicle = () => {
     // TODO: Handle "Can't find your Vehicle?" action
     console.log('Can\'t find vehicle pressed');
   };
 
-  const getBrandLogoUrl = (brandName) => {
+  // Memoize brand logo URL generation
+  const getBrandLogoUrl = useCallback((brandName) => {
     if (!brandName) return '';
     
     // Mapping brand names to their slugs in the repository
@@ -121,16 +152,21 @@ export default function FourWheelerDetailsScreen({ navigation }) {
     // Use the thumb version for small logo display (60x60)
     // Repository structure: /filippofilip95/car-logos-dataset/master/logos/thumb/{slug}.png
     return `https://raw.githubusercontent.com/filippofilip95/car-logos-dataset/master/logos/thumb/${finalSlug}.png`;
-  };
+  }, []);
   
 
 
   const [imageErrors, setImageErrors] = useState({});
 
-  const handleImageError = (brandId, name) => {
-    console.log(`❌ Failed: ${name} | URL: ${getBrandLogoUrl(name)}`);
-    setImageErrors(prev => ({ ...prev, [brandId]: true }));
-  };
+  const handleImageError = useCallback((brandId, name) => {
+    setImageErrors(prev => {
+      // Only update if not already in errors (prevent unnecessary re-renders)
+      if (prev[brandId]) return prev;
+      return { ...prev, [brandId]: true };
+    });
+  }, []);
+
+  // Don't reset image errors on unmount - keep them cached to prevent reloading
 
   return (
     <View style={styles.container}>
@@ -235,9 +271,9 @@ export default function FourWheelerDetailsScreen({ navigation }) {
         )}
 
         {/* No results message */}
-        {searchQuery.trim() && filteredPopularBrands.length === 0 && filteredAllBrands.length === 0 && (
+        {debouncedQuery.trim() && filteredPopularBrands.length === 0 && filteredAllBrands.length === 0 && (
           <View style={styles.noResultsContainer}>
-            <Text style={styles.noResultsText}>No brands found matching "{searchQuery}"</Text>
+            <Text style={styles.noResultsText}>No brands found matching "{debouncedQuery}"</Text>
           </View>
         )}
       </ScrollView>

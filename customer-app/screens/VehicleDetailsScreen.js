@@ -19,13 +19,29 @@ export default function VehicleDetailsScreen({ navigation, route }) {
   const [phone, setPhone] = useState('');
   const [saving, setSaving] = useState(false);
   const [selectedVehicleType, setSelectedVehicleType] = useState(null); // No default selection
+  
+  // Reset selected vehicle type when screen loses focus to prevent stale state
+  React.useEffect(() => {
+    const unsubscribe = navigation.addListener('blur', () => {
+      setSelectedVehicleType(null);
+    });
+    return unsubscribe;
+  }, [navigation]);
 
   useEffect(() => {
+    let mounted = true;
     const loadPhone = async () => {
-      const storedPhone = await AsyncStorage.getItem('authPhone');
-      setPhone(storedPhone || '');
+      try {
+        const storedPhone = await AsyncStorage.getItem('authPhone');
+        if (mounted) {
+          setPhone(storedPhone || '');
+        }
+      } catch (error) {
+        console.warn('Failed to load phone:', error);
+      }
     };
-    loadPhone().catch(error => console.warn('Failed to load phone:', error));
+    loadPhone();
+    return () => { mounted = false; };
   }, []);
 
   const handleTwoWheeler = async () => {
@@ -40,13 +56,13 @@ export default function VehicleDetailsScreen({ navigation, route }) {
       try {
         await addVehicle(phone, {
           vehicleType: 'Bike',
-          vehicleModel: '2 wheeler bike',
+          vehicleModel: '2 wheeler / bike',
         });
       } catch (networkError) {
         console.warn('Network error, saving locally only:', networkError);
         // Fallback to old API for backward compatibility
         try {
-          await updateUserVehicle({ phone, vehicleType: 'Bike', vehicleModel: '2 wheeler bike' });
+          await updateUserVehicle({ phone, vehicleType: 'Bike', vehicleModel: '2 wheeler / bike' });
         } catch (e) {
           console.warn('Fallback API also failed:', e);
         }
@@ -54,9 +70,9 @@ export default function VehicleDetailsScreen({ navigation, route }) {
       
       // Always save to local storage
       await AsyncStorage.setItem(`userVehicleType:${phone}`, 'Bike');
-      await AsyncStorage.setItem(`userVehicleModel:${phone}`, '2 wheeler bike');
+      await AsyncStorage.setItem(`userVehicleModel:${phone}`, '2 wheeler / bike');
       
-      Alert.alert('Saved', 'Vehicle details updated.');
+      Alert.alert('Saved', '2 wheeler saved');
       // Navigate to Home screen
       navigation.navigate('MainTabs', { screen: 'Home' });
     } catch (error) {
