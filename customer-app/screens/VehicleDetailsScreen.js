@@ -1,288 +1,181 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { Alert, StyleSheet, Text, TouchableOpacity, View, Image } from 'react-native';
-import { StatusBar } from 'expo-status-bar';
+import React from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTheme } from '../theme/ThemeContext';
-import BackHeader from '../components/BackHeader';
-import { updateUserVehicle } from '../services/userApi';
-import { addVehicle } from '../services/vehicleApi';
+import { Image } from 'expo-image';
 
-const FOUR_WHEELER_IMAGE = require('../assets/carVehicle.png');
-const TWO_WHEELER_IMAGE = require('../assets/fallbackBike.png');
-
-export default function VehicleDetailsScreen({ navigation, route }) {
+export default function VehicleDetailsScreen({ navigation }) {
   const insets = useSafeAreaInsets();
   const { theme, isLightMode } = useTheme();
-  const styles = useMemo(() => createStyles(theme), [theme]);
-  const [phone, setPhone] = useState('');
-  const [saving, setSaving] = useState(false);
-  const [selectedVehicleType, setSelectedVehicleType] = useState(null); // No default selection
-  
-  // Reset selected vehicle type when screen loses focus to prevent stale state
-  React.useEffect(() => {
-    const unsubscribe = navigation.addListener('blur', () => {
-      setSelectedVehicleType(null);
-    });
-    return unsubscribe;
-  }, [navigation]);
 
-  useEffect(() => {
-    let mounted = true;
-    const loadPhone = async () => {
-      try {
-        const storedPhone = await AsyncStorage.getItem('authPhone');
-        if (mounted) {
-          setPhone(storedPhone || '');
-        }
-      } catch (error) {
-        console.warn('Failed to load phone:', error);
-      }
-    };
-    loadPhone();
-    return () => { mounted = false; };
-  }, []);
-
-  const handleTwoWheeler = async () => {
-    setSelectedVehicleType('2WHEELER');
-    if (!phone) {
-      Alert.alert('Missing phone', 'Please login to save vehicle details.');
-      return;
-    }
-    setSaving(true);
-    try {
-      // Try to add vehicle to vehicles array
-      try {
-        await addVehicle(phone, {
-          vehicleType: 'Bike',
-          vehicleModel: '2 wheeler / bike',
-        });
-      } catch (networkError) {
-        console.warn('Network error, saving locally only:', networkError);
-        // Fallback to old API for backward compatibility
-        try {
-          await updateUserVehicle({ phone, vehicleType: 'Bike', vehicleModel: '2 wheeler / bike' });
-        } catch (e) {
-          console.warn('Fallback API also failed:', e);
-        }
-      }
-      
-      // Always save to local storage
-      await AsyncStorage.setItem(`userVehicleType:${phone}`, 'Bike');
-      await AsyncStorage.setItem(`userVehicleModel:${phone}`, '2 wheeler / bike');
-      
-      Alert.alert('Saved', '2 wheeler saved');
-      // Navigate to Home screen
-      navigation.navigate('MainTabs', { screen: 'Home' });
-    } catch (error) {
-      console.error('Save vehicle error:', error);
-      Alert.alert(
-        'Connection Error', 
-        'Unable to connect to server. Please check your internet connection and ensure the server is running. Your selection has been saved locally.'
-      );
-      // Navigate to Home screen
-      navigation.navigate('MainTabs', { screen: 'Home' });
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleFourWheeler = async () => {
-    setSelectedVehicleType('4WHEELER');
-    if (!phone) {
-      Alert.alert('Missing phone', 'Please login to save vehicle details.');
-      return;
-    }
-    setSaving(true);
-    try {
-      // For 4 wheeler, we'll save after model selection, so just navigate
-      // But we can save a placeholder if needed
-      await AsyncStorage.setItem(`userVehicleType:${phone}`, 'Car');
-      
-      // Navigate to next screen to select model
-      navigation.navigate('FourWheelerDetails');
-    } catch (error) {
-      console.error('Error:', error);
-      navigation.navigate('FourWheelerDetails');
-    } finally {
-      setSaving(false);
-    }
+  const handleVehicleTypeSelect = (type) => {
+    // Navigate to BrandsScreen with vehicle type
+    navigation.navigate('Brands', { vehicleType: type });
   };
 
   return (
-    <View style={styles.container}>
-      <StatusBar style={isLightMode ? 'dark' : 'light'} />
-      <BackHeader navigation={navigation} title="Choose Your Vehicle Type" />
-      <View style={[styles.content, { paddingBottom: 20 + insets.bottom }]}>
-        <Text style={styles.title}>Choose Your Vehicle Type</Text>
-        <Text style={styles.subtitle}>You can add more vehicles from the home screen</Text>
-        
-        {/* 4 Wheeler Card */}
+    <View style={[styles.container, { backgroundColor: theme.background }]}>
+      {/* Header */}
+      <View style={[styles.header, { paddingTop: insets.top, backgroundColor: theme.background }]}>
         <TouchableOpacity 
-          style={[
-            styles.vehicleCard,
-            selectedVehicleType === '4WHEELER' && styles.vehicleCardSelected
-          ]}
-          onPress={handleFourWheeler}
-          disabled={saving}
+          style={styles.backButton}
+          onPress={() => navigation.goBack()}
           activeOpacity={0.7}
         >
-          <View style={styles.cardContent}>
-            <View style={styles.cardLeftContent}>
-              <Text style={styles.cardPrefixText}>I have a</Text>
-              <Text style={styles.vehicleTitle}>4 WHEELER</Text>
-              {selectedVehicleType === '4WHEELER' && (
-                <View style={styles.selectedIndicator}>
-                  <MaterialCommunityIcons name="check-circle" size={20} color="#4CAF50" />
-                  <Text style={styles.selectedText}>Selected</Text>
-                </View>
-              )}
+          <MaterialCommunityIcons 
+            name="arrow-left" 
+            size={24} 
+            color={theme.textPrimary} 
+          />
+        </TouchableOpacity>
+        <View style={styles.headerTitleContainer}>
+          <Text style={[styles.headerTitle, { color: theme.textPrimary }]}>
+            Choose Your Vehicle Type
+          </Text>
+        </View>
+        <View style={styles.backButton} />
+      </View>
+
+      <ScrollView 
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Subtitle */}
+        <Text style={[styles.subtitle, { color: theme.textSecondary }]}>
+          You can add more vehicles from the home screen.
+        </Text>
+
+        {/* 4 Wheeler Option */}
+        <TouchableOpacity 
+          style={[styles.vehicleOption, { borderColor: theme.cardBorder }]}
+          onPress={() => handleVehicleTypeSelect('4WHEELER')}
+          activeOpacity={0.8}
+        >
+          <View style={styles.vehicleOptionContent}>
+            <View style={styles.vehicleTextContainer}>
+              <Text style={[styles.vehicleLabel, { color: '#FFA500' }]}>I have a</Text>
+              <Text style={[styles.vehicleType, { color: theme.textPrimary }]}>4 WHEELER</Text>
             </View>
-            <View style={styles.cardImageContainer}>
-              <Image 
-                source={FOUR_WHEELER_IMAGE} 
-                style={styles.vehicleImage}
-                resizeMode="contain"
-              />
-            </View>
+            <Image 
+              source={require('../assets/carVehicle.png')}
+              style={styles.vehicleImage}
+              contentFit="contain"
+              transition={200}
+            />
           </View>
         </TouchableOpacity>
 
         {/* OR Separator */}
-        <View style={styles.separatorContainer}>
-          <View style={styles.separatorLine} />
-          <Text style={styles.separatorText}>OR</Text>
-          <View style={styles.separatorLine} />
+        <View style={styles.orContainer}>
+          <View style={[styles.orLine, { backgroundColor: theme.divider }]} />
+          <Text style={[styles.orText, { color: theme.textSecondary }]}>OR</Text>
+          <View style={[styles.orLine, { backgroundColor: theme.divider }]} />
         </View>
 
-        {/* 2 Wheeler Card */}
+        {/* 2 Wheeler Option */}
         <TouchableOpacity 
-          style={[
-            styles.vehicleCard,
-            selectedVehicleType === '2WHEELER' && styles.vehicleCardSelected
-          ]}
-          onPress={handleTwoWheeler}
-          disabled={saving}
-          activeOpacity={0.7}
+          style={[styles.vehicleOption, { borderColor: theme.cardBorder }]}
+          onPress={() => handleVehicleTypeSelect('2WHEELER')}
+          activeOpacity={0.8}
         >
-          <View style={styles.cardContent}>
-            <View style={styles.cardLeftContent}>
-              <Text style={styles.cardPrefixText}>I have a</Text>
-              <Text style={styles.vehicleTitle}>2 WHEELER / BIKE</Text>
-              {selectedVehicleType === '2WHEELER' && (
-                <View style={styles.selectedIndicator}>
-                  <MaterialCommunityIcons name="check-circle" size={20} color="#4CAF50" />
-                  <Text style={styles.selectedText}>Selected</Text>
-                </View>
-              )}
+          <View style={styles.vehicleOptionContent}>
+            <View style={styles.vehicleTextContainer}>
+              <Text style={[styles.vehicleLabel, { color: '#FFA500' }]}>I have a</Text>
+              <Text style={[styles.vehicleType, { color: theme.textPrimary }]}>2 WHEELER / BIKE</Text>
             </View>
-            <View style={styles.cardImageContainer}>
-              <Image 
-                source={TWO_WHEELER_IMAGE} 
-                style={styles.vehicleImage}
-                resizeMode="contain"
-              />
-            </View>
+            <Image 
+              source={require('../assets/fallbackBike.png')}
+              style={styles.vehicleImage}
+              resizeMode="contain"
+            />
           </View>
         </TouchableOpacity>
-      </View>
+      </ScrollView>
     </View>
   );
 }
 
-const createStyles = theme =>
-  StyleSheet.create({
-    container: {
-      flex: 1,
-      backgroundColor: theme.background,
-    },
-    content: {
-      paddingHorizontal: 16,
-      paddingTop: 24,
-      flex: 1,
-    },
-    title: {
-      fontSize: 28,
-      fontWeight: 'bold',
-      color: theme.textPrimary,
-      marginBottom: 8,
-      textAlign: 'left',
-    },
-    subtitle: {
-      fontSize: 14,
-      color: theme.textSecondary,
-      marginBottom: 32,
-      textAlign: 'left',
-    },
-    vehicleCard: {
-      backgroundColor: '#F5F5F5',
-      borderRadius: 16,
-      borderWidth: 1,
-      borderColor: '#E0E0E0',
-      marginBottom: 16,
-      overflow: 'hidden',
-    },
-    vehicleCardSelected: {
-      borderColor: '#4CAF50',
-      borderWidth: 2,
-      backgroundColor: '#F0F8F0',
-    },
-    cardContent: {
-      flexDirection: 'row',
-      padding: 20,
-      alignItems: 'center',
-      justifyContent: 'space-between',
-    },
-    cardLeftContent: {
-      flex: 1,
-      justifyContent: 'center',
-    },
-    cardPrefixText: {
-      fontSize: 14,
-      color: '#FFA500',
-      marginBottom: 8,
-    },
-    vehicleTitle: {
-      fontSize: 24,
-      fontWeight: 'bold',
-      color: theme.textPrimary || '#000000',
-      marginBottom: 8,
-    },
-    selectedIndicator: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      marginTop: 8,
-    },
-    selectedText: {
-      color: '#4CAF50',
-      fontSize: 14,
-      fontWeight: '600',
-      marginLeft: 6,
-    },
-    cardImageContainer: {
-      width: 140,
-      height: 140,
-      justifyContent: 'center',
-      alignItems: 'center',
-    },
-    vehicleImage: {
-      width: 250,
-      height: 200,
-    },
-    separatorContainer: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      marginVertical: 16,
-    },
-    separatorLine: {
-      flex: 1,
-      height: 1,
-      backgroundColor: theme.cardBorder || '#E0E0E0',
-    },
-    separatorText: {
-      marginHorizontal: 16,
-      fontSize: 14,
-      color: theme.textSecondary || '#999999',
-    },
-  });
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingBottom: 16,
+  },
+  backButton: {
+    width: 40,
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  headerTitleContainer: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    padding: 16,
+    paddingTop: 24,
+  },
+  subtitle: {
+    fontSize: 14,
+    marginBottom: 32,
+    textAlign: 'center',
+  },
+  vehicleOption: {
+    borderRadius: 12,
+    borderWidth: 1,
+    padding: 20,
+    marginBottom: 16,
+    minHeight: 140,
+    justifyContent: 'center',
+    backgroundColor: '#F5F5F5',
+  },
+  vehicleOptionContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  vehicleTextContainer: {
+    flex: 1,
+    marginRight: 16,
+  },
+  vehicleLabel: {
+    fontSize: 16,
+    fontWeight: '500',
+    marginBottom: 8,
+  },
+  vehicleType: {
+    fontSize: 20,
+    fontWeight: 'bold',
+  },
+  vehicleImage: {
+    width: 140,
+    height: 120,
+  },
+  orContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 16,
+  },
+  orLine: {
+    flex: 1,
+    height: 1,
+  },
+  orText: {
+    marginHorizontal: 16,
+    fontSize: 14,
+    fontWeight: '500',
+  },
+});

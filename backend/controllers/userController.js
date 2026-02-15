@@ -89,9 +89,19 @@ export const getVehicles = async (req, res) => {
       });
     }
 
+    // Ensure vehicles have proper _id fields and are properly serialized
+    const vehicles = (user.vehicles || []).map(vehicle => ({
+      _id: vehicle._id,
+      vehicleType: vehicle.vehicleType,
+      vehicleModel: vehicle.vehicleModel,
+      isSelected: vehicle.isSelected || false,
+    }));
+
+    console.log(`Returning ${vehicles.length} vehicles for phone ${phone}`);
+
     res.status(200).json({
       success: true,
-      data: user.vehicles || [],
+      data: vehicles,
     });
   } catch (error) {
     console.error('Error getting vehicles:', error);

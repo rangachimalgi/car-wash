@@ -5,12 +5,39 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 export const getVehicles = async (phone) => {
   try {
     const response = await api.get(`/users/${phone}/vehicles`);
-    return response.data.data || response.data || [];
+    console.log('getVehicles API response:', response.data);
+    
+    // Handle different response structures
+    let vehicles = [];
+    if (response.data) {
+      if (response.data.data) {
+        vehicles = response.data.data;
+      } else if (Array.isArray(response.data)) {
+        vehicles = response.data;
+      } else if (response.data.vehicles) {
+        vehicles = response.data.vehicles;
+      }
+    }
+    
+    // Ensure it's an array
+    if (!Array.isArray(vehicles)) {
+      console.warn('Vehicles response is not an array:', vehicles);
+      vehicles = [];
+    }
+    
+    console.log('Parsed vehicles:', vehicles.length, vehicles);
+    return vehicles;
   } catch (error) {
     console.warn('Error fetching vehicles from server:', error);
+    console.warn('Error details:', error.response?.data || error.message);
     // Fallback to AsyncStorage
-    const stored = await AsyncStorage.getItem(`userVehicles:${phone}`);
-    return stored ? JSON.parse(stored) : [];
+    try {
+      const stored = await AsyncStorage.getItem(`userVehicles:${phone}`);
+      return stored ? JSON.parse(stored) : [];
+    } catch (storageError) {
+      console.warn('Error reading from AsyncStorage:', storageError);
+      return [];
+    }
   }
 };
 
@@ -18,18 +45,52 @@ export const getVehicles = async (phone) => {
 export const addVehicle = async (phone, vehicleData) => {
   try {
     const response = await api.post(`/users/${phone}/vehicles`, vehicleData);
-    return response.data.data || response.data;
+    const savedVehicle = response.data.data || response.data;
+    
+    // Sync to AsyncStorage after successful API call
+    try {
+      const vehicles = await getVehicles(phone);
+      const vehiclesArray = Array.isArray(vehicles) ? vehicles : [];
+      
+      // Check if vehicle already exists (avoid duplicates)
+      const vehicleId = savedVehicle._id || savedVehicle.id;
+      const exists = vehiclesArray.some(v => {
+        const id = v._id || v.id;
+        return id && id.toString() === vehicleId?.toString();
+      });
+      
+      if (!exists) {
+        vehiclesArray.push(savedVehicle);
+        await AsyncStorage.setItem(`userVehicles:${phone}`, JSON.stringify(vehiclesArray));
+      } else {
+        // Update existing vehicle
+        const index = vehiclesArray.findIndex(v => {
+          const id = v._id || v.id;
+          return id && id.toString() === vehicleId?.toString();
+        });
+        if (index !== -1) {
+          vehiclesArray[index] = savedVehicle;
+          await AsyncStorage.setItem(`userVehicles:${phone}`, JSON.stringify(vehiclesArray));
+        }
+      }
+    } catch (storageError) {
+      console.warn('Error syncing vehicle to AsyncStorage:', storageError);
+      // Don't fail the whole operation if storage sync fails
+    }
+    
+    return savedVehicle;
   } catch (error) {
     console.warn('Error adding vehicle to server:', error);
     // Save locally as fallback
     const vehicles = await getVehicles(phone);
+    const vehiclesArray = Array.isArray(vehicles) ? vehicles : [];
     const newVehicle = {
       id: Date.now().toString(),
       ...vehicleData,
       createdAt: new Date().toISOString(),
     };
-    vehicles.push(newVehicle);
-    await AsyncStorage.setItem(`userVehicles:${phone}`, JSON.stringify(vehicles));
+    vehiclesArray.push(newVehicle);
+    await AsyncStorage.setItem(`userVehicles:${phone}`, JSON.stringify(vehiclesArray));
     return newVehicle;
   }
 };

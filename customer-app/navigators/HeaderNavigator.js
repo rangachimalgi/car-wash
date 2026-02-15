@@ -14,11 +14,10 @@ import LoginScreen from '../screens/LoginScreen';
 import RegisterScreen from '../screens/RegisterScreen';
 import WelcomeScreen from '../screens/WelcomeScreen';
 import AddressesScreen from '../screens/AddressesScreen';
-import VehicleDetailsScreen from '../screens/VehicleDetailsScreen';
-import SelectVehicleScreen from '../screens/SelectVehicleScreen';
-import FourWheelerDetailsScreen from '../screens/FourWheelerDetailsScreen';
-import CarModelsScreen from '../screens/CarModelsScreen';
 import EmployeeLiveLocationScreen from '../screens/EmployeeLiveLocationScreen';
+import VehicleDetailsScreen from '../screens/VehicleDetailsScreen';
+import BrandsScreen from '../screens/BrandsScreen';
+import ModelSelectionScreen from '../screens/ModelSelectionScreen';
 
 const Stack = createStackNavigator();
 
@@ -127,28 +126,23 @@ export default function HeaderNavigator() {
         options={{ headerShown: false }}
       />
       <Stack.Screen
-        name="VehicleDetails"
-        component={VehicleDetailsScreen}
+        name="EmployeeLiveLocation"
+        component={EmployeeLiveLocationScreen}
         options={{ headerShown: false }}
       />
       <Stack.Screen
         name="SelectVehicle"
-        component={SelectVehicleScreen}
+        component={VehicleDetailsScreen}
         options={{ headerShown: false }}
       />
       <Stack.Screen
-        name="FourWheelerDetails"
-        component={FourWheelerDetailsScreen}
+        name="Brands"
+        component={BrandsScreen}
         options={{ headerShown: false }}
       />
       <Stack.Screen
-        name="CarModels"
-        component={CarModelsScreen}
-        options={{ headerShown: false }}
-      />
-      <Stack.Screen
-        name="EmployeeLiveLocation"
-        component={EmployeeLiveLocationScreen}
+        name="ModelSelection"
+        component={ModelSelectionScreen}
         options={{ headerShown: false }}
       />
     </Stack.Navigator>

@@ -1,25 +1,45 @@
 import carsData from '../assets/carsData.json';
 
+// Cache for expensive operations - persists across renders
+let cachedBrands = null;
+let cachedPopularBrands = null;
+const modelsCache = new Map(); // Cache for brand models
+
 /**
- * Get all unique car brands
+ * Get all unique car brands (cached)
  * @returns {Array<{id: string, name: string}>} Array of brand objects
  */
 export const getAllBrands = () => {
-  const brands = Object.keys(carsData).map(brand => ({
+  // Return cached result if available
+  if (cachedBrands) {
+    return cachedBrands;
+  }
+  
+  // Compute and cache
+  cachedBrands = Object.keys(carsData).map(brand => ({
     id: brand.toLowerCase().replace(/\s+/g, '-'),
     name: brand,
-  }));
-  return brands.sort((a, b) => a.name.localeCompare(b.name));
+  })).sort((a, b) => a.name.localeCompare(b.name));
+  
+  return cachedBrands;
 };
 
 /**
- * Get models for a specific brand
+ * Get models for a specific brand (cached)
  * @param {string} brandName - The brand name (e.g., "Tata", "Maruti Suzuki")
  * @param {number} limit - Maximum number of models to return (default: 20)
  * @returns {Array<string>} Array of model names
  */
 export const getModelsForBrand = (brandName, limit = 20) => {
   if (!brandName) return [];
+  
+  // Create cache key
+  const cacheKey = `${brandName.toLowerCase()}_${limit}`;
+  
+  // Check cache first
+  if (modelsCache.has(cacheKey)) {
+    return modelsCache.get(cacheKey);
+  }
   
   // Try exact match first
   let models = carsData[brandName];
@@ -35,18 +55,26 @@ export const getModelsForBrand = (brandName, limit = 20) => {
   }
   
   if (!models || !Array.isArray(models)) {
+    modelsCache.set(cacheKey, []); // Cache empty result too
     return [];
   }
   
   // Return unique models, limited to specified count
-  return models.slice(0, limit);
+  const result = models.slice(0, limit);
+  modelsCache.set(cacheKey, result); // Cache the result
+  return result;
 };
 
 /**
- * Get popular brands (you can customize this list)
+ * Get popular brands (you can customize this list) - cached
  * @returns {Array<{id: string, name: string}>} Array of popular brand objects
  */
 export const getPopularBrands = () => {
+  // Return cached result if available
+  if (cachedPopularBrands) {
+    return cachedPopularBrands;
+  }
+  
   const popularBrandNames = [
     'Maruti Suzuki',
     'Hyundai',
@@ -56,7 +84,8 @@ export const getPopularBrands = () => {
     'Kia',
   ];
   
-  return popularBrandNames
+  // Compute and cache
+  cachedPopularBrands = popularBrandNames
     .map(name => {
       const brand = Object.keys(carsData).find(
         key => key.toLowerCase() === name.toLowerCase()
@@ -64,11 +93,63 @@ export const getPopularBrands = () => {
       return brand ? { id: brand.toLowerCase().replace(/\s+/g, '-'), name: brand } : null;
     })
     .filter(Boolean);
+  
+  return cachedPopularBrands;
+};
+
+// Lazy-loaded search index: model name -> array of brand names
+// Built only when first search happens (not at module load) to speed up initial load
+let modelToBrandsIndex = null;
+let indexBuilding = false; // Prevent concurrent builds
+
+/**
+ * Build search index lazily (only when needed)
+ * Maps model names to brand names for O(1) lookup
+ */
+const buildSearchIndex = () => {
+  // Return if already built or currently building
+  if (modelToBrandsIndex || indexBuilding) return;
+  
+  indexBuilding = true;
+  const index = new Map();
+  
+  // Build index: for each brand, index all its models
+  Object.keys(carsData).forEach(brandName => {
+    const models = carsData[brandName];
+    if (Array.isArray(models)) {
+      models.forEach(model => {
+        const modelLower = model.toLowerCase();
+        // Index by full model name
+        if (!index.has(modelLower)) {
+          index.set(modelLower, []);
+        }
+        const brands = index.get(modelLower);
+        if (!brands.includes(brandName)) {
+          brands.push(brandName);
+        }
+        
+        // Also index by individual words for partial matching
+        const words = modelLower.split(/\s+/).filter(w => w.length > 2); // Only words > 2 chars
+        words.forEach(word => {
+          if (!index.has(word)) {
+            index.set(word, []);
+          }
+          const wordBrands = index.get(word);
+          if (!wordBrands.includes(brandName)) {
+            wordBrands.push(brandName);
+          }
+        });
+      });
+    }
+  });
+  
+  modelToBrandsIndex = index;
+  indexBuilding = false;
 };
 
 // Cache for search results to avoid re-processing
 const searchCache = new Map();
-const CACHE_SIZE_LIMIT = 20; // Reduced cache size to prevent memory issues
+const CACHE_SIZE_LIMIT = 50; // Increased since we're using index now
 
 // Clear cache periodically to prevent memory buildup
 const clearCacheIfNeeded = () => {
@@ -80,7 +161,7 @@ const clearCacheIfNeeded = () => {
 };
 
 /**
- * Search brands by model name (optimized with caching)
+ * Search brands by model name (optimized with pre-built index and caching)
  * @param {string} modelQuery - The model name to search for (e.g., "A4", "Swift")
  * @returns {Array<{id: string, name: string}>} Array of brand objects that have models matching the query
  */
@@ -94,33 +175,36 @@ export const searchBrandsByModel = (modelQuery) => {
     return searchCache.get(query);
   }
   
-  const matchingBrands = [];
-  const queryWords = query.split(' ').filter(w => w.length > 0);
+  // Build index lazily (only on first search)
+  buildSearchIndex();
   
-  // Search through all brands and their models
-  Object.keys(carsData).forEach(brandName => {
-    const models = carsData[brandName];
-    if (Array.isArray(models)) {
-      // Optimized: Check if any model matches the query (faster with early exit)
-      let hasMatchingModel = false;
-      for (let i = 0; i < models.length && !hasMatchingModel; i++) {
-        const modelLower = models[i].toLowerCase();
-        // Check if query matches model (either full match or word match)
-        if (modelLower.includes(query) || queryWords.some(word => modelLower.includes(word))) {
-          hasMatchingModel = true;
-        }
-      }
-      
-      if (hasMatchingModel) {
-        matchingBrands.push({
-          id: brandName.toLowerCase().replace(/\s+/g, '-'),
-          name: brandName,
-        });
-      }
+  // Use index for fast lookup (no iteration needed)
+  const matchingBrandNames = new Set();
+  const queryWords = query.split(/\s+/).filter(w => w.length > 0);
+  
+  // Search using index - much faster than iterating all brands
+  queryWords.forEach(word => {
+    if (modelToBrandsIndex && modelToBrandsIndex.has(word)) {
+      modelToBrandsIndex.get(word).forEach(brandName => {
+        matchingBrandNames.add(brandName);
+      });
     }
   });
   
-  const result = matchingBrands.sort((a, b) => a.name.localeCompare(b.name));
+  // Also check full query match
+  if (modelToBrandsIndex && modelToBrandsIndex.has(query)) {
+    modelToBrandsIndex.get(query).forEach(brandName => {
+      matchingBrandNames.add(brandName);
+    });
+  }
+  
+  // Convert to result format
+  const result = Array.from(matchingBrandNames)
+    .map(brandName => ({
+      id: brandName.toLowerCase().replace(/\s+/g, '-'),
+      name: brandName,
+    }))
+    .sort((a, b) => a.name.localeCompare(b.name));
   
   // Clear cache if needed before adding new entry
   clearCacheIfNeeded();
