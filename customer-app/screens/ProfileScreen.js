@@ -211,7 +211,7 @@ export default function ProfileScreen({ navigation }) {
           <View style={styles.sectionHeader}>
             <MaterialCommunityIcons name="car" size={24} color={theme.accent} />
             <Text style={styles.sectionTitle}>My Vehicle</Text>
-            <TouchableOpacity style={styles.addButton} onPress={() => navigation.navigate('VehicleDetails')}>
+            <TouchableOpacity style={styles.addButton} onPress={() => navigation.navigate('SelectVehicle')}>
               <MaterialCommunityIcons name="pencil" size={20} color={theme.accent} />
             </TouchableOpacity>
           </View>
@@ -233,7 +233,7 @@ export default function ProfileScreen({ navigation }) {
             </View>
             <TouchableOpacity
               style={styles.saveVehicleButton}
-              onPress={() => navigation.navigate('VehicleDetails')}
+              onPress={() => navigation.navigate('SelectVehicle')}
             >
               <Text style={styles.saveVehicleText}>Edit Vehicle</Text>
             </TouchableOpacity>

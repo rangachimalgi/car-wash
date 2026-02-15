@@ -15,6 +15,9 @@ import RegisterScreen from '../screens/RegisterScreen';
 import WelcomeScreen from '../screens/WelcomeScreen';
 import AddressesScreen from '../screens/AddressesScreen';
 import VehicleDetailsScreen from '../screens/VehicleDetailsScreen';
+import SelectVehicleScreen from '../screens/SelectVehicleScreen';
+import FourWheelerDetailsScreen from '../screens/FourWheelerDetailsScreen';
+import CarModelsScreen from '../screens/CarModelsScreen';
 import EmployeeLiveLocationScreen from '../screens/EmployeeLiveLocationScreen';
 
 const Stack = createStackNavigator();
@@ -126,6 +129,21 @@ export default function HeaderNavigator() {
       <Stack.Screen
         name="VehicleDetails"
         component={VehicleDetailsScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="SelectVehicle"
+        component={SelectVehicleScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="FourWheelerDetails"
+        component={FourWheelerDetailsScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="CarModels"
+        component={CarModelsScreen}
         options={{ headerShown: false }}
       />
       <Stack.Screen

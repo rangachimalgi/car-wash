@@ -1,61 +1,94 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Alert, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Alert, StyleSheet, Text, TouchableOpacity, View, Image } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTheme } from '../theme/ThemeContext';
 import BackHeader from '../components/BackHeader';
 import { updateUserVehicle } from '../services/userApi';
+import { addVehicle } from '../services/vehicleApi';
+
+const FOUR_WHEELER_IMAGE = require('../assets/carVehicle.png');
+const TWO_WHEELER_IMAGE = require('../assets/fallbackBike.png');
 
 export default function VehicleDetailsScreen({ navigation, route }) {
   const insets = useSafeAreaInsets();
   const { theme, isLightMode } = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
-  const [vehicleType, setVehicleType] = useState('SUV');
-  const [vehicleModel, setVehicleModel] = useState('');
   const [phone, setPhone] = useState('');
   const [saving, setSaving] = useState(false);
-
-  // Vehicle type options - organized by category
-  const carTypes = ['SUV', 'Sedan', 'Hatchback'];
-  const bikeTypes = ['Bike', 'Scooter'];
-  const allTypes = [...carTypes, ...bikeTypes];
+  const [selectedVehicleType, setSelectedVehicleType] = useState(null); // No default selection
 
   useEffect(() => {
-    const loadVehicle = async () => {
+    const loadPhone = async () => {
       const storedPhone = await AsyncStorage.getItem('authPhone');
       setPhone(storedPhone || '');
-      if (storedPhone) {
-        const [storedType, storedModel] = await Promise.all([
-          AsyncStorage.getItem(`userVehicleType:${storedPhone}`),
-          AsyncStorage.getItem(`userVehicleModel:${storedPhone}`),
-        ]);
-        if (storedType) setVehicleType(storedType);
-        if (storedModel) setVehicleModel(storedModel);
-      }
     };
-    loadVehicle().catch(error => console.warn('Failed to load vehicle:', error));
+    loadPhone().catch(error => console.warn('Failed to load phone:', error));
   }, []);
 
-  const handleSave = async () => {
+  const handleTwoWheeler = async () => {
+    setSelectedVehicleType('2WHEELER');
     if (!phone) {
       Alert.alert('Missing phone', 'Please login to save vehicle details.');
       return;
     }
-    if (!vehicleModel.trim()) {
-      Alert.alert('Missing model', 'Please enter your vehicle model.');
+    setSaving(true);
+    try {
+      // Try to add vehicle to vehicles array
+      try {
+        await addVehicle(phone, {
+          vehicleType: 'Bike',
+          vehicleModel: '2 wheeler bike',
+        });
+      } catch (networkError) {
+        console.warn('Network error, saving locally only:', networkError);
+        // Fallback to old API for backward compatibility
+        try {
+          await updateUserVehicle({ phone, vehicleType: 'Bike', vehicleModel: '2 wheeler bike' });
+        } catch (e) {
+          console.warn('Fallback API also failed:', e);
+        }
+      }
+      
+      // Always save to local storage
+      await AsyncStorage.setItem(`userVehicleType:${phone}`, 'Bike');
+      await AsyncStorage.setItem(`userVehicleModel:${phone}`, '2 wheeler bike');
+      
+      Alert.alert('Saved', 'Vehicle details updated.');
+      // Navigate to Home screen
+      navigation.navigate('MainTabs', { screen: 'Home' });
+    } catch (error) {
+      console.error('Save vehicle error:', error);
+      Alert.alert(
+        'Connection Error', 
+        'Unable to connect to server. Please check your internet connection and ensure the server is running. Your selection has been saved locally.'
+      );
+      // Navigate to Home screen
+      navigation.navigate('MainTabs', { screen: 'Home' });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleFourWheeler = async () => {
+    setSelectedVehicleType('4WHEELER');
+    if (!phone) {
+      Alert.alert('Missing phone', 'Please login to save vehicle details.');
       return;
     }
     setSaving(true);
     try {
-      await updateUserVehicle({ phone, vehicleType, vehicleModel: vehicleModel.trim() });
-      await AsyncStorage.setItem(`userVehicleType:${phone}`, vehicleType);
-      await AsyncStorage.setItem(`userVehicleModel:${phone}`, vehicleModel.trim());
-      Alert.alert('Saved', 'Vehicle details updated.');
-      navigation.goBack();
+      // For 4 wheeler, we'll save after model selection, so just navigate
+      // But we can save a placeholder if needed
+      await AsyncStorage.setItem(`userVehicleType:${phone}`, 'Car');
+      
+      // Navigate to next screen to select model
+      navigation.navigate('FourWheelerDetails');
     } catch (error) {
-      console.error('Save vehicle error:', error);
-      Alert.alert('Error', 'Unable to save vehicle details.');
+      console.error('Error:', error);
+      navigation.navigate('FourWheelerDetails');
     } finally {
       setSaving(false);
     }
@@ -64,59 +97,78 @@ export default function VehicleDetailsScreen({ navigation, route }) {
   return (
     <View style={styles.container}>
       <StatusBar style={isLightMode ? 'dark' : 'light'} />
-      <BackHeader navigation={navigation} title="Vehicle Details" />
+      <BackHeader navigation={navigation} title="Choose Your Vehicle Type" />
       <View style={[styles.content, { paddingBottom: 20 + insets.bottom }]}>
-        <Text style={styles.label}>Vehicle Type</Text>
+        <Text style={styles.title}>Choose Your Vehicle Type</Text>
+        <Text style={styles.subtitle}>You can add more vehicles from the home screen</Text>
         
-        {/* Car Types */}
-        <View style={styles.typeSection}>
-          <Text style={styles.typeSectionLabel}>Car</Text>
-          <View style={styles.typeRow}>
-            {carTypes.map(type => (
-              <TouchableOpacity
-                key={type}
-                style={[styles.typeChip, vehicleType === type && styles.typeChipActive]}
-                onPress={() => setVehicleType(type)}
-              >
-                <Text style={[styles.typeChipText, vehicleType === type && styles.typeChipTextActive]}>
-                  {type}
-                </Text>
-              </TouchableOpacity>
-            ))}
+        {/* 4 Wheeler Card */}
+        <TouchableOpacity 
+          style={[
+            styles.vehicleCard,
+            selectedVehicleType === '4WHEELER' && styles.vehicleCardSelected
+          ]}
+          onPress={handleFourWheeler}
+          disabled={saving}
+          activeOpacity={0.7}
+        >
+          <View style={styles.cardContent}>
+            <View style={styles.cardLeftContent}>
+              <Text style={styles.cardPrefixText}>I have a</Text>
+              <Text style={styles.vehicleTitle}>4 WHEELER</Text>
+              {selectedVehicleType === '4WHEELER' && (
+                <View style={styles.selectedIndicator}>
+                  <MaterialCommunityIcons name="check-circle" size={20} color="#4CAF50" />
+                  <Text style={styles.selectedText}>Selected</Text>
+                </View>
+              )}
+            </View>
+            <View style={styles.cardImageContainer}>
+              <Image 
+                source={FOUR_WHEELER_IMAGE} 
+                style={styles.vehicleImage}
+                resizeMode="contain"
+              />
+            </View>
           </View>
+        </TouchableOpacity>
+
+        {/* OR Separator */}
+        <View style={styles.separatorContainer}>
+          <View style={styles.separatorLine} />
+          <Text style={styles.separatorText}>OR</Text>
+          <View style={styles.separatorLine} />
         </View>
 
-        {/* Bike Types */}
-        <View style={styles.typeSection}>
-          <Text style={styles.typeSectionLabel}>Bike/Scooter</Text>
-          <View style={styles.typeRow}>
-            {bikeTypes.map(type => (
-              <TouchableOpacity
-                key={type}
-                style={[styles.typeChip, vehicleType === type && styles.typeChipActive]}
-                onPress={() => setVehicleType(type)}
-              >
-                <Text style={[styles.typeChipText, vehicleType === type && styles.typeChipTextActive]}>
-                  {type}
-                </Text>
-              </TouchableOpacity>
-            ))}
+        {/* 2 Wheeler Card */}
+        <TouchableOpacity 
+          style={[
+            styles.vehicleCard,
+            selectedVehicleType === '2WHEELER' && styles.vehicleCardSelected
+          ]}
+          onPress={handleTwoWheeler}
+          disabled={saving}
+          activeOpacity={0.7}
+        >
+          <View style={styles.cardContent}>
+            <View style={styles.cardLeftContent}>
+              <Text style={styles.cardPrefixText}>I have a</Text>
+              <Text style={styles.vehicleTitle}>2 WHEELER / BIKE</Text>
+              {selectedVehicleType === '2WHEELER' && (
+                <View style={styles.selectedIndicator}>
+                  <MaterialCommunityIcons name="check-circle" size={20} color="#4CAF50" />
+                  <Text style={styles.selectedText}>Selected</Text>
+                </View>
+              )}
+            </View>
+            <View style={styles.cardImageContainer}>
+              <Image 
+                source={TWO_WHEELER_IMAGE} 
+                style={styles.vehicleImage}
+                resizeMode="contain"
+              />
+            </View>
           </View>
-        </View>
-
-        <Text style={styles.label}>Vehicle Name & Model</Text>
-        <TextInput
-          style={styles.input}
-          placeholder={vehicleType === 'Bike' || vehicleType === 'Scooter' 
-            ? "e.g., Royal Enfield Classic 350" 
-            : "e.g., Hyundai i20"}
-          placeholderTextColor={theme.textSecondary}
-          value={vehicleModel}
-          onChangeText={setVehicleModel}
-        />
-
-        <TouchableOpacity style={styles.saveButton} onPress={handleSave} disabled={saving}>
-          <Text style={styles.saveButtonText}>{saving ? 'Saving...' : 'Save Vehicle'}</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -131,68 +183,90 @@ const createStyles = theme =>
     },
     content: {
       paddingHorizontal: 16,
-      paddingTop: 16,
+      paddingTop: 24,
+      flex: 1,
     },
-    label: {
-      fontSize: 14,
-      fontWeight: '600',
+    title: {
+      fontSize: 28,
+      fontWeight: 'bold',
       color: theme.textPrimary,
       marginBottom: 8,
+      textAlign: 'left',
     },
-    typeSection: {
-      marginBottom: 20,
-    },
-    typeSectionLabel: {
-      fontSize: 12,
-      fontWeight: '600',
+    subtitle: {
+      fontSize: 14,
       color: theme.textSecondary,
-      marginBottom: 8,
-      textTransform: 'uppercase',
+      marginBottom: 32,
+      textAlign: 'left',
     },
-    typeRow: {
+    vehicleCard: {
+      backgroundColor: '#F5F5F5',
+      borderRadius: 16,
+      borderWidth: 1,
+      borderColor: '#E0E0E0',
+      marginBottom: 16,
+      overflow: 'hidden',
+    },
+    vehicleCardSelected: {
+      borderColor: '#4CAF50',
+      borderWidth: 2,
+      backgroundColor: '#F0F8F0',
+    },
+    cardContent: {
       flexDirection: 'row',
-      flexWrap: 'wrap',
-      gap: 8,
+      padding: 20,
+      alignItems: 'center',
+      justifyContent: 'space-between',
     },
-    typeChip: {
-      paddingHorizontal: 12,
-      paddingVertical: 6,
-      borderRadius: 12,
-      borderWidth: 1,
-      borderColor: theme.cardBorder,
+    cardLeftContent: {
+      flex: 1,
+      justifyContent: 'center',
     },
-    typeChipActive: {
-      backgroundColor: theme.accent,
-      borderColor: theme.accent,
-    },
-    typeChipText: {
-      fontSize: 12,
-      color: theme.textSecondary,
-      fontWeight: '600',
-    },
-    typeChipTextActive: {
-      color: '#000000',
-    },
-    input: {
-      backgroundColor: theme.cardBackground,
-      borderRadius: 12,
-      borderWidth: 1,
-      borderColor: theme.cardBorder,
-      paddingHorizontal: 12,
-      paddingVertical: 12,
+    cardPrefixText: {
       fontSize: 14,
-      color: theme.textPrimary,
-      marginBottom: 20,
+      color: '#FFA500',
+      marginBottom: 8,
     },
-    saveButton: {
-      backgroundColor: theme.accent,
-      borderRadius: 12,
-      paddingVertical: 14,
+    vehicleTitle: {
+      fontSize: 24,
+      fontWeight: 'bold',
+      color: theme.textPrimary || '#000000',
+      marginBottom: 8,
+    },
+    selectedIndicator: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginTop: 8,
+    },
+    selectedText: {
+      color: '#4CAF50',
+      fontSize: 14,
+      fontWeight: '600',
+      marginLeft: 6,
+    },
+    cardImageContainer: {
+      width: 140,
+      height: 140,
+      justifyContent: 'center',
       alignItems: 'center',
     },
-    saveButtonText: {
-      color: '#000000',
-      fontWeight: '700',
+    vehicleImage: {
+      width: 250,
+      height: 200,
+    },
+    separatorContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginVertical: 16,
+    },
+    separatorLine: {
+      flex: 1,
+      height: 1,
+      backgroundColor: theme.cardBorder || '#E0E0E0',
+    },
+    separatorText: {
+      marginHorizontal: 16,
       fontSize: 14,
+      color: theme.textSecondary || '#999999',
     },
   });
