@@ -29,37 +29,30 @@ export default function SavedVehiclesModal({ visible, onClose, navigation }) {
       setLoading(true);
       const phone = await AsyncStorage.getItem('authPhone');
       if (!phone) {
-        console.log('No phone number found');
         setVehicles([]);
         setLoading(false);
         return;
       }
 
-      console.log('Loading vehicles for phone:', phone);
       let userVehicles = await getVehicles(phone);
-      console.log('Vehicles from API:', userVehicles);
       
       // Ensure we have an array
       let vehiclesArray = Array.isArray(userVehicles) ? userVehicles : [];
       
       // If no vehicles from API, check AsyncStorage directly
       if (vehiclesArray.length === 0) {
-        console.log('No vehicles from API, checking AsyncStorage...');
         const storedVehicles = await AsyncStorage.getItem(`userVehicles:${phone}`);
         if (storedVehicles) {
           try {
             const parsed = JSON.parse(storedVehicles);
             if (Array.isArray(parsed) && parsed.length > 0) {
               vehiclesArray = parsed;
-              console.log('Loaded vehicles from AsyncStorage:', vehiclesArray.length);
             }
           } catch (e) {
             console.warn('Error parsing stored vehicles:', e);
           }
         }
       }
-      
-      console.log('Final vehicles array:', vehiclesArray.length, vehiclesArray);
       
       // Ensure all vehicles have proper ID fields
       vehiclesArray = vehiclesArray.map((vehicle, index) => {
@@ -70,9 +63,7 @@ export default function SavedVehiclesModal({ visible, onClose, navigation }) {
         return vehicle;
       });
       
-      console.log('Setting vehicles state with', vehiclesArray.length, 'vehicles');
       setVehicles(vehiclesArray);
-      console.log('Vehicles state should be updated');
 
       // Get selected vehicle ID
       const storedSelectedId = await AsyncStorage.getItem(`selectedVehicleId:${phone}`);
@@ -90,7 +81,6 @@ export default function SavedVehiclesModal({ visible, onClose, navigation }) {
       }
     } catch (error) {
       console.error('Error loading vehicles:', error);
-      console.error('Error details:', error.message, error.stack);
       setVehicles([]);
     } finally {
       setLoading(false);
@@ -102,12 +92,6 @@ export default function SavedVehiclesModal({ visible, onClose, navigation }) {
       loadVehicles();
     }
   }, [visible, loadVehicles]);
-
-  // Debug: Log when vehicles state changes
-  useEffect(() => {
-    console.log('Vehicles state changed:', vehicles.length, 'vehicles');
-    console.log('Loading state:', loading);
-  }, [vehicles, loading]);
 
   // Handle vehicle selection
   const handleSelectVehicle = useCallback(async (vehicle) => {
@@ -317,6 +301,11 @@ export default function SavedVehiclesModal({ visible, onClose, navigation }) {
     return model || type || 'Unknown Vehicle';
   };
 
+  // Don't render modal content when not visible to prevent unnecessary renders
+  if (!visible) {
+    return null;
+  }
+
   return (
     <Modal
       isVisible={visible}
@@ -392,7 +381,6 @@ export default function SavedVehiclesModal({ visible, onClose, navigation }) {
             nestedScrollEnabled={true}
           >
               {vehicles.map((vehicle, index) => {
-                console.log(`Rendering vehicle ${index}:`, vehicle.vehicleModel);
               // Handle both _id (MongoDB) and id (local) formats
               const vehicleId = vehicle._id?.toString() || vehicle.id?.toString() || `vehicle-${index}`;
               const isSelected = selectedVehicleId === vehicleId;
