@@ -173,7 +173,7 @@ export default function LoginScreen({ navigation }) {
             {/* Banner Section with Image */}
             <View style={styles.bannerContainer}>
               <Image 
-                source={require('../assets/carbannerthree.jpeg')} 
+                source={require('../assets/carpicfour.jpeg')} 
                 style={styles.bannerImage}
                 resizeMode="cover"
               />
@@ -348,6 +348,7 @@ const createStyles = theme => StyleSheet.create({
   bannerImage: {
     width: '100%',
     height: '100%',
+    resizeMode: 'contain', 
   },
   bannerOverlay: {
     position: 'absolute',
