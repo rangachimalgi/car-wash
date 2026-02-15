@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import CustomHeader from '../components/CustomHeader';
+import { LinearGradient } from 'expo-linear-gradient'
 
 const { width } = Dimensions.get('window');
 
@@ -27,11 +28,19 @@ export default function WelcomeScreen({ navigation }) {
         {/* Banner Section */}
         <View style={styles.bannerWrapper}>
           <View style={styles.heroBanner}>
-            <Image
-              source={require('../assets/welcomebanner.jpeg')}
-              style={styles.heroImage}
-              resizeMode="cover"
-            />
+            {/* Text Section - 30% */}
+            <View style={styles.bannerTextContainer}>
+              <Text style={styles.bannerText}>At your time & place</Text>
+            </View>
+            
+            {/* Image Section - 60% */}
+            <View style={styles.bannerImageContainer}>
+              <Image
+                source={require('../assets/welcomeCarBanner.jpeg')}
+                style={styles.bannerImage}
+                resizeMode="contain"
+              />
+            </View>
           </View>
           
           {/* Header on top of banner */}
@@ -136,11 +145,44 @@ const styles = StyleSheet.create({
   heroBanner: {
     width: '100%',
     height: 400,
+    backgroundColor: '#D9DEE2', // Light blue color
     overflow: 'hidden',
     position: 'relative',
     paddingTop: 100,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 20,
   },
-  heroImage: {
+  bannerTextContainer: {
+    width: '30%',
+    justifyContent: 'center',
+    paddingRight: 10,
+  },
+  bannerText: {
+    // Font Styling
+    fontSize: 30,             // Large impact size
+    fontWeight: '800',        // Extra bold
+    fontStyle: 'italic',      // The slant is key
+    color: '#4ED3F4',         // Bright yellow from image
+    textTransform: 'uppercase',
+    lineHeight: 40,
+    
+    // The Outline Effect (iOS Only)
+    textShadowColor: '#000',  // Black outline
+    textShadowOffset: { width: 2, height: 2 },
+    textShadowRadius: 1,
+  
+    // Custom Android Shadow Hack (Multiple shadows)
+    // For a perfect outline on Android, consider 'react-native-svg-text'
+  },
+  bannerImageContainer: {
+    width: '60%',
+    height: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingLeft: 10,
+  },
+  bannerImage: {
     width: '100%',
     height: '100%',
   },
