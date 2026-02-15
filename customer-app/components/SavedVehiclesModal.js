@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, ActivityIndicator, TextInput } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import Modal from 'react-native-modal';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../theme/ThemeContext';
 import { Image } from 'expo-image';
-import { getVehicles, deleteVehicle, setSelectedVehicle } from '../services/vehicleApi';
+import { getVehicles, deleteVehicle, setSelectedVehicle, addVehicle } from '../services/vehicleApi';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const FALLBACK_CAR_IMAGE = require('../assets/carVehicle.png');
@@ -18,6 +18,10 @@ export default function SavedVehiclesModal({ visible, onClose, navigation }) {
   const [selectedVehicleId, setSelectedVehicleId] = useState(null);
   const [loading, setLoading] = useState(false);
   const [deletingId, setDeletingId] = useState(null);
+  const [showCustomVehicleModal, setShowCustomVehicleModal] = useState(false);
+  const [customBrand, setCustomBrand] = useState('');
+  const [customModel, setCustomModel] = useState('');
+  const [savingCustomVehicle, setSavingCustomVehicle] = useState(false);
 
   // Load vehicles and selected vehicle
   const loadVehicles = useCallback(async () => {
@@ -182,6 +186,95 @@ export default function SavedVehiclesModal({ visible, onClose, navigation }) {
     navigation?.navigate('SelectVehicle');
   }, [navigation, onClose]);
 
+  // Handle save custom vehicle
+  const handleSaveCustomVehicle = useCallback(async () => {
+    if (!customBrand.trim() || !customModel.trim()) {
+      Alert.alert('Required Fields', 'Please enter both brand and model name.');
+      return;
+    }
+
+    if (savingCustomVehicle) return;
+
+    try {
+      setSavingCustomVehicle(true);
+
+      // Get user's phone number from AsyncStorage
+      const phone = await AsyncStorage.getItem('authPhone');
+      
+      if (!phone) {
+        Alert.alert(
+          'Login Required',
+          'Please login to save your vehicle.',
+          [{ text: 'OK' }]
+        );
+        setSavingCustomVehicle(false);
+        return;
+      }
+      
+      // Determine vehicle type from existing vehicles or default to 4WHEELER
+      let vehicleType = '4WHEELER';
+      if (vehicles.length > 0) {
+        // Check if user has any 2-wheelers
+        const has2Wheeler = vehicles.some(v => {
+          const type = (v.vehicleType || '').toLowerCase();
+          return type === '2wheeler' || type.includes('bike') || 
+                 (type.includes('2') && type.includes('wheeler'));
+        });
+        // If they have 2-wheelers, we could ask, but for simplicity, default to 4WHEELER
+        // Or we could add a picker, but user said "no car type" so just use 4WHEELER
+      }
+      
+      // Prepare vehicle data
+      const vehicleModel = `${customBrand.trim()} ${customModel.trim()}`;
+      const vehicleData = {
+        vehicleType: vehicleType,
+        vehicleModel: vehicleModel,
+      };
+      
+      // Save vehicle to database
+      const savedVehicle = await addVehicle(phone, vehicleData);
+      
+      // Set as selected vehicle if it has an ID
+      if (savedVehicle?._id || savedVehicle?.id) {
+        const vehicleId = savedVehicle._id || savedVehicle.id;
+        await setSelectedVehicle(phone, vehicleId);
+        
+        // Also save to AsyncStorage for quick access
+        await AsyncStorage.setItem(`userVehicleType:${phone}`, vehicleType);
+        await AsyncStorage.setItem(`userVehicleModel:${phone}`, vehicleModel);
+      }
+      
+      // Reload vehicles list
+      await loadVehicles();
+      
+      // Show success message
+      Alert.alert(
+        'Vehicle Saved',
+        `Your ${vehicleModel} has been saved successfully!`,
+        [
+          {
+            text: 'OK',
+            onPress: () => {
+              // Reset form and close modal
+              setCustomBrand('');
+              setCustomModel('');
+              setShowCustomVehicleModal(false);
+            }
+          }
+        ]
+      );
+    } catch (error) {
+      console.error('Error saving custom vehicle:', error);
+      Alert.alert(
+        'Error',
+        'Failed to save vehicle. Please try again.',
+        [{ text: 'OK' }]
+      );
+    } finally {
+      setSavingCustomVehicle(false);
+    }
+  }, [customBrand, customModel, vehicles, loadVehicles, savingCustomVehicle]);
+
   // Get vehicle image source
   const getVehicleImage = (vehicle) => {
     const vehicleType = (vehicle.vehicleType || '').toLowerCase();
@@ -235,17 +328,32 @@ export default function SavedVehiclesModal({ visible, onClose, navigation }) {
       animationIn="slideInUp"
       animationOut="slideOutDown"
     >
-      <View style={[styles.modalContent, { backgroundColor: theme.background, paddingBottom: insets.bottom }]}>
+      <View style={[
+        styles.modalContent, 
+        { 
+          backgroundColor: theme.background, 
+          paddingBottom: insets.bottom
+        }
+      ]}>
         {/* Header */}
         <View style={styles.modalHeader}>
           <Text style={[styles.modalTitle, { color: theme.textPrimary }]}>Select Vehicle</Text>
-          <TouchableOpacity
-            style={styles.addButton}
-            onPress={handleAddNewVehicle}
-            activeOpacity={0.7}
-          >
-            <Text style={styles.addButtonText}>+ Add New Vehicle</Text>
-          </TouchableOpacity>
+          <View style={styles.headerButtons}>
+            <TouchableOpacity
+              style={styles.cantFindButton}
+              onPress={() => setShowCustomVehicleModal(true)}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.cantFindButtonText}>Can't find?</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.addButton}
+              onPress={handleAddNewVehicle}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.addButtonText}>+ Add New</Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
         {/* Saved Vehicles Section */}
@@ -277,12 +385,12 @@ export default function SavedVehiclesModal({ visible, onClose, navigation }) {
             </TouchableOpacity>
           </View>
         ) : (
-          <View style={styles.vehiclesListContainer}>
-            <ScrollView 
-              style={styles.vehiclesList} 
-              contentContainerStyle={styles.vehiclesListContent}
-              showsVerticalScrollIndicator={false}
-            >
+          <ScrollView 
+            style={styles.vehiclesList}
+            contentContainerStyle={styles.vehiclesListContent}
+            showsVerticalScrollIndicator={vehicles.length > 5}
+            nestedScrollEnabled={true}
+          >
               {vehicles.map((vehicle, index) => {
                 console.log(`Rendering vehicle ${index}:`, vehicle.vehicleModel);
               // Handle both _id (MongoDB) and id (local) formats
@@ -348,9 +456,71 @@ export default function SavedVehiclesModal({ visible, onClose, navigation }) {
               );
               })}
             </ScrollView>
-          </View>
         )}
       </View>
+
+      {/* Custom Vehicle Modal */}
+      <Modal
+        isVisible={showCustomVehicleModal}
+        onBackdropPress={() => setShowCustomVehicleModal(false)}
+        onSwipeComplete={() => setShowCustomVehicleModal(false)}
+        swipeDirection="down"
+        style={styles.modal}
+        backdropOpacity={0.5}
+        animationIn="slideInUp"
+        animationOut="slideOutDown"
+      >
+        <View style={[styles.customModalContent, { backgroundColor: theme.background, paddingBottom: insets.bottom }]}>
+          <View style={styles.modalHeader}>
+            <Text style={[styles.modalTitle, { color: theme.textPrimary }]}>Enter Your Vehicle Details</Text>
+            <TouchableOpacity
+              onPress={() => setShowCustomVehicleModal(false)}
+              style={styles.modalCloseButton}
+            >
+              <MaterialCommunityIcons name="close" size={24} color={theme.textPrimary} />
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.customModalBody}>
+            <Text style={[styles.inputLabel, { color: theme.textSecondary }]}>Enter your brand</Text>
+            <View style={[styles.inputContainer, { backgroundColor: theme.cardBackground, borderColor: theme.cardBorder }]}>
+              <MaterialCommunityIcons name="car" size={20} color={theme.textSecondary} style={styles.inputIcon} />
+              <TextInput
+                style={[styles.input, { color: theme.textPrimary }]}
+                placeholder="e.g., Audi, Hyundai, Tata"
+                placeholderTextColor={theme.textSecondary}
+                value={customBrand}
+                onChangeText={setCustomBrand}
+                autoCapitalize="words"
+              />
+            </View>
+
+            <Text style={[styles.inputLabel, { color: theme.textSecondary, marginTop: 20 }]}>Enter your model name</Text>
+            <View style={[styles.inputContainer, { backgroundColor: theme.cardBackground, borderColor: theme.cardBorder }]}>
+              <MaterialCommunityIcons name="car-sports" size={20} color={theme.textSecondary} style={styles.inputIcon} />
+              <TextInput
+                style={[styles.input, { color: theme.textPrimary }]}
+                placeholder="e.g., A4, Creta, Harrier"
+                placeholderTextColor={theme.textSecondary}
+                value={customModel}
+                onChangeText={setCustomModel}
+                autoCapitalize="words"
+              />
+            </View>
+
+            <TouchableOpacity
+              style={[styles.saveButton, { backgroundColor: theme.accent }, savingCustomVehicle && styles.saveButtonDisabled]}
+              onPress={handleSaveCustomVehicle}
+              disabled={savingCustomVehicle}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.saveButtonText}>
+                {savingCustomVehicle ? 'Saving...' : 'Save Vehicle'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </Modal>
   );
 }
@@ -365,7 +535,8 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 20,
     paddingTop: 20,
     paddingHorizontal: 20,
-    maxHeight: '80%',
+    maxHeight: '90%',
+    minHeight: 200,
   },
   modalHeader: {
     flexDirection: 'row',
@@ -376,6 +547,24 @@ const styles = StyleSheet.create({
   modalTitle: {
     fontSize: 20,
     fontWeight: 'bold',
+  },
+  headerButtons: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  cantFindButton: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    backgroundColor: '#F8F9FA',
+  },
+  cantFindButtonText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#1A1A1A',
   },
   addButton: {
     paddingHorizontal: 12,
@@ -389,6 +578,55 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
     color: '#1A1A1A',
+  },
+  customModalContent: {
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    paddingTop: 20,
+    paddingHorizontal: 20,
+    maxHeight: '80%',
+  },
+  modalCloseButton: {
+    padding: 4,
+  },
+  customModalBody: {
+    paddingBottom: 20,
+  },
+  inputLabel: {
+    fontSize: 14,
+    fontWeight: '500',
+    marginBottom: 8,
+  },
+  inputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: 12,
+    borderWidth: 1,
+    paddingHorizontal: 12,
+    height: 50,
+  },
+  inputIcon: {
+    marginRight: 12,
+  },
+  input: {
+    flex: 1,
+    fontSize: 16,
+    paddingVertical: 0,
+  },
+  saveButton: {
+    marginTop: 32,
+    paddingVertical: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  saveButtonDisabled: {
+    opacity: 0.6,
+  },
+  saveButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
   },
   sectionHeaderContainer: {
     flexDirection: 'row',
@@ -427,12 +665,8 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
   },
-  vehiclesListContainer: {
-    flex: 1,
-    minHeight: 200,
-  },
   vehiclesList: {
-    flex: 1,
+    flexGrow: 1,
   },
   vehiclesListContent: {
     paddingBottom: 20,
