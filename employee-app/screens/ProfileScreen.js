@@ -1,10 +1,13 @@
 import React, { useEffect, useState } from 'react';
-import { Image, StyleSheet, Text, TouchableOpacity, View, ActivityIndicator } from 'react-native';
+import { Image, StyleSheet, Text, TouchableOpacity, View, ActivityIndicator, ScrollView } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import EarningsHistoryScreen from './EarningsHistoryScreen';
+import InventoryScreen from './InventoryScreen';
 
-export default function ProfileScreen({ onLogout }) {
+export default function ProfileScreen({ onLogout, employeeId }) {
   const insets = useSafeAreaInsets();
   const [profile, setProfile] = useState({
     employeeId: '',
@@ -12,6 +15,7 @@ export default function ProfileScreen({ onLogout }) {
     phone: '',
   });
   const [loading, setLoading] = useState(true);
+  const [activeView, setActiveView] = useState('profile'); // 'profile', 'earnings', 'inventory'
 
   useEffect(() => {
     const loadProfile = async () => {
@@ -43,7 +47,7 @@ export default function ProfileScreen({ onLogout }) {
     }
   };
 
-  if (loading) {
+  if (loading && activeView === 'profile') {
     return (
       <View style={[styles.container, styles.loadingContainer, { paddingTop: 24 + insets.top }]}>
         <StatusBar style="dark" />
@@ -53,8 +57,49 @@ export default function ProfileScreen({ onLogout }) {
     );
   }
 
+  // Show Earnings screen
+  if (activeView === 'earnings') {
+    return (
+      <View style={[styles.container, { paddingTop: 24 + insets.top }]}>
+        <StatusBar style="dark" />
+        <View style={styles.headerRow}>
+          <TouchableOpacity style={styles.backButton} onPress={() => setActiveView('profile')}>
+            <MaterialCommunityIcons name="arrow-left" size={20} color="#2F5CF4" />
+            <Text style={styles.backText}>Back</Text>
+          </TouchableOpacity>
+          <Text style={styles.title}>Earnings</Text>
+          <View style={styles.headerSpacer} />
+        </View>
+        <EarningsHistoryScreen />
+      </View>
+    );
+  }
+
+  // Show Inventory screen
+  if (activeView === 'inventory') {
+    return (
+      <View style={[styles.container, { paddingTop: 24 + insets.top }]}>
+        <StatusBar style="dark" />
+        <View style={styles.headerRow}>
+          <TouchableOpacity style={styles.backButton} onPress={() => setActiveView('profile')}>
+            <MaterialCommunityIcons name="arrow-left" size={20} color="#2F5CF4" />
+            <Text style={styles.backText}>Back</Text>
+          </TouchableOpacity>
+          <Text style={styles.title}>Inventory</Text>
+          <View style={styles.headerSpacer} />
+        </View>
+        <InventoryScreen employeeId={employeeId} />
+      </View>
+    );
+  }
+
+  // Show Profile screen
   return (
-    <View style={[styles.container, { paddingTop: 24 + insets.top }]}>
+    <ScrollView 
+      style={[styles.container, { paddingTop: 24 + insets.top }]}
+      contentContainerStyle={styles.scrollContent}
+      showsVerticalScrollIndicator={false}
+    >
       <StatusBar style="dark" />
       <Text style={styles.title}>Profile</Text>
 
@@ -87,10 +132,20 @@ export default function ProfileScreen({ onLogout }) {
         </View>
       </View>
 
+      <TouchableOpacity style={styles.earningsButton} onPress={() => setActiveView('earnings')}>
+        <MaterialCommunityIcons name="cash-multiple" size={20} color="#FFFFFF" />
+        <Text style={styles.earningsText}>Earnings</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity style={styles.inventoryButton} onPress={() => setActiveView('inventory')}>
+        <MaterialCommunityIcons name="package-variant-closed" size={20} color="#FFFFFF" />
+        <Text style={styles.inventoryText}>Inventory</Text>
+      </TouchableOpacity>
+
       <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
         <Text style={styles.logoutText}>Logout</Text>
       </TouchableOpacity>
-    </View>
+    </ScrollView>
   );
 }
 
@@ -99,6 +154,32 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#F5F6F8',
     paddingHorizontal: 20,
+  },
+  scrollContent: {
+    paddingBottom: 24,
+  },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+  },
+  backButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#EEF2FF',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 10,
+  },
+  backText: {
+    color: '#2F5CF4',
+    fontWeight: '700',
+    fontSize: 12,
+  },
+  headerSpacer: {
+    width: 60,
   },
   title: {
     fontSize: 24,
@@ -160,8 +241,38 @@ const styles = StyleSheet.create({
     color: '#111827',
     fontWeight: '600',
   },
-  logoutButton: {
+  earningsButton: {
     marginTop: 24,
+    backgroundColor: '#22C55E',
+    borderRadius: 12,
+    paddingVertical: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  earningsText: {
+    color: '#FFFFFF',
+    fontWeight: '700',
+    fontSize: 14,
+  },
+  inventoryButton: {
+    marginTop: 12,
+    backgroundColor: '#2F8CF4',
+    borderRadius: 12,
+    paddingVertical: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  inventoryText: {
+    color: '#FFFFFF',
+    fontWeight: '700',
+    fontSize: 14,
+  },
+  logoutButton: {
+    marginTop: 12,
     backgroundColor: '#EF4444',
     borderRadius: 12,
     paddingVertical: 14,
