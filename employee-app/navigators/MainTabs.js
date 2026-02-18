@@ -3,13 +3,13 @@ import { BottomNavigation } from 'react-native-paper';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import AttendanceScreen from '../screens/AttendanceScreen';
 import EarningsHistoryScreen from '../screens/EarningsHistoryScreen';
-import HomeScreen from '../screens/HomeScreen';
+// import HomeScreen from '../screens/HomeScreen';
 import InventoryScreen from '../screens/InventoryScreen';
 import JobQueueScreen from '../screens/JobQueueScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 
 const routes = [
-  { key: 'home', title: 'Home', icon: 'home-variant-outline' },
+  // { key: 'home', title: 'Home', icon: 'home-variant-outline' },
   { key: 'attendance', title: 'Attendance', icon: 'calendar-check-outline' },
   { key: 'jobs', title: 'Job Queue', icon: 'clipboard-list-outline' },
   { key: 'inventory', title: 'Inventory', icon: 'package-variant-closed' },
@@ -22,22 +22,18 @@ const renderIcon = ({ route, color, size }) => (
 );
 
 export default function MainTabs({ onLogout, employeeId, navigation }) {
-  const [index, setIndex] = useState(0);
-  const [refreshKey, setRefreshKey] = useState(0);
-  const openAttendance = () => setIndex(1);
+  const [index, setIndex] = useState(0); // Default to Attendance (index 0)
+  // const [refreshKey, setRefreshKey] = useState(0);
+  // const openAttendance = () => setIndex(0);
 
   const handleIndexChange = (newIndex) => {
     setIndex(newIndex);
-    // Refresh home screen when coming back from attendance tab
-    if (newIndex === 0 && index === 1) {
-      setRefreshKey(prev => prev + 1);
-    }
   };
 
   const renderScene = ({ route }) => {
     switch (route.key) {
-      case 'home':
-        return <HomeScreen key={refreshKey} onOpenAttendance={openAttendance} employeeId={employeeId} />;
+      // case 'home':
+      //   return <HomeScreen key={refreshKey} onOpenAttendance={openAttendance} employeeId={employeeId} />;
       case 'attendance':
         return <AttendanceScreen />;
       case 'jobs':
