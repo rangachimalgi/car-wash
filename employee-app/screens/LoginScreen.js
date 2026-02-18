@@ -14,7 +14,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { API_BASE_URL } from '../config/api';
+import api from '../services/api';
 
 export default function LoginScreen({ onLogin }) {
   const insets = useSafeAreaInsets();
@@ -31,13 +31,13 @@ export default function LoginScreen({ onLogin }) {
     }
     setLoading(true);
     try {
-      const response = await fetch(`${API_BASE_URL}/employees/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ employeeId: employeeId.trim(), password }),
+      const response = await api.post('/employees/login', {
+        employeeId: employeeId.trim(),
+        password,
       });
-      const data = await response.json();
-      if (!response.ok || !data.success) {
+      
+      const data = response.data;
+      if (!data.success) {
         Alert.alert('Login failed', data.message || 'Invalid credentials');
         return;
       }
@@ -54,8 +54,29 @@ export default function LoginScreen({ onLogin }) {
         onLogin({ employeeId: data.data.employeeId });
       }
     } catch (error) {
-      Alert.alert('Login failed', 'Unable to login right now.');
       console.error('Employee login error:', error);
+      if (error.response) {
+        // Server responded with error
+        Alert.alert('Login failed', error.response.data?.message || 'Invalid credentials');
+      } else if (error.request) {
+        // Request made but no response - network issue
+        const errorMessage = error.request?._response || error.message || '';
+        if (errorMessage.includes('unreachable')) {
+          Alert.alert(
+            'Connection Error',
+            'Cannot reach server. Please check:\n\n' +
+            '• Backend server is running\n' +
+            '• Correct IP address configured\n' +
+            '• Device and computer on same network\n\n' +
+            'Check console for details.'
+          );
+        } else {
+          Alert.alert('Network Error', 'Unable to connect to server. Please check your connection.');
+        }
+      } else {
+        // Something else happened
+        Alert.alert('Login failed', error.message || 'Unable to login right now.');
+      }
     } finally {
       setLoading(false);
     }

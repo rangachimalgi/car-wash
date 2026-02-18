@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { API_BASE_URL } from '../config/api';
+import api from '../services/api';
 
 export default function JobDetailScreen({ route, navigation }) {
   const insets = useSafeAreaInsets();
@@ -20,11 +20,10 @@ export default function JobDetailScreen({ route, navigation }) {
       try {
         // Include employeeId in query if available
         const url = employeeId 
-          ? `${API_BASE_URL}/orders/${orderId}?employeeId=${employeeId}`
-          : `${API_BASE_URL}/orders/${orderId}`;
-        const res = await fetch(url);
-        const data = await res.json();
-        setJob(data?.data || null);
+          ? `/orders/${orderId}?employeeId=${employeeId}`
+          : `/orders/${orderId}`;
+        const response = await api.get(url);
+        setJob(response.data?.data || null);
       } catch (error) {
         console.error('Error fetching job detail:', error);
         setJob(null);

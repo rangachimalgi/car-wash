@@ -2,7 +2,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View, ActivityIndicator } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { API_BASE_URL } from '../config/api';
+import api from '../services/api';
 import { getTodayAttendance } from '../services/attendanceApi';
 
 export default function HomeScreen({ onOpenAttendance, employeeId }) {
@@ -31,8 +31,8 @@ export default function HomeScreen({ onOpenAttendance, employeeId }) {
     if (!employeeId) return;
     setLoadingJob(true);
     try {
-      const res = await fetch(`${API_BASE_URL}/jobs/incoming?employeeId=${employeeId}`);
-      const data = await res.json();
+      const response = await api.get(`/jobs/incoming?employeeId=${employeeId}`);
+      const data = response.data;
       const first = data?.data?.[0];
       if (!first) {
         setIncomingJob(null);

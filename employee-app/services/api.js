@@ -2,7 +2,13 @@ import axios from 'axios';
 import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const COMPUTER_IP = '192.168.1.3';
+// Your computer's IP address (for physical Android devices)
+// Find it with: ipconfig getifaddr en0 (Mac) or ipconfig (Windows)
+const COMPUTER_IP = '192.168.1.15';
+
+// Set to true if using Android Emulator, false if using physical device
+// Android Emulator uses special IP: 10.0.2.2 to reach host machine
+const USE_ANDROID_EMULATOR = false; // Change to true if using Android emulator
 
 const getBaseURL = () => {
   if (!__DEV__) {
@@ -10,9 +16,13 @@ const getBaseURL = () => {
   }
 
   if (Platform.OS === 'android') {
+    // Android emulator: use 10.0.2.2, Physical device: use computer's IP
+    if (USE_ANDROID_EMULATOR) {
+      return 'http://10.0.2.2:8000/api';
+    }
     return `http://${COMPUTER_IP}:8000/api`;
   }
-a
+
   return 'http://localhost:8000/api';
 };
 
@@ -74,6 +84,17 @@ api.interceptors.response.use(
     } else if (error.request) {
       // Request made but no response
       console.error('Network Error:', error.request);
+      
+      // Provide helpful error message for network issues
+      const errorMessage = error.request._response || error.message;
+      if (errorMessage && errorMessage.includes('unreachable')) {
+        console.error('⚠️ Host unreachable. Check:');
+        console.error(`   1. Backend server is running on port 8000`);
+        console.error(`   2. Using Android Emulator? Set USE_ANDROID_EMULATOR = true in api.js`);
+        console.error(`   3. Using physical device? Ensure IP ${COMPUTER_IP} is correct`);
+        console.error(`   4. Both device and computer are on same WiFi network`);
+        console.error(`   Current API URL: ${API_BASE_URL}`);
+      }
     } else {
       // Something else happened
       console.error('Error:', error.message);

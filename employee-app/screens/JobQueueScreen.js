@@ -3,7 +3,7 @@ import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-nati
 import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
-import { API_BASE_URL } from '../config/api';
+import api from '../services/api';
 
 export default function JobQueueScreen({ employeeId, navigation }) {
   const insets = useSafeAreaInsets();
@@ -18,16 +18,13 @@ export default function JobQueueScreen({ employeeId, navigation }) {
     setLoading(true);
     try {
       const [incomingRes, queueRes, historyRes] = await Promise.all([
-        fetch(`${API_BASE_URL}/jobs/incoming?employeeId=${employeeId}`),
-        fetch(`${API_BASE_URL}/jobs/queue?employeeId=${employeeId}`),
-        fetch(`${API_BASE_URL}/jobs/history?employeeId=${employeeId}`),
+        api.get(`/jobs/incoming?employeeId=${employeeId}`),
+        api.get(`/jobs/queue?employeeId=${employeeId}`),
+        api.get(`/jobs/history?employeeId=${employeeId}`),
       ]);
-      const incomingData = await incomingRes.json();
-      const queueData = await queueRes.json();
-      const historyData = await historyRes.json();
-      setIncomingJobs(incomingData.data || []);
-      setQueue(queueData.data || []);
-      setHistory(historyData.data || []);
+      setIncomingJobs(incomingRes.data.data || []);
+      setQueue(queueRes.data.data || []);
+      setHistory(historyRes.data.data || []);
     } catch (error) {
       console.error('Error fetching jobs:', error);
     } finally {
@@ -47,11 +44,7 @@ export default function JobQueueScreen({ employeeId, navigation }) {
 
   const handleAccept = async (orderId) => {
     try {
-      await fetch(`${API_BASE_URL}/jobs/${orderId}/accept`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ employeeId }),
-      });
+      await api.post(`/jobs/${orderId}/accept`, { employeeId });
       fetchJobs();
     } catch (error) {
       console.error('Error accepting job:', error);
@@ -60,11 +53,7 @@ export default function JobQueueScreen({ employeeId, navigation }) {
 
   const handleDecline = async (orderId) => {
     try {
-      await fetch(`${API_BASE_URL}/jobs/${orderId}/decline`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ employeeId }),
-      });
+      await api.post(`/jobs/${orderId}/decline`, { employeeId });
       fetchJobs();
     } catch (error) {
       console.error('Error declining job:', error);
