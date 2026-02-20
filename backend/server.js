@@ -52,7 +52,10 @@ app.use(errorHandler);
 
 const PORT = process.env.PORT || 5000;
 
-app.listen(PORT, () => {
+// Listen on all network interfaces (0.0.0.0) so it's accessible from other devices
+// Use 'localhost' or '127.0.0.1' if you only want local access
+app.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 Server running on port ${PORT}`);
+  console.log(`📡 Accessible at http://localhost:${PORT} or http://YOUR_IP:${PORT}`);
   startKeepAlive();
 });
