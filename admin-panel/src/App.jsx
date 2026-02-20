@@ -1,13 +1,9 @@
 import React, { useState, useEffect } from 'react'
 import './App.css'
 
-// API configuration
-// For local development: use your computer's IP address
-// Find it with: ipconfig getifaddr en0 (Mac) or ipconfig (Windows)
-const COMPUTER_IP = '192.168.1.3'
-const API_BASE_URL = `http://${COMPUTER_IP}:8000/api`
-// For production, uncomment the line below and comment the line above:
-// const API_BASE_URL = 'https://car-wash-vbry.onrender.com/api'
+// API configuration: use env var or fallback for local backend
+// Set VITE_API_URL in .env (e.g. http://localhost:8000/api or http://YOUR_IP:8000/api)
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api'
 
 function App() {
   const [activeTab, setActiveTab] = useState('services') // 'services', 'addons', 'coverage', 'orders', 'attendance', 'inventory'
@@ -68,6 +64,7 @@ function App() {
   const [allServices, setAllServices] = useState([])
   const [serviceFilter, setServiceFilter] = useState('all') // 'all', 'car', 'bike'
   const [editingServiceId, setEditingServiceId] = useState(null) // Track which service is being edited
+  const [servicesError, setServicesError] = useState('')
   const [authToken, setAuthToken] = useState(() => localStorage.getItem('adminAuthToken') || '')
   
   // Attendance state
@@ -96,6 +93,7 @@ function App() {
   const [editingInventoryId, setEditingInventoryId] = useState(null)
   const [inventoryMessage, setInventoryMessage] = useState({ type: '', text: '' })
   const [stockUpdateModal, setStockUpdateModal] = useState({ open: false, item: null, quantity: '', operation: 'add' })
+  const [sidebarOpen, setSidebarOpen] = useState(false)
 
   // Helper function to create fetch options with auth headers
   const getFetchOptions = (options = {}) => {
@@ -611,6 +609,7 @@ function App() {
   // Fetch all services for listing
   const fetchAllServices = async () => {
     setLoadingAllServices(true)
+    setServicesError('')
     try {
       const response = await fetch(`${API_BASE_URL}/services?isActive=true`)
       const data = await response.json()
@@ -618,9 +617,14 @@ function App() {
         // Filter to only CarWash and BikeWash services
         const services = (data.data || []).filter(s => s.category === 'CarWash' || s.category === 'BikeWash')
         setAllServices(services)
+      } else {
+        setServicesError(data.message || 'Failed to load services')
       }
     } catch (error) {
       console.error('Error fetching all services:', error)
+      setServicesError(
+        `Cannot reach backend at ${API_BASE_URL}. Is the server running? (${error.message})`
+      )
     } finally {
       setLoadingAllServices(false)
     }
@@ -1153,109 +1157,91 @@ function App() {
     }
   }
 
+  const navItems = [
+    { id: 'services', label: 'Services', icon: '🚗' },
+    { id: 'addons', label: 'Add-Ons', icon: '➕' },
+    { id: 'coverage', label: 'Coverage', icon: '📋' },
+    { id: 'orders', label: 'Orders', icon: '📦' },
+    { id: 'attendance', label: 'Attendance', icon: '👥' },
+    { id: 'inventory', label: 'Inventory', icon: '📦', badge: inventory.filter(item => item.isLowStock).length },
+  ]
+
+  const pageTitles = {
+    services: 'Services',
+    addons: 'Add-Ons',
+    coverage: 'Coverage',
+    orders: 'Orders',
+    attendance: 'Employee Attendance',
+    inventory: 'Inventory',
+  }
+
   return (
     <div className="app">
-      <div className="container">
-        <h1 className="title">Admin Panel</h1>
-        <p className="subtitle">Woosh Car & Bike Wash Service</p>
+      {/* Sidebar overlay for mobile */}
+      <div
+        className={`sidebar-overlay ${sidebarOpen ? 'open' : ''}`}
+        onClick={() => setSidebarOpen(false)}
+        aria-hidden="true"
+      />
 
-        {/* Auth Token Section */}
-        <div style={{ marginBottom: '20px', padding: '15px', backgroundColor: '#f5f5f5', borderRadius: '8px', border: '1px solid #ddd' }}>
-          <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600', fontSize: '14px' }}>
-            Auth Token (for protected endpoints):
-          </label>
-          <div style={{ display: 'flex', gap: '10px' }}>
-            <input
-              type="text"
-              value={authToken}
-              onChange={(e) => {
-                const token = e.target.value
-                setAuthToken(token)
-                localStorage.setItem('adminAuthToken', token)
-              }}
-              placeholder="Enter JWT token from customer app login"
-              style={{
-                flex: 1,
-                padding: '8px 12px',
-                border: '1px solid #ddd',
-                borderRadius: '4px',
-                fontSize: '14px',
-              }}
-            />
+      <aside className={`sidebar ${sidebarOpen ? 'open' : ''}`}>
+        <div className="sidebar-header">
+          <button type="button" className="sidebar-close" onClick={() => setSidebarOpen(false)} aria-label="Close menu">
+            ×
+          </button>
+          <div className="sidebar-brand">
+            <span className="sidebar-logo">Woosh</span>
+            <span className="sidebar-tagline">Admin Panel</span>
+          </div>
+        </div>
+        <nav className="sidebar-nav">
+          {navItems.map(({ id, label, icon, badge }) => (
             <button
+              key={id}
               type="button"
+              className={`nav-item ${activeTab === id ? 'active' : ''}`}
               onClick={() => {
-                setAuthToken('')
-                localStorage.removeItem('adminAuthToken')
-              }}
-              style={{
-                padding: '8px 16px',
-                backgroundColor: '#dc3545',
-                color: 'white',
-                border: 'none',
-                borderRadius: '4px',
-                cursor: 'pointer',
-                fontSize: '14px',
+                setActiveTab(id)
+                setSidebarOpen(false)
               }}
             >
-              Clear
+              <span className="nav-icon">{icon}</span>
+              <span className="nav-label">{label}</span>
+              {badge > 0 && <span className="nav-badge">{badge}</span>}
             </button>
-          </div>
-          <p style={{ marginTop: '8px', fontSize: '12px', color: '#666' }}>
-            Get token from customer app after logging in, or use browser dev tools to copy from network requests.
-          </p>
+          ))}
+        </nav>
+        <div className="sidebar-footer">
+          <details className="auth-details">
+            <summary>Auth Token</summary>
+            <div className="auth-token-fields">
+              <input
+                type="text"
+                value={authToken}
+                onChange={(e) => {
+                  const token = e.target.value
+                  setAuthToken(token)
+                  localStorage.setItem('adminAuthToken', token)
+                }}
+                placeholder="JWT token"
+              />
+              <button type="button" className="auth-clear" onClick={() => { setAuthToken(''); localStorage.removeItem('adminAuthToken') }}>
+                Clear
+              </button>
+            </div>
+          </details>
         </div>
+      </aside>
 
-        {/* Tabs */}
-        <div className="tabs">
-          <button
-            type="button"
-            className={`tab ${activeTab === 'services' ? 'active' : ''}`}
-            onClick={() => setActiveTab('services')}
-          >
-            Services
+      <main className="main">
+        <header className="main-header">
+          <button type="button" className="menu-toggle" onClick={() => setSidebarOpen(true)} aria-label="Open menu">
+            ☰
           </button>
-          <button
-            type="button"
-            className={`tab ${activeTab === 'addons' ? 'active' : ''}`}
-            onClick={() => setActiveTab('addons')}
-          >
-            Add-Ons
-          </button>
-          <button
-            type="button"
-            className={`tab ${activeTab === 'coverage' ? 'active' : ''}`}
-            onClick={() => setActiveTab('coverage')}
-          >
-            Coverage
-          </button>
-          <button
-            type="button"
-            className={`tab ${activeTab === 'orders' ? 'active' : ''}`}
-            onClick={() => setActiveTab('orders')}
-          >
-            Orders
-          </button>
-          <button
-            type="button"
-            className={`tab ${activeTab === 'attendance' ? 'active' : ''}`}
-            onClick={() => setActiveTab('attendance')}
-          >
-            Attendance
-          </button>
-          <button
-            type="button"
-            className={`tab ${activeTab === 'inventory' ? 'active' : ''}`}
-            onClick={() => setActiveTab('inventory')}
-          >
-            Inventory
-            {(() => {
-              const lowStockCount = inventory.filter(item => item.isLowStock).length
-              return lowStockCount > 0 ? ` (${lowStockCount})` : ''
-            })()}
-          </button>
-        </div>
+          <h1 className="page-title">{pageTitles[activeTab]}</h1>
+        </header>
 
+        <div className="container">
         {/* Services Tab */}
         {activeTab === 'services' && (
           <>
@@ -1263,7 +1249,16 @@ function App() {
             <div className="addons-list-section">
               <div className="section-header">
                 <h2 className="section-title">Existing Services</h2>
-                <div className="filter-tabs">
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+                  <button
+                    type="button"
+                    className="secondary-button"
+                    onClick={fetchAllServices}
+                    disabled={loadingAllServices}
+                  >
+                    {loadingAllServices ? 'Loading...' : 'Refresh'}
+                  </button>
+                  <div className="filter-tabs">
                   <button
                     type="button"
                     className={`filter-tab ${serviceFilter === 'all' ? 'active' : ''}`}
@@ -1285,10 +1280,18 @@ function App() {
                   >
                     Bike Wash
                   </button>
+                  </div>
                 </div>
               </div>
 
-              {loadingAllServices ? (
+              {servicesError ? (
+                <div className="message error">
+                  {servicesError}
+                  <button type="button" className="secondary-button" style={{ marginTop: '10px' }} onClick={fetchAllServices}>
+                    Retry
+                  </button>
+                </div>
+              ) : loadingAllServices ? (
                 <div className="loading-text">Loading services...</div>
               ) : filteredServices.length === 0 ? (
                 <div className="info-text">No services found for this filter.</div>
@@ -2608,7 +2611,8 @@ function App() {
             )}
           </div>
         )}
-      </div>
+        </div>
+      </main>
     </div>
   )
 }
