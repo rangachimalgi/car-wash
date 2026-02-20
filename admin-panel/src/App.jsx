@@ -63,9 +63,32 @@ function App() {
   const [orders, setOrders] = useState([])
   const [allServices, setAllServices] = useState([])
   const [serviceFilter, setServiceFilter] = useState('all') // 'all', 'car', 'bike'
+  const [serviceSearch, setServiceSearch] = useState('') // Search query
   const [editingServiceId, setEditingServiceId] = useState(null) // Track which service is being edited
   const [servicesError, setServicesError] = useState('')
   const [authToken, setAuthToken] = useState(() => localStorage.getItem('adminAuthToken') || '')
+  
+  // Time Slots state
+  const [timeSlots, setTimeSlots] = useState([])
+  const [loadingTimeSlots, setLoadingTimeSlots] = useState(false)
+  const [timeSlotsError, setTimeSlotsError] = useState('')
+  const [editingTimeSlotId, setEditingTimeSlotId] = useState(null)
+  const [timeSlotFormData, setTimeSlotFormData] = useState({
+    time: '',
+    startTime: '',
+    endTime: '',
+    order: '',
+    isActive: true,
+  })
+  const [timeSlotMessage, setTimeSlotMessage] = useState({ type: '', text: '' })
+  
+  // Daily slot override state
+  const [selectedOverrideDate, setSelectedOverrideDate] = useState('')
+  const [dailyOverrideSlots, setDailyOverrideSlots] = useState([])
+  const [loadingDailyOverride, setLoadingDailyOverride] = useState(false)
+  const [dailyOverrideMessage, setDailyOverrideMessage] = useState({ type: '', text: '' })
+  const [defaultSlotsCount, setDefaultSlotsCount] = useState(10)
+  const [defaultStartHour, setDefaultStartHour] = useState(9)
   
   // Attendance state
   const [attendance, setAttendance] = useState([])
@@ -116,7 +139,15 @@ function App() {
     fetchOrders()
     fetchAllServices()
     fetchEmployees()
+    fetchTimeSlots()
   }, [])
+
+  // Fetch time slots when slots tab is active
+  useEffect(() => {
+    if (activeTab === 'slots') {
+      fetchTimeSlots()
+    }
+  }, [activeTab])
 
   // Fetch attendance when attendance tab is active or date/employee filter changes
   useEffect(() => {
@@ -606,6 +637,384 @@ function App() {
     return { totalItems, lowStockItems, totalStockValue }
   }
 
+  // Fetch all time slots
+  const fetchTimeSlots = async () => {
+    setLoadingTimeSlots(true)
+    setTimeSlotsError('')
+    try {
+      const response = await fetch(`${API_BASE_URL}/slots/times/all`)
+      const data = await response.json()
+      if (data.success) {
+        setTimeSlots(data.data || [])
+      } else {
+        setTimeSlotsError(data.message || 'Failed to load time slots')
+      }
+    } catch (error) {
+      console.error('Error fetching time slots:', error)
+      setTimeSlotsError(`Cannot reach backend: ${error.message}`)
+    } finally {
+      setLoadingTimeSlots(false)
+    }
+  }
+
+  // Handle time slot form change
+  const handleTimeSlotChange = (e) => {
+    const { name, value, type, checked } = e.target
+    setTimeSlotFormData(prev => ({
+      ...prev,
+      [name]: type === 'checkbox' ? checked : value
+    }))
+  }
+
+  // Handle time slot submit
+  const handleTimeSlotSubmit = async (e) => {
+    e.preventDefault()
+    setTimeSlotMessage({ type: '', text: '' })
+
+    try {
+      const slotData = {
+        time: timeSlotFormData.time.trim(),
+        startTime: timeSlotFormData.startTime.trim(),
+        endTime: timeSlotFormData.endTime.trim(),
+        order: timeSlotFormData.order ? parseInt(timeSlotFormData.order) : undefined,
+        isActive: timeSlotFormData.isActive,
+      }
+
+      const url = editingTimeSlotId 
+        ? `${API_BASE_URL}/slots/times/${editingTimeSlotId}`
+        : `${API_BASE_URL}/slots/times`
+      const method = editingTimeSlotId ? 'PUT' : 'POST'
+
+      const response = await fetch(url, {
+        method,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(slotData),
+      })
+
+      const data = await response.json()
+
+      if (response.ok && data.success) {
+        setTimeSlotMessage({ 
+          type: 'success', 
+          text: editingTimeSlotId ? 'Time slot updated successfully!' : 'Time slot created successfully!' 
+        })
+        // Reset form
+        setTimeSlotFormData({
+          time: '',
+          startTime: '',
+          endTime: '',
+          order: '',
+          isActive: true,
+        })
+        setEditingTimeSlotId(null)
+        // Refresh slots list
+        fetchTimeSlots()
+      } else {
+        setTimeSlotMessage({ 
+          type: 'error', 
+          text: data.message || (editingTimeSlotId ? 'Failed to update slot' : 'Failed to create slot')
+        })
+      }
+    } catch (error) {
+      console.error('Error saving time slot:', error)
+      setTimeSlotMessage({ 
+        type: 'error', 
+        text: error.message || 'Network error. Please check if backend is running.' 
+      })
+    }
+  }
+
+  // Handle edit time slot
+  const handleEditTimeSlot = (slotId) => {
+    const slot = timeSlots.find(s => s._id === slotId)
+    if (slot) {
+      setEditingTimeSlotId(slotId)
+      setTimeSlotFormData({
+        time: slot.time || '',
+        startTime: slot.startTime || '',
+        endTime: slot.endTime || '',
+        order: String(slot.order || ''),
+        isActive: slot.isActive !== undefined ? slot.isActive : true,
+      })
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+    }
+  }
+
+  // Handle new time slot
+  const handleNewTimeSlot = () => {
+    setEditingTimeSlotId(null)
+    setTimeSlotFormData({
+      time: '',
+      startTime: '',
+      endTime: '',
+      order: '',
+      isActive: true,
+    })
+  }
+
+  // Handle delete time slot
+  const handleDeleteTimeSlot = async (slotId) => {
+    if (!window.confirm('Are you sure you want to delete this time slot? This cannot be undone if there are active orders using it.')) {
+      return
+    }
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/slots/times/${slotId}`, {
+        method: 'DELETE',
+      })
+
+      const data = await response.json()
+
+      if (response.ok && data.success) {
+        setTimeSlotMessage({ type: 'success', text: 'Time slot deleted successfully!' })
+        fetchTimeSlots()
+      } else {
+        setTimeSlotMessage({ type: 'error', text: data.message || 'Failed to delete time slot' })
+      }
+    } catch (error) {
+      console.error('Error deleting time slot:', error)
+      setTimeSlotMessage({ type: 'error', text: error.message || 'Network error' })
+    }
+  }
+
+  // Generate default slots (10 slots, 1 hour each)
+  const generateDefaultSlots = (count, startHour) => {
+    const slots = []
+    for (let i = 0; i < count; i++) {
+      const hour = startHour + i
+      const nextHour = hour + 1
+      const start12h = hour > 12 ? `${hour - 12}:00 PM` : hour === 12 ? '12:00 PM' : `${hour}:00 AM`
+      const end12h = nextHour > 12 ? `${nextHour - 12}:00 PM` : nextHour === 12 ? '12:00 PM' : `${nextHour}:00 AM`
+      const start24h = String(hour).padStart(2, '0') + ':00'
+      const end24h = String(nextHour).padStart(2, '0') + ':00'
+      
+      slots.push({
+        time: `${start12h} - ${end12h}`,
+        startTime: start24h,
+        endTime: end24h,
+        order: i + 1,
+      })
+    }
+    return slots
+  }
+
+  // Reset to default slots
+  const handleResetToDefaults = async () => {
+    if (!window.confirm(`This will delete all existing slots and create ${defaultSlotsCount} default slots starting from ${defaultStartHour}:00. Continue?`)) {
+      return
+    }
+
+    setLoadingTimeSlots(true)
+    setTimeSlotMessage({ type: '', text: '' })
+
+    try {
+      // Get all existing slots
+      const existingResponse = await fetch(`${API_BASE_URL}/slots/times/all`)
+      const existingData = await existingResponse.json()
+      
+      if (existingData.success) {
+        // Delete all existing slots
+        for (const slot of existingData.data) {
+          try {
+            await fetch(`${API_BASE_URL}/slots/times/${slot._id}`, { method: 'DELETE' })
+          } catch (e) {
+            console.warn('Error deleting slot:', e)
+          }
+        }
+      }
+
+      // Create new default slots
+      const defaultSlots = generateDefaultSlots(defaultSlotsCount, defaultStartHour)
+      let successCount = 0
+
+      for (const slot of defaultSlots) {
+        try {
+          const response = await fetch(`${API_BASE_URL}/slots/times`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              ...slot,
+              isActive: true,
+            }),
+          })
+          if (response.ok) successCount++
+        } catch (e) {
+          console.error('Error creating slot:', e)
+        }
+      }
+
+      setTimeSlotMessage({ 
+        type: 'success', 
+        text: `Successfully created ${successCount} default slots!` 
+      })
+      fetchTimeSlots()
+    } catch (error) {
+      console.error('Error resetting slots:', error)
+      setTimeSlotMessage({ type: 'error', text: error.message || 'Failed to reset slots' })
+    } finally {
+      setLoadingTimeSlots(false)
+    }
+  }
+
+  // Load daily override for a date
+  const loadDailyOverride = async (date) => {
+    if (!date) {
+      setDailyOverrideSlots([])
+      return
+    }
+
+    setLoadingDailyOverride(true)
+    setDailyOverrideMessage({ type: '', text: '' })
+
+    try {
+      const dateStr = new Date(date).toISOString().split('T')[0]
+      const response = await fetch(`${API_BASE_URL}/slots/daily/${dateStr}`)
+      const data = await response.json()
+
+      if (data.success) {
+        if (data.data && data.data.slots && data.data.slots.length > 0) {
+          // Override exists, use it
+          setDailyOverrideSlots(data.data.slots.map(s => ({
+            time: s.time,
+            startTime: s.startTime,
+            endTime: s.endTime,
+            order: s.order || 0,
+          })))
+        } else {
+          // No override, load default slots
+          const slotsResponse = await fetch(`${API_BASE_URL}/slots/times`)
+          const slotsData = await slotsResponse.json()
+          if (slotsData.success && slotsData.data) {
+            setDailyOverrideSlots(slotsData.data.map(s => ({
+              time: s.time,
+              startTime: s.startTime,
+              endTime: s.endTime,
+              order: s.order || 0,
+            })))
+          } else {
+            // Fallback to generated defaults
+            const defaults = generateDefaultSlots(defaultSlotsCount, defaultStartHour)
+            setDailyOverrideSlots(defaults)
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error loading daily override:', error)
+      setDailyOverrideMessage({ type: 'error', text: error.message || 'Failed to load daily override' })
+      // On error, use generated defaults
+      const defaults = generateDefaultSlots(defaultSlotsCount, defaultStartHour)
+      setDailyOverrideSlots(defaults)
+    } finally {
+      setLoadingDailyOverride(false)
+    }
+  }
+
+  // Get time slots from API
+  const getTimeSlotsFromDB = async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/slots/times`)
+      const data = await response.json()
+      return data.success ? data.data : []
+    } catch (error) {
+      return []
+    }
+  }
+
+  // Save daily override
+  const handleSaveDailyOverride = async (e) => {
+    e.preventDefault()
+    if (!selectedOverrideDate) {
+      setDailyOverrideMessage({ type: 'error', text: 'Please select a date' })
+      return
+    }
+
+    setLoadingDailyOverride(true)
+    setDailyOverrideMessage({ type: '', text: '' })
+
+    try {
+      const dateStr = new Date(selectedOverrideDate).toISOString().split('T')[0]
+      const response = await fetch(`${API_BASE_URL}/slots/daily`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          date: dateStr,
+          slots: dailyOverrideSlots,
+          isActive: true,
+        }),
+      })
+
+      const data = await response.json()
+
+      if (response.ok && data.success) {
+        setDailyOverrideMessage({ type: 'success', text: 'Daily slot override saved successfully!' })
+      } else {
+        setDailyOverrideMessage({ type: 'error', text: data.message || 'Failed to save override' })
+      }
+    } catch (error) {
+      console.error('Error saving daily override:', error)
+      setDailyOverrideMessage({ type: 'error', text: error.message || 'Network error' })
+    } finally {
+      setLoadingDailyOverride(false)
+    }
+  }
+
+  // Delete daily override
+  const handleDeleteDailyOverride = async () => {
+    if (!selectedOverrideDate) return
+    if (!window.confirm('Delete override for this date? It will revert to default slots.')) return
+
+    setLoadingDailyOverride(true)
+    try {
+      const dateStr = new Date(selectedOverrideDate).toISOString().split('T')[0]
+      const response = await fetch(`${API_BASE_URL}/slots/daily/${dateStr}`, {
+        method: 'DELETE',
+      })
+
+      const data = await response.json()
+
+      if (response.ok && data.success) {
+        setDailyOverrideMessage({ type: 'success', text: 'Override deleted! Using default slots.' })
+        setDailyOverrideSlots([])
+        setSelectedOverrideDate('')
+      } else {
+        setDailyOverrideMessage({ type: 'error', text: data.message || 'Failed to delete override' })
+      }
+    } catch (error) {
+      console.error('Error deleting override:', error)
+      setDailyOverrideMessage({ type: 'error', text: error.message || 'Network error' })
+    } finally {
+      setLoadingDailyOverride(false)
+    }
+  }
+
+  // Add/remove slots for daily override
+  const addSlotToOverride = () => {
+    const hour = dailyOverrideSlots.length > 0 
+      ? parseInt(dailyOverrideSlots[dailyOverrideSlots.length - 1].endTime.split(':')[0])
+      : defaultStartHour
+    const nextHour = hour + 1
+    const start12h = hour > 12 ? `${hour - 12}:00 PM` : hour === 12 ? '12:00 PM' : `${hour}:00 AM`
+    const end12h = nextHour > 12 ? `${nextHour - 12}:00 PM` : nextHour === 12 ? '12:00 PM' : `${nextHour}:00 AM`
+    const start24h = String(hour).padStart(2, '0') + ':00'
+    const end24h = String(nextHour).padStart(2, '0') + ':00'
+
+    setDailyOverrideSlots([...dailyOverrideSlots, {
+      time: `${start12h} - ${end12h}`,
+      startTime: start24h,
+      endTime: end24h,
+      order: dailyOverrideSlots.length + 1,
+    }])
+  }
+
+  const removeSlotFromOverride = (index) => {
+    setDailyOverrideSlots(dailyOverrideSlots.filter((_, i) => i !== index).map((slot, idx) => ({
+      ...slot,
+      order: idx + 1,
+    })))
+  }
+
   // Fetch all services for listing
   const fetchAllServices = async () => {
     setLoadingAllServices(true)
@@ -630,11 +1039,20 @@ function App() {
     }
   }
 
-  // Filter services based on selected filter
+  // Filter services based on selected filter and search
   const filteredServices = allServices.filter(service => {
-    if (serviceFilter === 'all') return true
-    if (serviceFilter === 'car') return service.category === 'CarWash'
-    if (serviceFilter === 'bike') return service.category === 'BikeWash'
+    // Category filter
+    if (serviceFilter === 'car' && service.category !== 'CarWash') return false
+    if (serviceFilter === 'bike' && service.category !== 'BikeWash') return false
+    
+    // Search filter
+    if (serviceSearch) {
+      const searchLower = serviceSearch.toLowerCase()
+      const matchesName = service.name?.toLowerCase().includes(searchLower)
+      const matchesDescription = service.description?.toLowerCase().includes(searchLower)
+      if (!matchesName && !matchesDescription) return false
+    }
+    
     return true
   })
 
@@ -1161,6 +1579,7 @@ function App() {
     { id: 'services', label: 'Services', icon: '🚗' },
     { id: 'addons', label: 'Add-Ons', icon: '➕' },
     { id: 'coverage', label: 'Coverage', icon: '📋' },
+    { id: 'slots', label: 'Time Slots', icon: '⏰' },
     { id: 'orders', label: 'Orders', icon: '📦' },
     { id: 'attendance', label: 'Attendance', icon: '👥' },
     { id: 'inventory', label: 'Inventory', icon: '📦', badge: inventory.filter(item => item.isLowStock).length },
@@ -1170,6 +1589,7 @@ function App() {
     services: 'Services',
     addons: 'Add-Ons',
     coverage: 'Coverage',
+    slots: 'Time Slots',
     orders: 'Orders',
     attendance: 'Employee Attendance',
     inventory: 'Inventory',
@@ -1246,41 +1666,65 @@ function App() {
         {activeTab === 'services' && (
           <>
             {/* Services List Section */}
-            <div className="addons-list-section">
+            <div className="services-section">
               <div className="section-header">
-                <h2 className="section-title">Existing Services</h2>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
-                  <button
-                    type="button"
-                    className="secondary-button"
-                    onClick={fetchAllServices}
-                    disabled={loadingAllServices}
-                  >
-                    {loadingAllServices ? 'Loading...' : 'Refresh'}
-                  </button>
-                  <div className="filter-tabs">
+                <h2 className="section-title">Services</h2>
+                <button
+                  type="button"
+                  className="refresh-button"
+                  onClick={fetchAllServices}
+                  disabled={loadingAllServices}
+                  title="Refresh services list"
+                >
+                  <span className="refresh-icon">↻</span>
+                  {loadingAllServices ? 'Loading...' : 'Refresh'}
+                </button>
+              </div>
+
+              {/* Search and Filters */}
+              <div className="services-controls">
+                <div className="search-box">
+                  <span className="search-icon">🔍</span>
+                  <input
+                    type="text"
+                    placeholder="Search services by name or description..."
+                    value={serviceSearch}
+                    onChange={(e) => setServiceSearch(e.target.value)}
+                    className="search-input"
+                  />
+                  {serviceSearch && (
+                    <button
+                      type="button"
+                      className="clear-search"
+                      onClick={() => setServiceSearch('')}
+                      title="Clear search"
+                    >
+                      ×
+                    </button>
+                  )}
+                </div>
+                <div className="filter-tabs">
                   <button
                     type="button"
                     className={`filter-tab ${serviceFilter === 'all' ? 'active' : ''}`}
                     onClick={() => setServiceFilter('all')}
                   >
-                    All
+                    All ({allServices.length})
                   </button>
                   <button
                     type="button"
                     className={`filter-tab ${serviceFilter === 'car' ? 'active' : ''}`}
                     onClick={() => setServiceFilter('car')}
                   >
-                    Car Wash
+                    🚗 Car Wash ({allServices.filter(s => s.category === 'CarWash').length})
                   </button>
                   <button
                     type="button"
                     className={`filter-tab ${serviceFilter === 'bike' ? 'active' : ''}`}
                     onClick={() => setServiceFilter('bike')}
                   >
-                    Bike Wash
+                    🏍️ Bike Wash ({allServices.filter(s => s.category === 'BikeWash').length})
                   </button>
-                  </div>
                 </div>
               </div>
 
@@ -1292,79 +1736,142 @@ function App() {
                   </button>
                 </div>
               ) : loadingAllServices ? (
-                <div className="loading-text">Loading services...</div>
+                <div className="loading-state">
+                  <div className="spinner"></div>
+                  <p>Loading services...</p>
+                </div>
               ) : filteredServices.length === 0 ? (
-                <div className="info-text">No services found for this filter.</div>
+                <div className="empty-state">
+                  <div className="empty-icon">📦</div>
+                  <h3>No services found</h3>
+                  <p>{serviceSearch ? `No services match "${serviceSearch}"` : 'No services match the selected filter'}</p>
+                  {serviceSearch && (
+                    <button
+                      type="button"
+                      className="secondary-button"
+                      onClick={() => setServiceSearch('')}
+                    >
+                      Clear Search
+                    </button>
+                  )}
+                </div>
               ) : (
-                <div className="addons-grid">
-                  {filteredServices.map(service => (
-                    <div key={service._id} className="addon-card">
-                      <div className="addon-card-header">
-                        <h3 className="addon-card-title">{service.name}</h3>
-                        <span className={`addon-status ${service.isActive ? 'active' : 'inactive'}`}>
-                          {service.isActive ? 'Active' : 'Inactive'}
-                        </span>
-                      </div>
-                      <div className="addon-card-details">
-                        <div className="detail-item">
-                          <span className="detail-label">Category:</span>
-                          <span className="detail-value">
-                            {service.category === 'CarWash' ? 'Car Wash' : 'Bike Wash'}
-                          </span>
-                        </div>
-                        <div className="detail-item">
-                          <span className="detail-label">Price:</span>
-                          <span className="detail-value">₹{service.basePrice}</span>
-                        </div>
-                        <div className="detail-item">
-                          <span className="detail-label">Duration:</span>
-                          <span className="detail-value">{service.duration || 'N/A'}</span>
-                        </div>
-                        {service.packages && (
-                          <div className="detail-item">
-                            <span className="detail-label">Packages:</span>
-                            <span className="detail-value">
-                              {[
-                                service.packages.monthly?.length > 0 && `${service.packages.monthly.length} Monthly`,
-                                service.packages.quarterly?.length > 0 && `${service.packages.quarterly.length} Quarterly`,
-                                service.packages.yearly?.length > 0 && `${service.packages.yearly.length} Yearly`,
-                              ].filter(Boolean).join(', ') || 'None'}
-                            </span>
+                <>
+                  <div className="services-stats">
+                    Showing {filteredServices.length} of {allServices.length} services
+                  </div>
+                  <div className="services-grid">
+                    {filteredServices.map(service => (
+                      <div key={service._id} className="service-card">
+                        {service.image && (
+                          <div className="service-card-image">
+                            <img src={service.image} alt={service.name} onError={(e) => { e.target.style.display = 'none' }} />
                           </div>
                         )}
+                        <div className="service-card-content">
+                          <div className="service-card-header">
+                            <div className="service-card-title-row">
+                              <span className="service-category-icon">
+                                {service.category === 'CarWash' ? '🚗' : '🏍️'}
+                              </span>
+                              <h3 className="service-card-title">{service.name}</h3>
+                            </div>
+                            <span className={`service-status ${service.isActive ? 'active' : 'inactive'}`}>
+                              {service.isActive ? '✓ Active' : '✗ Inactive'}
+                            </span>
+                          </div>
+                          
+                          {service.description && (
+                            <p className="service-card-description">
+                              {service.description.length > 100 
+                                ? `${service.description.substring(0, 100)}...` 
+                                : service.description}
+                            </p>
+                          )}
+                          
+                          <div className="service-card-details">
+                            <div className="service-detail">
+                              <span className="service-detail-icon">💰</span>
+                              <div>
+                                <span className="service-detail-label">Price</span>
+                                <span className="service-detail-value">₹{service.basePrice}</span>
+                              </div>
+                            </div>
+                            <div className="service-detail">
+                              <span className="service-detail-icon">⏱️</span>
+                              <div>
+                                <span className="service-detail-label">Duration</span>
+                                <span className="service-detail-value">{service.duration || 'N/A'}</span>
+                              </div>
+                            </div>
+                            {service.rating > 0 && (
+                              <div className="service-detail">
+                                <span className="service-detail-icon">⭐</span>
+                                <div>
+                                  <span className="service-detail-label">Rating</span>
+                                  <span className="service-detail-value">
+                                    {service.rating.toFixed(1)} ({service.totalReviews || 0} reviews)
+                                  </span>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+
+                          {service.packages && (
+                            (service.packages.monthly?.length > 0 || 
+                             service.packages.quarterly?.length > 0 || 
+                             service.packages.yearly?.length > 0) && (
+                              <div className="service-packages-badge">
+                                📦 {[
+                                  service.packages.monthly?.length > 0 && `${service.packages.monthly.length} Monthly`,
+                                  service.packages.quarterly?.length > 0 && `${service.packages.quarterly.length} Quarterly`,
+                                  service.packages.yearly?.length > 0 && `${service.packages.yearly.length} Yearly`,
+                                ].filter(Boolean).join(' • ')}
+                              </div>
+                            )
+                          )}
+                          
+                          <div className="service-card-actions">
+                            <button
+                              type="button"
+                              className="edit-button"
+                              onClick={() => handleEditService(service._id)}
+                            >
+                              ✏️ Edit Service
+                            </button>
+                          </div>
+                        </div>
                       </div>
-                      <div className="addon-card-footer">
-                        <button
-                          type="button"
-                          className="secondary-button"
-                          onClick={() => handleEditService(service._id)}
-                        >
-                          Edit
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                </>
               )}
             </div>
 
             {/* Create/Edit Service Form */}
-            <div className="form-section-divider"></div>
-            <div className="section-header">
-              <h2 className="section-title">
-                {editingServiceId ? 'Edit Service' : 'Create New Service'}
-              </h2>
-              {editingServiceId && (
-                <button
-                  type="button"
-                  className="secondary-button"
-                  onClick={handleNewService}
-                >
-                  Create New Instead
-                </button>
-              )}
-            </div>
-            <form onSubmit={handleSubmit} className="form">
+            <div className="form-section">
+              <div className="section-header">
+                <div>
+                  <h2 className="section-title">
+                    {editingServiceId ? '✏️ Edit Service' : '➕ Create New Service'}
+                  </h2>
+                  {editingServiceId && (
+                    <p style={{ margin: '0.25rem 0 0 0', fontSize: '0.85rem', color: '#64748b' }}>
+                      Editing: {formData.name || 'Service'}
+                    </p>
+                  )}
+                </div>
+                {editingServiceId && (
+                  <button
+                    type="button"
+                    className="secondary-button"
+                    onClick={handleNewService}
+                  >
+                    + Create New
+                  </button>
+                )}
+              </div>
+              <form onSubmit={handleSubmit} className="form">
               <div className="form-group">
                 <label htmlFor="name">Service Name *</label>
                 <input
@@ -1582,12 +2089,32 @@ function App() {
                 </div>
               )}
 
-              <button type="submit" className="submit-button" disabled={loading}>
-                {loading 
-                  ? (editingServiceId ? 'Updating...' : 'Creating...') 
-                  : (editingServiceId ? 'Update Service' : 'Create Service')}
-              </button>
-            </form>
+                <div className="form-actions">
+                  <button type="submit" className="submit-button" disabled={loading}>
+                    {loading ? (
+                      <>
+                        <span className="spinner-small"></span>
+                        {editingServiceId ? 'Updating...' : 'Creating...'}
+                      </>
+                    ) : (
+                      <>
+                        {editingServiceId ? '💾 Update Service' : '✨ Create Service'}
+                      </>
+                    )}
+                  </button>
+                  {editingServiceId && (
+                    <button
+                      type="button"
+                      className="cancel-button"
+                      onClick={handleNewService}
+                      disabled={loading}
+                    >
+                      Cancel
+                    </button>
+                  )}
+                </div>
+              </form>
+            </div>
           </>
         )}
 
@@ -1870,6 +2397,419 @@ function App() {
                 {loadingCoverage ? 'Creating...' : 'Create Coverage'}
               </button>
             </form>
+          </>
+        )}
+
+        {/* Time Slots Tab */}
+        {activeTab === 'slots' && (
+          <>
+            {/* Default Slots Configuration */}
+            <div className="services-section">
+              <div className="section-header">
+                <h2 className="section-title">Default Time Slots</h2>
+                <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+                  <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                    <label style={{ fontSize: '0.85rem', color: '#64748b' }}>Slots:</label>
+                    <input
+                      type="number"
+                      min="1"
+                      max="24"
+                      value={defaultSlotsCount}
+                      onChange={(e) => setDefaultSlotsCount(parseInt(e.target.value) || 10)}
+                      style={{
+                        width: '60px',
+                        padding: '0.25rem 0.5rem',
+                        border: '1px solid #e2e8f0',
+                        borderRadius: '4px',
+                        fontSize: '0.85rem',
+                      }}
+                    />
+                  </div>
+                  <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                    <label style={{ fontSize: '0.85rem', color: '#64748b' }}>Start:</label>
+                    <input
+                      type="number"
+                      min="0"
+                      max="23"
+                      value={defaultStartHour}
+                      onChange={(e) => setDefaultStartHour(parseInt(e.target.value) || 9)}
+                      style={{
+                        width: '60px',
+                        padding: '0.25rem 0.5rem',
+                        border: '1px solid #e2e8f0',
+                        borderRadius: '4px',
+                        fontSize: '0.85rem',
+                      }}
+                    />
+                    <span style={{ fontSize: '0.85rem', color: '#64748b' }}>AM</span>
+                  </div>
+                  <button
+                    type="button"
+                    className="secondary-button"
+                    onClick={handleResetToDefaults}
+                    disabled={loadingTimeSlots}
+                    title="Reset to default slots"
+                  >
+                    🔄 Reset to Defaults
+                  </button>
+                  <button
+                    type="button"
+                    className="refresh-button"
+                    onClick={fetchTimeSlots}
+                    disabled={loadingTimeSlots}
+                    title="Refresh slots list"
+                  >
+                    <span className="refresh-icon">↻</span>
+                    {loadingTimeSlots ? 'Loading...' : 'Refresh'}
+                  </button>
+                </div>
+              </div>
+
+              {timeSlotsError ? (
+                <div className="message error">
+                  {timeSlotsError}
+                  <button type="button" className="secondary-button" style={{ marginTop: '10px' }} onClick={fetchTimeSlots}>
+                    Retry
+                  </button>
+                </div>
+              ) : loadingTimeSlots ? (
+                <div className="loading-state">
+                  <div className="spinner"></div>
+                  <p>Loading time slots...</p>
+                </div>
+              ) : timeSlots.length === 0 ? (
+                <div className="empty-state">
+                  <div className="empty-icon">⏰</div>
+                  <h3>No time slots configured</h3>
+                  <p>Create your first time slot below to get started.</p>
+                </div>
+              ) : (
+                <>
+                  <div className="services-stats">
+                    {timeSlots.filter(s => s.isActive).length} active, {timeSlots.filter(s => !s.isActive).length} inactive
+                  </div>
+                  <div className="services-grid">
+                    {timeSlots.map(slot => (
+                      <div key={slot._id} className="service-card">
+                        <div className="service-card-content">
+                          <div className="service-card-header">
+                            <div className="service-card-title-row">
+                              <span className="service-category-icon">⏰</span>
+                              <h3 className="service-card-title">{slot.time}</h3>
+                            </div>
+                            <span className={`service-status ${slot.isActive ? 'active' : 'inactive'}`}>
+                              {slot.isActive ? '✓ Active' : '✗ Inactive'}
+                            </span>
+                          </div>
+                          
+                          <div className="service-card-details">
+                            <div className="service-detail">
+                              <span className="service-detail-icon">🕐</span>
+                              <div>
+                                <span className="service-detail-label">Start</span>
+                                <span className="service-detail-value">{slot.startTime}</span>
+                              </div>
+                            </div>
+                            <div className="service-detail">
+                              <span className="service-detail-icon">🕑</span>
+                              <div>
+                                <span className="service-detail-label">End</span>
+                                <span className="service-detail-value">{slot.endTime}</span>
+                              </div>
+                            </div>
+                            <div className="service-detail">
+                              <span className="service-detail-icon">#</span>
+                              <div>
+                                <span className="service-detail-label">Order</span>
+                                <span className="service-detail-value">{slot.order}</span>
+                              </div>
+                            </div>
+                          </div>
+                          
+                          <div className="service-card-actions">
+                            <button
+                              type="button"
+                              className="edit-button"
+                              onClick={() => handleEditTimeSlot(slot._id)}
+                            >
+                              ✏️ Edit Slot
+                            </button>
+                            <button
+                              type="button"
+                              className="danger-button"
+                              style={{ marginTop: '0.5rem', width: '100%' }}
+                              onClick={() => handleDeleteTimeSlot(slot._id)}
+                            >
+                              🗑️ Delete
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+
+            {/* Create/Edit Time Slot Form */}
+            <div className="form-section">
+              <div className="section-header">
+                <div>
+                  <h2 className="section-title">
+                    {editingTimeSlotId ? '✏️ Edit Time Slot' : '➕ Create New Time Slot'}
+                  </h2>
+                  {editingTimeSlotId && (
+                    <p style={{ margin: '0.25rem 0 0 0', fontSize: '0.85rem', color: '#64748b' }}>
+                      Editing slot
+                    </p>
+                  )}
+                </div>
+                {editingTimeSlotId && (
+                  <button
+                    type="button"
+                    className="secondary-button"
+                    onClick={handleNewTimeSlot}
+                  >
+                    + Create New
+                  </button>
+                )}
+              </div>
+              <form onSubmit={handleTimeSlotSubmit} className="form">
+                <div className="form-group">
+                  <label htmlFor="time">Time Slot Display *</label>
+                  <input
+                    type="text"
+                    id="time"
+                    name="time"
+                    value={timeSlotFormData.time}
+                    onChange={handleTimeSlotChange}
+                    required
+                    placeholder="e.g., 9:00 AM - 10:00 AM"
+                  />
+                  <small className="help-text">This is what customers will see</small>
+                </div>
+
+                <div className="form-row">
+                  <div className="form-group">
+                    <label htmlFor="startTime">Start Time (24h) *</label>
+                    <input
+                      type="text"
+                      id="startTime"
+                      name="startTime"
+                      value={timeSlotFormData.startTime}
+                      onChange={handleTimeSlotChange}
+                      required
+                      placeholder="09:00"
+                      pattern="^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$"
+                    />
+                    <small className="help-text">Format: HH:MM (24-hour)</small>
+                  </div>
+
+                  <div className="form-group">
+                    <label htmlFor="endTime">End Time (24h) *</label>
+                    <input
+                      type="text"
+                      id="endTime"
+                      name="endTime"
+                      value={timeSlotFormData.endTime}
+                      onChange={handleTimeSlotChange}
+                      required
+                      placeholder="10:00"
+                      pattern="^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$"
+                    />
+                    <small className="help-text">Format: HH:MM (24-hour)</small>
+                  </div>
+
+                  <div className="form-group">
+                    <label htmlFor="order">Display Order</label>
+                    <input
+                      type="number"
+                      id="order"
+                      name="order"
+                      value={timeSlotFormData.order}
+                      onChange={handleTimeSlotChange}
+                      min="1"
+                      placeholder="Auto"
+                    />
+                    <small className="help-text">Lower numbers appear first (auto if empty)</small>
+                  </div>
+                </div>
+
+                <div className="form-group checkbox-group">
+                  <label className="checkbox-label">
+                    <input
+                      type="checkbox"
+                      name="isActive"
+                      checked={timeSlotFormData.isActive}
+                      onChange={handleTimeSlotChange}
+                    />
+                    Active (visible to customers)
+                  </label>
+                </div>
+
+                {timeSlotMessage.text && (
+                  <div className={`message ${timeSlotMessage.type}`}>
+                    {timeSlotMessage.text}
+                  </div>
+                )}
+
+                <div className="form-actions">
+                  <button type="submit" className="submit-button" disabled={loadingTimeSlots}>
+                    {loadingTimeSlots 
+                      ? (editingTimeSlotId ? 'Updating...' : 'Creating...') 
+                      : (editingTimeSlotId ? '💾 Update Slot' : '✨ Create Slot')}
+                  </button>
+                  {editingTimeSlotId && (
+                    <button
+                      type="button"
+                      className="cancel-button"
+                      onClick={handleNewTimeSlot}
+                      disabled={loadingTimeSlots}
+                    >
+                      Cancel
+                    </button>
+                  )}
+                </div>
+              </form>
+            </div>
+
+            {/* Daily Slot Overrides */}
+            <div className="form-section" style={{ marginTop: '2rem' }}>
+              <div className="section-header">
+                <div>
+                  <h2 className="section-title">📅 Daily Slot Overrides</h2>
+                  <p style={{ margin: '0.25rem 0 0 0', fontSize: '0.85rem', color: '#64748b' }}>
+                    Override slots for specific dates (e.g., holidays, special events)
+                  </p>
+                </div>
+              </div>
+
+              <form onSubmit={handleSaveDailyOverride} className="form">
+                <div className="form-row">
+                  <div className="form-group">
+                    <label htmlFor="override-date">Select Date *</label>
+                    <input
+                      type="date"
+                      id="override-date"
+                      value={selectedOverrideDate}
+                      onChange={(e) => {
+                        setSelectedOverrideDate(e.target.value)
+                        if (e.target.value) {
+                          loadDailyOverride(e.target.value)
+                        } else {
+                          setDailyOverrideSlots([])
+                        }
+                      }}
+                      required={false}
+                      min={new Date().toISOString().split('T')[0]}
+                    />
+                  </div>
+                  {selectedOverrideDate && (
+                    <div className="form-group" style={{ display: 'flex', alignItems: 'flex-end', gap: '0.5rem' }}>
+                      <button
+                        type="button"
+                        className="secondary-button"
+                        onClick={async () => {
+                          try {
+                            const slotsResponse = await fetch(`${API_BASE_URL}/slots/times`)
+                            const slotsData = await slotsResponse.json()
+                            if (slotsData.success && slotsData.data) {
+                              setDailyOverrideSlots(slotsData.data.map(s => ({
+                                time: s.time,
+                                startTime: s.startTime,
+                                endTime: s.endTime,
+                                order: s.order || 0,
+                              })))
+                            } else {
+                              const defaults = generateDefaultSlots(defaultSlotsCount, defaultStartHour)
+                              setDailyOverrideSlots(defaults)
+                            }
+                          } catch (error) {
+                            const defaults = generateDefaultSlots(defaultSlotsCount, defaultStartHour)
+                            setDailyOverrideSlots(defaults)
+                          }
+                        }}
+                      >
+                        Use Defaults
+                      </button>
+                      <button
+                        type="button"
+                        className="danger-button"
+                        onClick={handleDeleteDailyOverride}
+                        disabled={loadingDailyOverride}
+                      >
+                        Remove Override
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {selectedOverrideDate && (
+                  <>
+                    <div className="form-group">
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                        <label>Slots for {new Date(selectedOverrideDate).toLocaleDateString()}</label>
+                        <button
+                          type="button"
+                          className="secondary-button"
+                          onClick={addSlotToOverride}
+                        >
+                          + Add Slot
+                        </button>
+                      </div>
+                      {dailyOverrideSlots.length === 0 ? (
+                        <div className="info-text" style={{ padding: '1rem', textAlign: 'center' }}>
+                          No slots configured. Click "Use Defaults" or "Add Slot" to configure.
+                        </div>
+                      ) : (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                          {dailyOverrideSlots.map((slot, index) => (
+                            <div key={index} style={{
+                              display: 'flex',
+                              gap: '0.5rem',
+                              alignItems: 'center',
+                              padding: '0.75rem',
+                              background: '#f8f9fa',
+                              borderRadius: '8px',
+                              border: '1px solid #e2e8f0',
+                            }}>
+                              <span style={{ flex: 1, fontWeight: '600' }}>{slot.time}</span>
+                              <span style={{ fontSize: '0.85rem', color: '#64748b' }}>
+                                {slot.startTime} - {slot.endTime}
+                              </span>
+                              <button
+                                type="button"
+                                className="danger-button"
+                                onClick={() => removeSlotFromOverride(index)}
+                                style={{ padding: '0.25rem 0.5rem', fontSize: '0.8rem' }}
+                              >
+                                Remove
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    {dailyOverrideMessage.text && (
+                      <div className={`message ${dailyOverrideMessage.type}`}>
+                        {dailyOverrideMessage.text}
+                      </div>
+                    )}
+
+                    <div className="form-actions">
+                      <button
+                        type="submit"
+                        className="submit-button"
+                        disabled={loadingDailyOverride || dailyOverrideSlots.length === 0}
+                      >
+                        {loadingDailyOverride ? 'Saving...' : '💾 Save Override'}
+                      </button>
+                    </div>
+                  </>
+                )}
+              </form>
+            </div>
           </>
         )}
 

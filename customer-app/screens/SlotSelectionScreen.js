@@ -1,11 +1,12 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions, Alert, ActivityIndicator } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import BackHeader from '../components/BackHeader';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Location from 'expo-location';
 import { useTheme } from '../theme/ThemeContext';
+import { getAvailableSlots, getTimeSlots } from '../services/slotApi';
 
 const { width } = Dimensions.get('window');
 
@@ -29,6 +30,13 @@ export default function SlotSelectionScreen({ navigation, route }) {
   const [locationAddress, setLocationAddress] = useState('');
   const [locationError, setLocationError] = useState('');
   const [locationLoading, setLocationLoading] = useState(false);
+  
+  // Slot availability state
+  const [timeSlots, setTimeSlots] = useState([]);
+  const [availableSlotsByDate, setAvailableSlotsByDate] = useState({});
+  const [loadingSlots, setLoadingSlots] = useState(true);
+  const [slotsError, setSlotsError] = useState(null);
+  
   const { theme, isLightMode } = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
 
@@ -77,19 +85,74 @@ export default function SlotSelectionScreen({ navigation, route }) {
 
   const dates = generateDates(isPackage ? 30 : 7);
 
-  // Generate time slots
-  const timeSlots = [
-    { id: '1', time: '9:00 AM - 10:00 AM' },
-    { id: '2', time: '10:00 AM - 11:00 AM' },
-    { id: '3', time: '11:00 AM - 12:00 PM' },
-    { id: '4', time: '12:00 PM - 1:00 PM' },
-    { id: '5', time: '1:00 PM - 2:00 PM' },
-    { id: '6', time: '2:00 PM - 3:00 PM' },
-    { id: '7', time: '3:00 PM - 4:00 PM' },
-    { id: '8', time: '4:00 PM - 5:00 PM' },
-    { id: '9', time: '5:00 PM - 6:00 PM' },
-    { id: '10', time: '6:00 PM - 7:00 PM' },
-  ];
+  // Fetch time slots and available slots from API
+  useEffect(() => {
+    const fetchSlots = async () => {
+      setLoadingSlots(true);
+      setSlotsError(null);
+      
+      try {
+        // Fetch time slots configuration
+        const timeSlotsResponse = await getTimeSlots();
+        if (timeSlotsResponse.success) {
+          setTimeSlots(timeSlotsResponse.data);
+        } else {
+          // Fallback to default slots if API fails
+          setTimeSlots([
+            { id: '1', time: '9:00 AM - 10:00 AM' },
+            { id: '2', time: '10:00 AM - 11:00 AM' },
+            { id: '3', time: '11:00 AM - 12:00 PM' },
+            { id: '4', time: '12:00 PM - 1:00 PM' },
+            { id: '5', time: '1:00 PM - 2:00 PM' },
+            { id: '6', time: '2:00 PM - 3:00 PM' },
+            { id: '7', time: '3:00 PM - 4:00 PM' },
+            { id: '8', time: '4:00 PM - 5:00 PM' },
+            { id: '9', time: '5:00 PM - 6:00 PM' },
+            { id: '10', time: '6:00 PM - 7:00 PM' },
+          ]);
+        }
+
+        // Fetch available slots for the date range
+        const startDate = new Date();
+        startDate.setHours(0, 0, 0, 0);
+        
+        const endDate = new Date();
+        endDate.setDate(endDate.getDate() + (isPackage ? 30 : 7));
+        endDate.setHours(23, 59, 59, 999);
+
+        const slotsResponse = await getAvailableSlots(startDate, endDate);
+        if (slotsResponse.success) {
+          setAvailableSlotsByDate(slotsResponse.data.slotsByDate || {});
+        }
+      } catch (error) {
+        console.error('Error fetching slots:', error);
+        setSlotsError('Failed to load available slots. Showing all slots.');
+        // Fallback: show all slots if API fails
+        setTimeSlots([
+          { id: '1', time: '9:00 AM - 10:00 AM' },
+          { id: '2', time: '10:00 AM - 11:00 AM' },
+          { id: '3', time: '11:00 AM - 12:00 PM' },
+          { id: '4', time: '12:00 PM - 1:00 PM' },
+          { id: '5', time: '1:00 PM - 2:00 PM' },
+          { id: '6', time: '2:00 PM - 3:00 PM' },
+          { id: '7', time: '3:00 PM - 4:00 PM' },
+          { id: '8', time: '4:00 PM - 5:00 PM' },
+          { id: '9', time: '5:00 PM - 6:00 PM' },
+          { id: '10', time: '6:00 PM - 7:00 PM' },
+        ]);
+      } finally {
+        setLoadingSlots(false);
+      }
+    };
+
+    fetchSlots();
+  }, [isPackage]);
+
+  // Get available slots for a specific date
+  const getAvailableSlotsForDate = (date) => {
+    const dateKey = date.toISOString().split('T')[0]; // YYYY-MM-DD
+    return availableSlotsByDate[dateKey] || timeSlots; // Fallback to all slots if not found
+  };
 
   const formatDate = (date) => {
     const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -445,22 +508,48 @@ export default function SlotSelectionScreen({ navigation, route }) {
                 {selectedDate && (
                   <View style={styles.timeSlotsSection}>
                     <Text style={styles.sectionTitle}>Select time for first service</Text>
-                    <View style={styles.timeSlotsGrid}>
-                      {timeSlots.map((slot) => {
-                        const isSelected = selectedTimeSlot?.id === slot.id;
-                        return (
-                          <TouchableOpacity
-                            key={slot.id}
-                            style={[styles.timeSlotCard, isSelected && styles.timeSlotCardSelected]}
-                            onPress={() => setSelectedTimeSlot(slot)}
-                          >
-                            <Text style={[styles.timeSlotText, isSelected && styles.timeSlotTextSelected]}>
-                              {slot.time}
-                            </Text>
-                          </TouchableOpacity>
-                        );
-                      })}
-                    </View>
+                    {loadingSlots ? (
+                      <View style={styles.loadingContainer}>
+                        <ActivityIndicator size="small" color={theme.accent} />
+                        <Text style={styles.loadingText}>Loading available slots...</Text>
+                      </View>
+                    ) : (
+                      <>
+                        {slotsError && (
+                          <Text style={styles.errorText}>{slotsError}</Text>
+                        )}
+                        {(() => {
+                          const availableSlots = getAvailableSlotsForDate(selectedDate);
+                          if (availableSlots.length === 0) {
+                            return (
+                              <View style={styles.noSlotsContainer}>
+                                <Text style={styles.noSlotsText}>
+                                  No available slots for this date. Please select another date.
+                                </Text>
+                              </View>
+                            );
+                          }
+                          return (
+                            <View style={styles.timeSlotsGrid}>
+                              {availableSlots.map((slot) => {
+                                const isSelected = selectedTimeSlot?.id === slot.id;
+                                return (
+                                  <TouchableOpacity
+                                    key={slot.id}
+                                    style={[styles.timeSlotCard, isSelected && styles.timeSlotCardSelected]}
+                                    onPress={() => setSelectedTimeSlot(slot)}
+                                  >
+                                    <Text style={[styles.timeSlotText, isSelected && styles.timeSlotTextSelected]}>
+                                      {slot.time}
+                                    </Text>
+                                  </TouchableOpacity>
+                                );
+                              })}
+                            </View>
+                          );
+                        })()}
+                      </>
+                    )}
                   </View>
                 )}
               </>
@@ -541,20 +630,30 @@ export default function SlotSelectionScreen({ navigation, route }) {
 
                           <Text style={styles.editLabel}>Change Time</Text>
                           <View style={styles.editTimeSlotsGrid}>
-                            {timeSlots.map((timeSlot) => {
-                              const isSelected = (slot.scheduledTimeSlot?.id || slot.scheduledTimeSlot) === timeSlot.id;
-                              return (
-                                <TouchableOpacity
-                                  key={timeSlot.id}
-                                  style={[styles.editTimeSlotCard, isSelected && styles.editTimeSlotCardSelected]}
-                                  onPress={() => updateSlot(index, slot.scheduledDate, timeSlot)}
-                                >
-                                  <Text style={[styles.editTimeSlotText, isSelected && styles.editTimeSlotTextSelected]}>
-                                    {timeSlot.time}
+                            {(() => {
+                              const availableSlots = getAvailableSlotsForDate(slot.scheduledDate);
+                              if (availableSlots.length === 0) {
+                                return (
+                                  <Text style={styles.noSlotsText}>
+                                    No available slots for this date
                                   </Text>
-                                </TouchableOpacity>
-                              );
-                            })}
+                                );
+                              }
+                              return availableSlots.map((timeSlot) => {
+                                const isSelected = (slot.scheduledTimeSlot?.id || slot.scheduledTimeSlot) === timeSlot.id;
+                                return (
+                                  <TouchableOpacity
+                                    key={timeSlot.id}
+                                    style={[styles.editTimeSlotCard, isSelected && styles.editTimeSlotCardSelected]}
+                                    onPress={() => updateSlot(index, slot.scheduledDate, timeSlot)}
+                                  >
+                                    <Text style={[styles.editTimeSlotText, isSelected && styles.editTimeSlotTextSelected]}>
+                                      {timeSlot.time}
+                                    </Text>
+                                  </TouchableOpacity>
+                                );
+                              });
+                            })()}
                           </View>
                         </View>
                       )}
@@ -946,6 +1045,44 @@ const createStyles = theme => StyleSheet.create({
   },
   editTimeSlotTextSelected: {
     color: '#FFFFFF',
+  },
+  loadingContainer: {
+    padding: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  loadingText: {
+    marginTop: 8,
+    fontSize: 14,
+    color: theme.textSecondary,
+  },
+  errorText: {
+    fontSize: 12,
+    color: '#ef4444',
+    marginBottom: 12,
+    paddingHorizontal: 16,
+  },
+  noSlotsContainer: {
+    padding: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: theme.cardBackground,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: theme.cardBorder,
+    marginTop: 12,
+  },
+  noSlotsText: {
+    fontSize: 14,
+    color: theme.textSecondary,
+    textAlign: 'center',
+  },
+  selectDateHint: {
+    fontSize: 14,
+    color: theme.textSecondary,
+    textAlign: 'center',
+    padding: 20,
+    fontStyle: 'italic',
   },
   totalSection: {
     backgroundColor: theme.cardBackground,

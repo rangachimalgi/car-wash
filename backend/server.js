@@ -34,6 +34,7 @@ import employeeRoutes from './routes/employeeRoutes.js';
 import userRoutes from './routes/userRoutes.js';
 import attendanceRoutes from './routes/attendanceRoutes.js';
 import inventoryRoutes from './routes/inventoryRoutes.js';
+import slotRoutes from './routes/slotRoutes.js';
 import { errorHandler } from './middleware/errorHandler.js';
 
 app.use('/api/services', serviceRoutes);
@@ -44,6 +45,7 @@ app.use('/api/employees', employeeRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/attendance', attendanceRoutes);
 app.use('/api/inventory', inventoryRoutes);
+app.use('/api/slots', slotRoutes);
 // app.use('/api/auth', authRoutes);
 // app.use('/api/bookings', bookingRoutes);
 
