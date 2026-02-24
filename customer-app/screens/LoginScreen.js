@@ -5,6 +5,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { requestOtp, verifyOtp } from '../services/authApi';
+import { registerPushTokenWithBackend } from '../services/pushNotifications';
 import { useTheme } from '../theme/ThemeContext';
 
 const { width } = Dimensions.get('window');
@@ -88,6 +89,7 @@ export default function LoginScreen({ navigation }) {
         await AsyncStorage.setItem('authToken', response.token);
         await AsyncStorage.setItem('authPhone', phoneNumber);
         await AsyncStorage.setItem('authName', response.user?.name || name);
+        registerPushTokenWithBackend().catch(() => {});
       }
       navigation.navigate('Welcome');
     } catch (error) {
@@ -144,6 +146,7 @@ export default function LoginScreen({ navigation }) {
         await AsyncStorage.setItem('authToken', response.token);
         await AsyncStorage.setItem('authPhone', phoneNumber);
         await AsyncStorage.setItem('authName', response.user?.name || name);
+        registerPushTokenWithBackend().catch(() => {});
       }
       navigation.navigate('Welcome');
     } catch (error) {

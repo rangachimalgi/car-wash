@@ -47,6 +47,7 @@ const userSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     default: null,
   },
+  expoPushToken: { type: String, default: '' },
   isActive: {
     type: Boolean,
     default: true,

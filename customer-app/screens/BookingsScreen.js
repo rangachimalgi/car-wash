@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, RefreshControl } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -16,6 +16,7 @@ export default function BookingsScreen({ navigation }) {
   const [upcomingWashes, setUpcomingWashes] = useState([]);
   const [recentServices, setRecentServices] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const [ratingOrder, setRatingOrder] = useState(null);
   const { theme, isLightMode } = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
@@ -65,6 +66,7 @@ export default function BookingsScreen({ navigation }) {
       image: getServiceImage(category),
       status: order.status,
       employeeLocation: order.employeeLocation,
+      startCode: order.startOtp || '',
     };
   };
 
@@ -110,6 +112,15 @@ export default function BookingsScreen({ navigation }) {
     }, [])
   );
 
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await fetchOrders();
+    } finally {
+      setRefreshing(false);
+    }
+  }, []);
+
   const handleViewLocation = (wash) => {
     navigation.navigate('EmployeeLiveLocation', { orderId: wash.id });
   };
@@ -142,6 +153,14 @@ export default function BookingsScreen({ navigation }) {
         style={styles.scrollView}
         contentContainerStyle={[styles.scrollContent, { paddingBottom: 100 + insets.bottom }]}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={theme.accent}
+            colors={[theme.accent]}
+          />
+        }
       >
         {/* Upcoming Wash Section */}
         <View style={styles.section}>

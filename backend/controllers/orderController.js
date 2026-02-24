@@ -257,6 +257,9 @@ export const createOrder = async (req, res) => {
       assignedAt: new Date(),
     }));
 
+    const startCode = String(Math.floor(100000 + Math.random() * 900000));
+    const startCodeExpiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+
     const order = await Order.create({
       user: userId,
       items: hydratedItems,
@@ -274,6 +277,8 @@ export const createOrder = async (req, res) => {
       },
       assignmentStatus: assignments.length > 0 ? 'pending' : 'declined',
       assignments,
+      startOtp: startCode,
+      startOtpExpiresAt: startCodeExpiresAt,
     });
 
     if (customer?.phone) {
@@ -625,6 +630,122 @@ export const rateOrder = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error submitting rating',
+      error: error.message,
+    });
+  }
+};
+
+const OTP_EXPIRY_MINUTES = 10;
+
+// @desc    Request start-service OTP; sends OTP to customer via push notification
+// @route   POST /api/orders/:id/request-start-otp
+// @access  Employee (employeeId in query or body)
+export const requestStartOtp = async (req, res) => {
+  try {
+    const orderId = req.params.id;
+    const employeeId = req.query.employeeId || req.body?.employeeId;
+    if (!employeeId) {
+      return res.status(400).json({ success: false, message: 'employeeId is required' });
+    }
+
+    const order = await Order.findOne({
+      _id: orderId,
+      assignments: { $elemMatch: { employeeId } },
+    }).populate('user', 'expoPushToken');
+
+    if (!order) {
+      return res.status(404).json({ success: false, message: 'Order not found or not assigned to you' });
+    }
+    if (order.status === 'In Progress' || order.status === 'Completed' || order.status === 'Cancelled') {
+      return res.status(400).json({ success: false, message: 'Order is already started or finished' });
+    }
+
+    const otp = String(Math.floor(100000 + Math.random() * 900000));
+    const expiresAt = new Date(Date.now() + OTP_EXPIRY_MINUTES * 60 * 1000);
+    order.startOtp = otp;
+    order.startOtpExpiresAt = expiresAt;
+    await order.save();
+
+    const pushToken = (order.user?.expoPushToken || '').toString().trim();
+    if (!pushToken || !pushToken.startsWith('ExponentPushToken[')) {
+      console.warn('[requestStartOtp] No valid push token for order user - customer may not have enabled notifications');
+    } else {
+      try {
+        const payload = [{
+          to: pushToken,
+          title: 'Service starting',
+          body: `Your Woosh service is starting. OTP for employee: ${otp}`,
+          sound: 'default',
+        }];
+        const pushRes = await fetch('https://exp.host/--/api/v2/push/send', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        const pushData = await pushRes.json().catch(() => ({}));
+        if (pushRes.status !== 200 || (pushData?.data?.[0]?.status === 'error')) {
+          console.error('[requestStartOtp] Expo push error:', pushRes.status, pushData);
+        }
+      } catch (err) {
+        console.error('Failed to send start OTP push to customer:', err);
+      }
+    }
+
+    res.status(200).json({ success: true, message: 'OTP sent to customer' });
+  } catch (error) {
+    console.error('Error requesting start OTP:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error requesting OTP',
+      error: error.message,
+    });
+  }
+};
+
+// @desc    Verify start-service OTP and mark order In Progress
+// @route   POST /api/orders/:id/verify-start-otp
+// @access  Employee (employeeId in query or body)
+export const verifyStartOtp = async (req, res) => {
+  try {
+    const orderId = req.params.id;
+    const employeeId = req.query.employeeId || req.body?.employeeId;
+    const otp = (req.body?.otp ?? req.query?.otp ?? '').toString().trim();
+    if (!employeeId) {
+      return res.status(400).json({ success: false, message: 'employeeId is required' });
+    }
+    if (!otp) {
+      return res.status(400).json({ success: false, message: 'OTP is required' });
+    }
+
+    const order = await Order.findOne({
+      _id: orderId,
+      assignments: { $elemMatch: { employeeId } },
+    });
+
+    if (!order) {
+      return res.status(404).json({ success: false, message: 'Order not found or not assigned to you' });
+    }
+    if (order.status === 'In Progress' || order.status === 'Completed' || order.status === 'Cancelled') {
+      return res.status(400).json({ success: false, message: 'Order is already started or finished' });
+    }
+    if (!order.startOtp || order.startOtp !== otp) {
+      return res.status(400).json({ success: false, message: 'Invalid OTP' });
+    }
+    if (order.startOtpExpiresAt && new Date() > order.startOtpExpiresAt) {
+      return res.status(400).json({ success: false, message: 'OTP has expired' });
+    }
+
+    order.status = 'In Progress';
+    order.startOtp = '';
+    order.startOtpExpiresAt = undefined;
+    await order.save();
+
+    res.status(200).json({ success: true, message: 'OTP verified', data: order });
+  } catch (error) {
+    console.error('Error verifying start OTP:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error verifying OTP',
       error: error.message,
     });
   }

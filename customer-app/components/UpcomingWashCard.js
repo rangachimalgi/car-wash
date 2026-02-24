@@ -54,6 +54,12 @@ export default function UpcomingWashCard({ wash, onPress, onViewLocation }) {
               <MaterialCommunityIcons name="map-marker" size={16} color={theme.textPrimary} />
               <Text style={styles.detailText} numberOfLines={1}>{wash.address}</Text>
             </View>
+            {wash.startCode ? (
+              <View style={styles.codeWrap}>
+                <Text style={styles.codeLabel}>Start code for employee</Text>
+                <Text style={styles.codeValue}>{wash.startCode}</Text>
+              </View>
+            ) : null}
           </View>
 
           <View style={styles.footer}>
@@ -186,6 +192,26 @@ const createStyles = theme => StyleSheet.create({
     fontSize: 13,
     color: theme.textSecondary,
     flex: 1,
+  },
+  codeWrap: {
+    marginTop: 10,
+    backgroundColor: theme.accentSoft,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 10,
+    alignSelf: 'flex-start',
+  },
+  codeLabel: {
+    fontSize: 11,
+    color: theme.textSecondary,
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  codeValue: {
+    fontSize: 22,
+    fontWeight: '800',
+    color: theme.textPrimary,
+    letterSpacing: 4,
   },
   footer: {
     flexDirection: 'row',

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { createStackNavigator } from '@react-navigation/stack';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { registerPushTokenWithBackend } from '../services/pushNotifications';
 import BottomTabNavigator from './BottomTabNavigator';
 import CarWashScreen from '../screens/CarWashScreen';
 import CarWashDetailsScreen from '../screens/CarWashDetailsScreen';
@@ -30,9 +31,8 @@ export default function HeaderNavigator() {
       try {
         const token = await AsyncStorage.getItem('authToken');
         if (token) {
-          // When already logged in, start on Welcome screen first.
-          // Welcome will route users into the main tabs (Home) via the tiles.
           setInitialRoute('Welcome');
+          registerPushTokenWithBackend().catch(() => {});
         }
       } catch (error) {
         console.error('Error checking auth:', error);

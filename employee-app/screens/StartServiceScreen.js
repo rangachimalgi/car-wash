@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Alert, Linking, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, Linking, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Location from 'expo-location';
@@ -18,23 +18,27 @@ export default function StartServiceScreen({ navigation, route }) {
   const [amount, setAmount] = useState(null);
   const [address, setAddress] = useState('');
   const [coords, setCoords] = useState(null);
+  const [orderStatus, setOrderStatus] = useState(null);
+  const [codeInput, setCodeInput] = useState('');
+  const [loadingVerify, setLoadingVerify] = useState(false);
+  const [codeError, setCodeError] = useState('');
   const orderId = route?.params?.orderId;
   const employeeId = route?.params?.employeeId;
 
+  const orderInProgress = orderStatus === 'In Progress';
+
   useEffect(() => {
-    const loadAmount = async () => {
+    const loadOrder = async () => {
       if (!orderId) return;
       try {
-        // Include employeeId in query if available
-        const url = employeeId 
+        const url = employeeId
           ? `${API_BASE_URL}/orders/${orderId}?employeeId=${employeeId}`
           : `${API_BASE_URL}/orders/${orderId}`;
         const res = await fetch(url);
         const data = await res.json();
         if (res.ok && data?.data) {
-          if (data.data.totalAmount != null) {
-            setAmount(data.data.totalAmount);
-          }
+          setOrderStatus(data.data.status);
+          if (data.data.totalAmount != null) setAmount(data.data.totalAmount);
           setAddress(data.data.customer?.address || '');
           const lat = data.data.customer?.latitude;
           const lng = data.data.customer?.longitude;
@@ -43,55 +47,27 @@ export default function StartServiceScreen({ navigation, route }) {
           } else {
             setCoords(null);
           }
-
-          const currentStatus = data.data.status;
-          if (!['In Progress', 'Completed', 'Cancelled'].includes(currentStatus)) {
-            try {
-              // Include employeeId in query for employee access
-              const url = employeeId 
-                ? `${API_BASE_URL}/orders/${orderId}?employeeId=${employeeId}`
-                : `${API_BASE_URL}/orders/${orderId}`;
-              const updateRes = await fetch(url, {
-                method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ status: 'In Progress' }),
-              });
-              const updateData = await updateRes.json();
-              if (!updateRes.ok || !updateData.success) {
-                console.error('Error marking service in progress:', updateData.message);
-              }
-            } catch (error) {
-              console.error('Error marking service in progress:', error);
-            }
-          }
         }
       } catch (error) {
-        console.error('Error loading order amount:', error);
+        console.error('Error loading order:', error);
       }
     };
-    loadAmount();
-  }, [orderId]);
+    loadOrder();
+  }, [orderId, employeeId]);
 
   useEffect(() => {
+    if (!orderId || !orderInProgress) return;
     let intervalId;
     const startLocationUpdates = async () => {
-      if (!orderId) return;
       try {
         const { status } = await Location.requestForegroundPermissionsAsync();
-        if (status !== 'granted') {
-          console.warn('Location permission not granted');
-          return;
-        }
-
+        if (status !== 'granted') return;
         const sendLocation = async () => {
           try {
-            const position = await Location.getCurrentPositionAsync({
-              accuracy: Location.Accuracy.Balanced,
-            });
+            const position = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
             const { latitude, longitude } = position.coords || {};
             if (typeof latitude !== 'number' || typeof longitude !== 'number') return;
-            // Include employeeId in query for employee access
-            const url = employeeId 
+            const url = employeeId
               ? `${API_BASE_URL}/orders/${orderId}/employee-location?employeeId=${employeeId}`
               : `${API_BASE_URL}/orders/${orderId}/employee-location`;
             await fetch(url, {
@@ -99,42 +75,66 @@ export default function StartServiceScreen({ navigation, route }) {
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ latitude, longitude }),
             });
-          } catch (error) {
-            console.error('Error updating live location:', error);
+          } catch (e) {
+            console.error('Error updating live location:', e);
           }
         };
-
         await sendLocation();
         intervalId = setInterval(sendLocation, 20000);
-      } catch (error) {
-        console.error('Error requesting location permission:', error);
+      } catch (e) {
+        console.error('Error requesting location permission:', e);
       }
     };
-
     startLocationUpdates();
     return () => {
       if (intervalId) clearInterval(intervalId);
     };
-  }, [orderId]);
+  }, [orderId, employeeId, orderInProgress]);
 
   useEffect(() => {
+    if (!orderId || !orderInProgress) return;
     const startBackgroundTracking = async () => {
-      if (!orderId) return;
       try {
         const { status } = await Location.requestBackgroundPermissionsAsync();
-        if (status !== 'granted') {
-          console.warn('Background location permission not granted');
-          return;
-        }
+        if (status !== 'granted') return;
         await saveActiveOrderId(orderId, employeeId);
         await startBackgroundLocationUpdates();
-      } catch (error) {
-        console.error('Error starting background tracking:', error);
+      } catch (e) {
+        console.error('Error starting background tracking:', e);
       }
     };
-
     startBackgroundTracking();
-  }, [orderId]);
+  }, [orderId, employeeId, orderInProgress]);
+
+  const handleVerifyCode = async () => {
+    const code = codeInput.replace(/\D/g, '').slice(0, 6);
+    if (code.length !== 6) {
+      setCodeError('Enter 6-digit code');
+      return;
+    }
+    if (!orderId || !employeeId) return;
+    setLoadingVerify(true);
+    setCodeError('');
+    try {
+      const url = `${API_BASE_URL}/orders/${orderId}/verify-start-otp?employeeId=${encodeURIComponent(employeeId)}`;
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ otp: code }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setOrderStatus('In Progress');
+        setCodeInput('');
+      } else {
+        setCodeError(data.message || 'Invalid code');
+      }
+    } catch (e) {
+      setCodeError('Could not verify. Try again.');
+    } finally {
+      setLoadingVerify(false);
+    }
+  };
 
   const handleOpenMaps = async () => {
     if (!coords && !address) {
@@ -192,57 +192,95 @@ export default function StartServiceScreen({ navigation, route }) {
     }
   };
 
+  const needsOtp = orderStatus && !['In Progress', 'Completed', 'Cancelled'].includes(orderStatus);
+  const loading = orderId && orderStatus === null;
+
   return (
     <View style={[styles.container, { paddingTop: 24 + insets.top }]}>
       <StatusBar style="dark" />
       <Text style={styles.title}>Start Service</Text>
 
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Customer Location</Text>
-        <Text style={styles.sectionHint}>{address || 'Address not available'}</Text>
-        <TouchableOpacity style={styles.locationButton} onPress={handleOpenMaps}>
-          <Text style={styles.locationButtonText}>Open in Maps</Text>
-        </TouchableOpacity>
-      </View>
+      {loading && (
+        <Text style={styles.sectionHint}>Loading order...</Text>
+      )}
 
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Before Photos</Text>
-        <Text style={styles.sectionHint}>Upload up to 4 images</Text>
-        <TouchableOpacity style={styles.uploadButton}>
-          <Text style={styles.uploadButtonText}>Upload Before Photos</Text>
-        </TouchableOpacity>
-      </View>
+      {needsOtp && (
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Enter start code</Text>
+          <Text style={styles.sectionHint}>
+            Ask the customer for the 6-digit code shown in their Bookings screen. Enter it below to start the service.
+          </Text>
+          <TextInput
+            style={styles.codeInput}
+            value={codeInput}
+            onChangeText={(t) => { setCodeInput(t.replace(/\D/g, '').slice(0, 6)); setCodeError(''); }}
+            placeholder="000000"
+            placeholderTextColor="#9CA3AF"
+            keyboardType="number-pad"
+            maxLength={6}
+          />
+          {codeError ? <Text style={styles.codeError}>{codeError}</Text> : null}
+          <TouchableOpacity
+            style={[styles.startServiceButton, (codeInput.replace(/\D/g, '').length !== 6 || loadingVerify) && styles.startServiceButtonDisabled]}
+            onPress={handleVerifyCode}
+            disabled={codeInput.replace(/\D/g, '').length !== 6 || loadingVerify}
+          >
+            <Text style={styles.startServiceButtonText}>
+              {loadingVerify ? 'Verifying...' : 'Verify & Start'}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      )}
 
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>After Photos</Text>
-        <Text style={styles.sectionHint}>Upload up to 4 images</Text>
-        <TouchableOpacity style={styles.uploadButton}>
-          <Text style={styles.uploadButtonText}>Upload After Photos</Text>
-        </TouchableOpacity>
-      </View>
+      {orderInProgress && (
+        <>
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Customer Location</Text>
+            <Text style={styles.sectionHint}>{address || 'Address not available'}</Text>
+            <TouchableOpacity style={styles.locationButton} onPress={handleOpenMaps}>
+              <Text style={styles.locationButtonText}>Open in Maps</Text>
+            </TouchableOpacity>
+          </View>
 
-      <TouchableOpacity
-        style={styles.paymentButton}
-        onPress={() => setPaymentReceived(true)}
-      >
-        <Text style={styles.paymentButtonText}>
-          {paymentReceived
-            ? 'Payment Received'
-            : `Get Payment${amount != null ? ` ₹${amount}` : ''}`}
-        </Text>
-      </TouchableOpacity>
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Before Photos</Text>
+            <Text style={styles.sectionHint}>Upload up to 4 images</Text>
+            <TouchableOpacity style={styles.uploadButton}>
+              <Text style={styles.uploadButtonText}>Upload Before Photos</Text>
+            </TouchableOpacity>
+          </View>
 
-      <TouchableOpacity
-        style={styles.submitButton}
-        onPress={handleSubmit}
-        disabled={submitting}
-      >
-        <Text style={styles.submitButtonText}>
-          {submitting ? 'Submitting...' : 'Submit'}
-        </Text>
-      </TouchableOpacity>
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>After Photos</Text>
+            <Text style={styles.sectionHint}>Upload up to 4 images</Text>
+            <TouchableOpacity style={styles.uploadButton}>
+              <Text style={styles.uploadButtonText}>Upload After Photos</Text>
+            </TouchableOpacity>
+          </View>
 
-      
+          <TouchableOpacity
+            style={styles.paymentButton}
+            onPress={() => setPaymentReceived(true)}
+          >
+            <Text style={styles.paymentButtonText}>
+              {paymentReceived
+                ? 'Payment Received'
+                : `Get Payment${amount != null ? ` ₹${amount}` : ''}`}
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.submitButton}
+            onPress={handleSubmit}
+            disabled={submitting}
+          >
+            <Text style={styles.submitButtonText}>
+              {submitting ? 'Submitting...' : 'Submit'}
+            </Text>
+          </TouchableOpacity>
+        </>
+      )}
+
     </View>
   );
 }
@@ -328,4 +366,33 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     fontSize: 12,
   },
-});
+  startServiceButton: {
+    backgroundColor: '#2F8CF4',
+    borderRadius: 12,
+    paddingVertical: 14,
+    alignItems: 'center',
+  },
+  startServiceButtonDisabled: {
+    opacity: 0.6,
+  },
+  startServiceButtonText: {
+    color: '#FFFFFF',
+    fontWeight: '700',
+    fontSize: 14,
+  },
+  codeInput: {
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: 10,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    fontSize: 20,
+    letterSpacing: 4,
+    marginBottom: 8,
+  },
+  codeError: {
+    fontSize: 13,
+    color: '#DC2626',
+    marginBottom: 8,
+  },
+  });

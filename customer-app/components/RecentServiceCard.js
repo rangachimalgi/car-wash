@@ -63,7 +63,7 @@ export default function RecentServiceCard({ service, onReBook, onPress, onRate }
                     onRate?.(service);
                   }}
                 >
-                  <MaterialCommunityIcons name="star-outline" size={16} color={theme.accent} />
+                  <MaterialCommunityIcons name="star-outline" size={16} color= '#000' />
                   <Text style={styles.rateButtonText}>Rate service</Text>
                 </TouchableOpacity>
               )}
@@ -207,7 +207,7 @@ const createStyles = theme => StyleSheet.create({
   rateButtonText: {
     fontSize: 13,
     fontWeight: '600',
-    color: theme.accent,
+    color: '#000',
   },
   footerRow: {
     flexDirection: 'row',

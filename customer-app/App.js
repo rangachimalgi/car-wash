@@ -6,8 +6,27 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import * as SplashScreen from 'expo-splash-screen';
+import * as Notifications from 'expo-notifications';
+import { Platform } from 'react-native';
 import HeaderNavigator from './navigators/HeaderNavigator';
 import { ThemeProvider, useTheme } from './theme/ThemeContext';
+
+// Show notifications when app is in foreground (e.g. OTP from employee)
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowAlert: true,
+    shouldPlaySound: true,
+    shouldSetBadge: false,
+  }),
+});
+
+if (Platform.OS === 'android') {
+  Notifications.setNotificationChannelAsync('default', {
+    name: 'Woosh',
+    importance: Notifications.AndroidImportance.MAX,
+    vibrationPattern: [0, 250, 250, 250],
+  }).catch(() => {});
+}
 
 // Hide splash screen immediately - we want video to show right away
 SplashScreen.hideAsync().catch(() => {});

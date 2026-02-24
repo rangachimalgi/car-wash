@@ -1,5 +1,23 @@
 import User from '../models/User.js';
 
+// @desc    Update current user's Expo push token (for start-service OTP notifications)
+// @route   PUT /api/users/me/push-token
+// @access  Protected
+export const updatePushToken = async (req, res) => {
+  try {
+    const expoPushToken = (req.body?.expoPushToken ?? '').toString().trim();
+    await User.findByIdAndUpdate(req.user._id, { expoPushToken });
+    res.status(200).json({ success: true, message: 'Push token updated' });
+  } catch (error) {
+    console.error('Error updating push token:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error updating push token',
+      error: error.message,
+    });
+  }
+};
+
 // @desc    Update user vehicle info (legacy - for backward compatibility)
 // @route   PUT /api/users/vehicle
 // @access  Public (will add auth later)

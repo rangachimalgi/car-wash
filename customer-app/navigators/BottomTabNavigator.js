@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import HomeScreen from '../screens/HomeScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import BookingsScreen from '../screens/BookingsScreen';
+import NotificationsScreen from '../screens/NotificationsScreen';
 import { useTheme } from '../theme/ThemeContext';
 
 const Tab = createBottomTabNavigator();
@@ -35,6 +36,7 @@ function SimpleTabBar({ state, descriptors, navigation }) {
         const iconName = {
           Home: focused ? 'home' : 'home-outline',
           Bookings: focused ? 'calendar-clock' : 'calendar-clock-outline',
+          Notifications: focused ? 'bell' : 'bell-outline',
           Profile: focused ? 'account' : 'account-outline',
         }[route.name] || 'circle-outline';
 
@@ -104,6 +106,17 @@ export default function BottomTabNavigator() {
           tabBarLabel: 'Bookings',
           tabBarIcon: ({ color, focused }) => (
             <MaterialCommunityIcons name="calendar-clock" color={color} size={24} />
+          ),
+        }}
+      />
+      <Tab.Screen 
+        name="Notifications" 
+        component={NotificationsScreen}
+        options={{
+          title: 'Notifications',
+          tabBarLabel: 'Notifications',
+          tabBarIcon: ({ color, focused }) => (
+            <MaterialCommunityIcons name={focused ? 'bell' : 'bell-outline'} color={color} size={24} />
           ),
         }}
       />

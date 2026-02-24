@@ -4,11 +4,14 @@ import {
   getVehicles, 
   addVehicle, 
   deleteVehicle, 
-  setSelectedVehicle 
+  setSelectedVehicle,
+  updatePushToken,
 } from '../controllers/userController.js';
+import { protect } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
 
+router.put('/me/push-token', protect, updatePushToken);
 router.put('/vehicle', updateUserVehicle);
 router.get('/:phone/vehicles', getVehicles);
 router.post('/:phone/vehicles', addVehicle);

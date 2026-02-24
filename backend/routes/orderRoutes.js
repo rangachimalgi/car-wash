@@ -1,5 +1,5 @@
 import express from 'express';
-import { createOrder, getOrderById, getOrders, getAllOrders, getRatedOrders, updateEmployeeLocation, updateOrderStatus, rateOrder } from '../controllers/orderController.js';
+import { createOrder, getOrderById, getOrders, getAllOrders, getRatedOrders, updateEmployeeLocation, updateOrderStatus, rateOrder, requestStartOtp, verifyStartOtp } from '../controllers/orderController.js';
 import { protect } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
@@ -19,6 +19,8 @@ router.get('/admin/all', getAllOrders); // Admin route - no auth required
 router.get('/admin/reviews', getRatedOrders); // Admin reviews tab
 router.get('/', protect, getOrders);
 router.get('/:id', conditionalProtect, getOrderById);
+router.post('/:id/request-start-otp', conditionalProtect, requestStartOtp);
+router.post('/:id/verify-start-otp', conditionalProtect, verifyStartOtp);
 router.patch('/:id/employee-location', conditionalProtect, updateEmployeeLocation);
 router.patch('/:id', conditionalProtect, updateOrderStatus);
 router.post('/:id/rate', protect, rateOrder);
