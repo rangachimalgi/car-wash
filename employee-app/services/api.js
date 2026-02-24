@@ -1,32 +1,7 @@
 import axios from 'axios';
 import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-
-// Your computer's IP address (for physical Android devices)
-// Find it with: ipconfig getifaddr en0 (Mac) or ipconfig (Windows)
-const COMPUTER_IP = '192.168.1.15';
-
-// Set to true if using Android Emulator, false if using physical device
-// Android Emulator uses special IP: 10.0.2.2 to reach host machine
-const USE_ANDROID_EMULATOR = false; // Change to true if using Android emulator
-
-const getBaseURL = () => {
-  if (!__DEV__) {
-    return 'https://car-wash-vbry.onrender.com/api';
-  }
-
-  if (Platform.OS === 'android') {
-    // Android emulator: use 10.0.2.2, Physical device: use computer's IP
-    if (USE_ANDROID_EMULATOR) {
-      return 'http://10.0.2.2:8000/api';
-    }
-    return `http://${COMPUTER_IP}:8000/api`;
-  }
-
-  return 'http://localhost:8000/api';
-};
-
-const API_BASE_URL = getBaseURL();
+import { API_BASE_URL, COMPUTER_IP } from '../config/api';
 
 // Log the API URL for debugging (only in development)
 if (__DEV__) {
@@ -87,13 +62,14 @@ api.interceptors.response.use(
       
       // Provide helpful error message for network issues
       const errorMessage = error.request._response || error.message;
-      if (errorMessage && errorMessage.includes('unreachable')) {
-        console.error('⚠️ Host unreachable. Check:');
-        console.error(`   1. Backend server is running on port 8000`);
-        console.error(`   2. Using Android Emulator? Set USE_ANDROID_EMULATOR = true in api.js`);
-        console.error(`   3. Using physical device? Ensure IP ${COMPUTER_IP} is correct`);
-        console.error(`   4. Both device and computer are on same WiFi network`);
-        console.error(`   Current API URL: ${API_BASE_URL}`);
+      const isTimeoutOrNetwork = !error.response && (error.code === 'ECONNABORTED' || error.message === 'Network Error');
+      if (isTimeoutOrNetwork || (errorMessage && errorMessage.includes('unreachable'))) {
+        console.error('⚠️ Cannot reach backend. Check:');
+        console.error(`   1. Backend is running: npm start (port 8000)`);
+        console.error(`   2. Android Emulator? Set USE_ANDROID_EMULATOR = true in config/api.js`);
+        console.error(`   3. Physical device? Set COMPUTER_IP = 'YOUR_IP' in config/api.js (current: ${COMPUTER_IP})`);
+        console.error(`   4. Device and computer on same WiFi`);
+        console.error(`   API URL: ${API_BASE_URL}`);
       }
     } else {
       // Something else happened
