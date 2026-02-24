@@ -4,6 +4,7 @@ import './App.css'
 // API configuration: use env var or fallback for local backend
 // Set VITE_API_URL in .env (e.g. http://localhost:8000/api or http://YOUR_IP:8000/api)
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api'
+const UPLOADS_BASE = API_BASE_URL.replace(/\/api\/?$/, '')
 
 function App() {
   const [activeTab, setActiveTab] = useState('services') // 'services', 'addons', 'coverage', 'orders', 'reviews', 'attendance', 'inventory'
@@ -99,6 +100,9 @@ function App() {
   const [loadingEmployees, setLoadingEmployees] = useState(false)
   const [attendanceDate, setAttendanceDate] = useState(new Date().toISOString().split('T')[0])
   const [selectedEmployeeId, setSelectedEmployeeId] = useState('all')
+  const [documentViewEmployee, setDocumentViewEmployee] = useState(null)
+  const [documentViewUrls, setDocumentViewUrls] = useState(null)
+  const [loadingDocumentView, setLoadingDocumentView] = useState(false)
 
   // Inventory state
   const [inventory, setInventory] = useState([])
@@ -364,6 +368,31 @@ function App() {
   // Get employee info by employeeId
   const getEmployeeInfo = (employeeId) => {
     return employees.find(emp => emp.employeeId === employeeId) || null
+  }
+
+  const openEmployeeDocuments = async (employee) => {
+    setDocumentViewEmployee(employee)
+    setDocumentViewUrls(null)
+    setLoadingDocumentView(true)
+    try {
+      const res = await fetch(`${API_BASE_URL}/employees/${employee.employeeId}/documents`)
+      const data = await res.json()
+      if (data.success && data.data) {
+        setDocumentViewUrls(data.data)
+      } else {
+        setDocumentViewUrls({ aadharUrl: null, panUrl: null })
+      }
+    } catch (e) {
+      console.error(e)
+      setDocumentViewUrls({ aadharUrl: null, panUrl: null })
+    } finally {
+      setLoadingDocumentView(false)
+    }
+  }
+
+  const closeDocumentView = () => {
+    setDocumentViewEmployee(null)
+    setDocumentViewUrls(null)
   }
 
   // Fetch attendance data
@@ -1605,6 +1634,7 @@ function App() {
     { id: 'slots', label: 'Time Slots', icon: '⏰' },
     { id: 'orders', label: 'Orders', icon: '📦' },
     { id: 'reviews', label: 'Reviews', icon: '⭐' },
+    { id: 'employees', label: 'Employees', icon: '👤' },
     { id: 'attendance', label: 'Attendance', icon: '👥' },
     { id: 'inventory', label: 'Inventory', icon: '📦', badge: inventory.filter(item => item.isLowStock).length },
   ]
@@ -1616,6 +1646,7 @@ function App() {
     slots: 'Time Slots',
     orders: 'Orders',
     reviews: 'Reviews',
+    employees: 'Employees',
     attendance: 'Employee Attendance',
     inventory: 'Inventory',
   }
@@ -2997,6 +3028,67 @@ function App() {
           </div>
         )}
 
+        {/* Employees Tab - list all employees and document status */}
+        {activeTab === 'employees' && (
+          <div className="attendance-section">
+            <div className="section-header">
+              <h2 className="section-title">Employees</h2>
+              <button
+                type="button"
+                className="secondary-button"
+                onClick={fetchEmployees}
+                disabled={loadingEmployees}
+              >
+                {loadingEmployees ? 'Loading...' : 'Refresh'}
+              </button>
+            </div>
+            <div style={{ overflowX: 'auto', marginTop: '16px' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', backgroundColor: '#fff', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
+                <thead>
+                  <tr style={{ backgroundColor: '#f8f9fa' }}>
+                    <th style={{ padding: '12px', textAlign: 'left', borderBottom: '2px solid #ddd', fontWeight: '600' }}>Employee ID</th>
+                    <th style={{ padding: '12px', textAlign: 'left', borderBottom: '2px solid #ddd', fontWeight: '600' }}>Name</th>
+                    <th style={{ padding: '12px', textAlign: 'left', borderBottom: '2px solid #ddd', fontWeight: '600' }}>Phone</th>
+                    <th style={{ padding: '12px', textAlign: 'left', borderBottom: '2px solid #ddd', fontWeight: '600' }}>Documents</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {loadingEmployees ? (
+                    <tr><td colSpan="4" style={{ padding: '20px', textAlign: 'center' }}>Loading employees...</td></tr>
+                  ) : employees.length === 0 ? (
+                    <tr><td colSpan="4" style={{ padding: '20px', textAlign: 'center', color: '#6B7280' }}>No employees found.</td></tr>
+                  ) : employees.map((emp) => {
+                    const docsUploaded = !!emp.documentsUploaded
+                    return (
+                      <tr key={emp.employeeId || emp._id} style={{ borderBottom: '1px solid #eee' }}>
+                        <td style={{ padding: '12px' }}>{emp.employeeId}</td>
+                        <td style={{ padding: '12px' }}>{emp.name || '—'}</td>
+                        <td style={{ padding: '12px' }}>{emp.phone || '—'}</td>
+                        <td style={{ padding: '12px' }}>
+                          {docsUploaded ? (
+                            <>
+                              <span style={{ marginRight: '8px', fontSize: '12px', color: '#155724' }}>Uploaded</span>
+                              <button
+                                type="button"
+                                onClick={() => openEmployeeDocuments(emp)}
+                                style={{ padding: '4px 10px', fontSize: '12px', cursor: 'pointer', backgroundColor: '#2F8CF4', color: '#fff', border: 'none', borderRadius: '6px' }}
+                              >
+                                View
+                              </button>
+                            </>
+                          ) : (
+                            <span style={{ fontSize: '12px', color: '#6B7280' }}>Not uploaded</span>
+                          )}
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
         {/* Attendance Tab */}
         {activeTab === 'attendance' && (
           <div className="attendance-section">
@@ -3112,17 +3204,19 @@ function App() {
                       <th style={{ padding: '12px', textAlign: 'left', borderBottom: '2px solid #ddd', fontWeight: '600' }}>Phone</th>
                       <th style={{ padding: '12px', textAlign: 'left', borderBottom: '2px solid #ddd', fontWeight: '600' }}>Time</th>
                       <th style={{ padding: '12px', textAlign: 'left', borderBottom: '2px solid #ddd', fontWeight: '600' }}>Status</th>
+                      <th style={{ padding: '12px', textAlign: 'left', borderBottom: '2px solid #ddd', fontWeight: '600' }}>Documents</th>
                     </tr>
                   </thead>
                   <tbody>
                     {employees.length === 0 ? (
                       <tr>
-                        <td colSpan="5" style={{ padding: '20px', textAlign: 'center', color: '#6B7280' }}>
+                        <td colSpan="6" style={{ padding: '20px', textAlign: 'center', color: '#6B7280' }}>
                           No employees found. Please ensure employees are created first.
                         </td>
                       </tr>
                     ) : employees.map((employee) => {
                       const attendanceRecord = attendance.find(a => a.employeeId === employee.employeeId)
+                      const docsUploaded = !!employee.documentsUploaded
                       return (
                         <tr key={employee.employeeId || employee._id} style={{ borderBottom: '1px solid #eee' }}>
                           <td style={{ padding: '12px' }}>{employee.employeeId}</td>
@@ -3156,6 +3250,30 @@ function App() {
                               </span>
                             )}
                           </td>
+                          <td style={{ padding: '12px' }}>
+                            {docsUploaded ? (
+                              <>
+                                <span style={{ marginRight: '8px', fontSize: '12px', color: '#155724' }}>Uploaded</span>
+                                <button
+                                  type="button"
+                                  onClick={() => openEmployeeDocuments(employee)}
+                                  style={{
+                                    padding: '4px 10px',
+                                    fontSize: '12px',
+                                    cursor: 'pointer',
+                                    backgroundColor: '#2F8CF4',
+                                    color: '#fff',
+                                    border: 'none',
+                                    borderRadius: '6px',
+                                  }}
+                                >
+                                  View
+                                </button>
+                              </>
+                            ) : (
+                              <span style={{ fontSize: '12px', color: '#6B7280' }}>Not uploaded</span>
+                            )}
+                          </td>
                         </tr>
                       )
                     })}
@@ -3163,6 +3281,70 @@ function App() {
                 </table>
               </div>
             )}
+
+          </div>
+        )}
+
+        {/* Employee documents view modal - outside tabs so it works from Employees or Attendance */}
+        {documentViewEmployee && (
+          <div
+            style={{
+              position: 'fixed',
+              inset: 0,
+              backgroundColor: 'rgba(0,0,0,0.5)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 1000,
+            }}
+            onClick={closeDocumentView}
+          >
+            <div
+              style={{
+                backgroundColor: '#fff',
+                borderRadius: '12px',
+                maxWidth: '90vw',
+                maxHeight: '90vh',
+                overflow: 'auto',
+                padding: '20px',
+                boxShadow: '0 4px 20px rgba(0,0,0,0.2)',
+              }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                <h3 style={{ margin: 0 }}>Documents – {documentViewEmployee.name || documentViewEmployee.employeeId}</h3>
+                <button type="button" onClick={closeDocumentView} style={{ padding: '6px 12px', cursor: 'pointer' }}>Close</button>
+              </div>
+              {loadingDocumentView ? (
+                <p>Loading…</p>
+              ) : documentViewUrls ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                  {documentViewUrls.aadharUrl && (
+                    <div>
+                      <div style={{ fontWeight: '600', marginBottom: '8px' }}>Aadhaar Card</div>
+                      <img
+                        src={UPLOADS_BASE + documentViewUrls.aadharUrl}
+                        alt="Aadhaar"
+                        style={{ maxWidth: '100%', maxHeight: '320px', objectFit: 'contain', border: '1px solid #eee', borderRadius: '8px' }}
+                      />
+                    </div>
+                  )}
+                  {documentViewUrls.panUrl && (
+                    <div>
+                      <div style={{ fontWeight: '600', marginBottom: '8px' }}>PAN Card</div>
+                      <img
+                        src={UPLOADS_BASE + documentViewUrls.panUrl}
+                        alt="PAN"
+                        style={{ maxWidth: '100%', maxHeight: '320px', objectFit: 'contain', border: '1px solid #eee', borderRadius: '8px' }}
+                      />
+                    </div>
+                  )}
+                  {(!documentViewUrls.aadharUrl && !documentViewUrls.panUrl) && (
+                    <p style={{ color: '#6B7280' }}>No documents available.</p>
+                  )}
+                </div>
+              ) : null}
+            </div>
           </div>
         )}
 

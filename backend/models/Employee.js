@@ -30,6 +30,12 @@ const employeeSchema = new mongoose.Schema({
     default: '',
     trim: true,
   },
+  documentsUploaded: {
+    type: Boolean,
+    default: false,
+  },
+  aadharPath: { type: String, default: '' },
+  panPath: { type: String, default: '' },
 }, {
   timestamps: true,
 });

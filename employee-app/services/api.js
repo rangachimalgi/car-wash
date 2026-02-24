@@ -17,9 +17,13 @@ const api = axios.create({
   },
 });
 
-// Request interceptor (for adding auth tokens)
+// Request interceptor (for adding auth tokens and FormData uploads)
 api.interceptors.request.use(
   async (config) => {
+    // For FormData (e.g. document upload), do NOT set Content-Type so the runtime sets multipart/form-data with boundary
+    if (config.data && typeof FormData !== 'undefined' && config.data instanceof FormData) {
+      delete config.headers['Content-Type'];
+    }
     // Add auth token if available
     try {
       const token = await AsyncStorage.getItem('employeeAuthToken');

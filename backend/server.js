@@ -1,8 +1,13 @@
 import express from 'express';
+import path from 'path';
+import fs from 'fs';
+import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
 import cors from 'cors';
 import connectDB from './config/db.js';
 import { startKeepAlive } from './keepAlive.js';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // Load environment variables
 dotenv.config();
@@ -12,10 +17,17 @@ connectDB();
 
 const app = express();
 
+// Ensure uploads directory exists (for employee documents)
+const uploadsDir = path.join(__dirname, 'uploads');
+fs.mkdirSync(path.join(uploadsDir, 'documents'), { recursive: true });
+
 // Middleware
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// Serve uploaded files (employee documents)
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Routes
 app.get('/', (req, res) => {

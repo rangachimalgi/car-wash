@@ -65,7 +65,7 @@ export const loginEmployee = async (req, res) => {
 export const getEmployees = async (req, res) => {
   try {
     const employees = await Employee.find({ isActive: true })
-      .select('-passwordHash -__v')
+      .select('-passwordHash -__v -aadharPath -panPath')
       .sort({ employeeId: 1 });
 
     res.status(200).json({
@@ -77,6 +77,114 @@ export const getEmployees = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error fetching employees',
+      error: error.message,
+    });
+  }
+};
+
+// @desc    Get current employee's document status (for app to decide if upload screen is needed)
+// @route   GET /api/employees/me/documents
+// @access  Protected (employee)
+export const getMyDocuments = async (req, res) => {
+  try {
+    const employee = req.employee;
+    const base = '/uploads';
+    res.status(200).json({
+      success: true,
+      data: {
+        documentsUploaded: !!employee.documentsUploaded,
+        aadharUrl: employee.aadharPath ? `${base}/${employee.aadharPath}` : null,
+        panUrl: employee.panPath ? `${base}/${employee.panPath}` : null,
+      },
+    });
+  } catch (error) {
+    console.error('Error fetching document status:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching document status',
+      error: error.message,
+    });
+  }
+};
+
+// @desc    Upload Aadhar and PAN documents (employee, first-time only)
+// @route   POST /api/employees/me/documents
+// @access  Protected (employee)
+export const uploadMyDocuments = async (req, res) => {
+  try {
+    const employee = req.employee;
+    const aadharFile = req.files?.aadhar?.[0];
+    const panFile = req.files?.pan?.[0];
+
+    if (!aadharFile || !panFile) {
+      return res.status(400).json({
+        success: false,
+        message: 'Both Aadhaar and PAN images are required',
+      });
+    }
+
+    const empId = String(employee._id);
+    const aadharPath = `documents/${empId}/${aadharFile.filename}`;
+    const panPath = `documents/${empId}/${panFile.filename}`;
+
+    await Employee.findOneAndUpdate(
+      { _id: employee._id },
+      {
+        $set: {
+          aadharPath,
+          panPath,
+          documentsUploaded: true,
+        },
+      }
+    );
+
+    const base = '/uploads';
+    res.status(200).json({
+      success: true,
+      message: 'Documents uploaded successfully',
+      data: {
+        documentsUploaded: true,
+        aadharUrl: `${base}/${aadharPath}`,
+        panUrl: `${base}/${panPath}`,
+      },
+    });
+  } catch (error) {
+    console.error('Error uploading documents:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error uploading documents',
+      error: error.message,
+    });
+  }
+};
+
+// @desc    Get an employee's documents (admin panel - view documents)
+// @route   GET /api/employees/:employeeId/documents
+// @access  Public (admin)
+export const getEmployeeDocuments = async (req, res) => {
+  try {
+    const { employeeId } = req.params;
+    const employee = await Employee.findOne({ employeeId }).select('documentsUploaded aadharPath panPath');
+    if (!employee) {
+      return res.status(404).json({
+        success: false,
+        message: 'Employee not found',
+      });
+    }
+    const base = '/uploads';
+    res.status(200).json({
+      success: true,
+      data: {
+        documentsUploaded: !!employee.documentsUploaded,
+        aadharUrl: employee.aadharPath ? `${base}/${employee.aadharPath}` : null,
+        panUrl: employee.panPath ? `${base}/${employee.panPath}` : null,
+      },
+    });
+  } catch (error) {
+    console.error('Error fetching employee documents:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching employee documents',
       error: error.message,
     });
   }
