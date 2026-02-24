@@ -4,6 +4,32 @@ import Employee from '../models/Employee.js';
 import User from '../models/User.js';
 
 const TAX_RATE = 0.18;
+
+/** Send Expo push notification to assigned employees (fire-and-forget). */
+async function notifyEmployeesNewJob(employeeIds, orderSummary = '') {
+  if (!Array.isArray(employeeIds) || employeeIds.length === 0) return;
+  try {
+    const employees = await Employee.find({
+      employeeId: { $in: employeeIds },
+      pushToken: { $exists: true, $ne: '' },
+    }).select('pushToken');
+    const tokens = employees.map((e) => e.pushToken).filter(Boolean);
+    if (tokens.length === 0) return;
+    const messages = tokens.map((to) => ({
+      to,
+      title: 'New job assigned',
+      body: orderSummary || 'You have a new job to review.',
+      sound: 'default',
+    }));
+    await fetch('https://exp.host/--/api/v2/push/send', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+      body: JSON.stringify(messages),
+    });
+  } catch (err) {
+    console.error('Failed to send employee push notifications:', err);
+  }
+}
 let lastAssignedIndex = -1;
 
 const getPackagePrice = (service, packageType, packageTimes) => {
@@ -263,6 +289,12 @@ export const createOrder = async (req, res) => {
         { new: true, upsert: true }
       );
     }
+
+    // Notify assigned employees of new job (push notifications)
+    const summary = order.items?.[0]?.scheduledTimeSlot
+      ? `New job – ${order.items[0].scheduledTimeSlot}`
+      : 'You have a new job to review.';
+    notifyEmployeesNewJob(normalizedEmployeeIds, summary).catch(() => {});
 
     res.status(201).json({
       success: true,

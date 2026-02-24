@@ -82,6 +82,33 @@ export const getEmployees = async (req, res) => {
   }
 };
 
+// @desc    Update current employee's push token (for notifications)
+// @route   PUT /api/employees/me/push-token
+// @access  Protected (employee)
+export const updatePushToken = async (req, res) => {
+  try {
+    const { pushToken } = req.body;
+    const employee = req.employee;
+
+    await Employee.findOneAndUpdate(
+      { employeeId: employee.employeeId },
+      { $set: { pushToken: (pushToken && String(pushToken).trim()) || '' } }
+    );
+
+    res.status(200).json({
+      success: true,
+      message: 'Push token updated',
+    });
+  } catch (error) {
+    console.error('Error updating push token:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error updating push token',
+      error: error.message,
+    });
+  }
+};
+
 // @desc    Create employee
 // @route   POST /api/employees
 // @access  Public (demo only)

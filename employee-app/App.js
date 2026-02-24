@@ -6,6 +6,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import AppNavigator from './navigators/AppNavigator';
 import AuthNavigator from './navigators/AuthNavigator';
+import { JobNotificationsProvider } from './context/JobNotificationsContext';
 import './locationTask';
 
 export default function App() {
@@ -44,9 +45,10 @@ export default function App() {
         <PaperProvider>
           <NavigationContainer>
             {isLoggedIn ? (
-              <AppNavigator
-                employeeId={employeeId}
-                onLogout={async () => {
+              <JobNotificationsProvider employeeId={employeeId}>
+                <AppNavigator
+                  employeeId={employeeId}
+                  onLogout={async () => {
                   try {
                     await AsyncStorage.multiRemove(['employeeAuthToken', 'employeeId', 'employeeName']);
                   } catch (error) {
@@ -55,7 +57,8 @@ export default function App() {
                   setIsLoggedIn(false);
                   setEmployeeId('');
                 }}
-              />
+                />
+              </JobNotificationsProvider>
             ) : (
               <AuthNavigator
                 onLogin={({ employeeId: id }) => {

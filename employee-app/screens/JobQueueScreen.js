@@ -4,10 +4,12 @@ import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import api from '../services/api';
+import { useJobNotifications } from '../context/JobNotificationsContext';
 
 export default function JobQueueScreen({ employeeId, navigation }) {
   const insets = useSafeAreaInsets();
   const styles = useMemo(() => createStyles(), []);
+  const { refreshJobCount } = useJobNotifications();
   const [incomingJobs, setIncomingJobs] = useState([]);
   const [queue, setQueue] = useState([]);
   const [history, setHistory] = useState([]);
@@ -25,6 +27,7 @@ export default function JobQueueScreen({ employeeId, navigation }) {
       setIncomingJobs(incomingRes.data.data || []);
       setQueue(queueRes.data.data || []);
       setHistory(historyRes.data.data || []);
+      refreshJobCount();
     } catch (error) {
       console.error('Error fetching jobs:', error);
     } finally {

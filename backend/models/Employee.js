@@ -25,6 +25,11 @@ const employeeSchema = new mongoose.Schema({
     type: Boolean,
     default: true,
   },
+  pushToken: {
+    type: String,
+    default: '',
+    trim: true,
+  },
 }, {
   timestamps: true,
 });

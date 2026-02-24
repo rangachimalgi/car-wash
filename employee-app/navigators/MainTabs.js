@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useJobNotifications } from '../context/JobNotificationsContext';
 import AttendanceScreen from '../screens/AttendanceScreen';
 import JobQueueScreen from '../screens/JobQueueScreen';
 import ProfileScreen from '../screens/ProfileScreen';
@@ -17,7 +18,7 @@ const theme = {
   cardBorder: '#E2E8F0',
 };
 
-function SimpleTabBar({ state, descriptors, navigation }) {
+function SimpleTabBar({ state, descriptors, navigation, incomingJobCount = 0 }) {
   const insets = useSafeAreaInsets();
   const styles = useMemo(() => createStyles(theme), []);
 
@@ -26,6 +27,7 @@ function SimpleTabBar({ state, descriptors, navigation }) {
       {state.routes.map((route, index) => {
         const focused = state.index === index;
         const label = descriptors[route.key]?.options?.tabBarLabel ?? route.name;
+        const showBadge = route.name === 'Jobs' && incomingJobCount > 0;
 
         const onPress = () => {
           const event = navigation.emit({
@@ -52,11 +54,20 @@ function SimpleTabBar({ state, descriptors, navigation }) {
             style={styles.tabButton}
             activeOpacity={0.8}
           >
-            <MaterialCommunityIcons
-              name={iconName}
-              size={24}
-              color={focused ? theme.textPrimary : theme.textSecondary}
-            />
+            <View>
+              <MaterialCommunityIcons
+                name={iconName}
+                size={24}
+                color={focused ? theme.textPrimary : theme.textSecondary}
+              />
+              {showBadge && (
+                <View style={styles.badge}>
+                  <Text style={styles.badgeText}>
+                    {incomingJobCount > 99 ? '99+' : incomingJobCount}
+                  </Text>
+                </View>
+              )}
+            </View>
             <Text style={[styles.tabLabel, focused && styles.tabLabelActive]} numberOfLines={1}>
               {label}
             </Text>
@@ -69,7 +80,8 @@ function SimpleTabBar({ state, descriptors, navigation }) {
 
 export default function MainTabs({ onLogout, employeeId, navigation }) {
   const insets = useSafeAreaInsets();
-  
+  const { incomingCount } = useJobNotifications();
+
   return (
     <Tab.Navigator
       screenOptions={{
@@ -89,7 +101,7 @@ export default function MainTabs({ onLogout, employeeId, navigation }) {
         tabBarActiveTintColor: theme.textPrimary,
         tabBarInactiveTintColor: theme.textSecondary,
       }}
-      tabBar={(props) => <SimpleTabBar {...props} />}
+      tabBar={(props) => <SimpleTabBar {...props} incomingJobCount={incomingCount} />}
     >
       <Tab.Screen 
         name="Attendance" 
@@ -155,6 +167,23 @@ const createStyles = (theme) => StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 4,
+  },
+  badge: {
+    position: 'absolute',
+    top: -6,
+    right: -10,
+    minWidth: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: '#DC2626',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 4,
+  },
+  badgeText: {
+    color: '#FFFFFF',
+    fontSize: 10,
+    fontWeight: '800',
   },
   tabLabel: {
     fontSize: 12,
