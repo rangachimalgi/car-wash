@@ -17,6 +17,11 @@
       "bundleIdentifier": "com.anonymous.customerapp",
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "We use your location to set the service address."
+      },
+      "config": {
+        "googleMaps": {
+          "apiKey": "REPLACE_WITH_GOOGLE_MAPS_API_KEY"
+        }
       }
     },
     "android": {
