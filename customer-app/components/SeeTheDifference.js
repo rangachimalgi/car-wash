@@ -25,11 +25,25 @@ const DEFAULT_SLIDES = [
   },
 ];
 
+const normalizeSlides = (slides) => {
+  if (!slides || !slides.length) return DEFAULT_SLIDES;
+  return slides.map((s, i) => {
+    if (s.image && typeof s.image === 'number') return { ...s, id: s.id || `s-${i}` };
+    return {
+      id: s._id || s.id || `s-${i}`,
+      title: s.name || s.title || `Slide ${i + 1}`,
+      bullets: s.bullets,
+      image: s.url ? { uri: s.url } : s.image,
+    };
+  });
+};
+
 export default function SeeTheDifference({ slides = DEFAULT_SLIDES }) {
   const { theme } = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
   const ref = useRef(null);
   const [activeIndex, setActiveIndex] = useState(0);
+  const list = useMemo(() => normalizeSlides(slides), [slides]);
 
   const onMomentumScrollEnd = useCallback((event) => {
     const nextIndex = Math.round(event.nativeEvent.contentOffset.x / width);
@@ -50,7 +64,7 @@ export default function SeeTheDifference({ slides = DEFAULT_SLIDES }) {
           snapToInterval={width}
           onMomentumScrollEnd={onMomentumScrollEnd}
         >
-          {slides.map((slide) => (
+          {list.map((slide) => (
             <View key={slide.id} style={styles.slide}>
               <Image source={slide.image} style={styles.image} resizeMode="cover" />
               <View style={styles.scrim} />
@@ -70,7 +84,7 @@ export default function SeeTheDifference({ slides = DEFAULT_SLIDES }) {
         </ScrollView>
 
         <View style={styles.dots}>
-          {slides.map((s, idx) => (
+          {list.map((s, idx) => (
             <View
               key={`${s.id}-dot`}
               style={[styles.dot, idx === activeIndex && styles.dotActive]}

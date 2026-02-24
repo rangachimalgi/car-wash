@@ -99,4 +99,18 @@ api.interceptors.response.use(
   }
 );
 
+export const getUploadsBase = () => API_BASE_URL.replace(/\/api\/?$/, '');
+
+export const getMedia = async () => {
+  const base = getUploadsBase();
+  const { data } = await api.get('/media/public');
+  if (!data?.success || !data.data) return { testimonials: [], transformations: [], seeTheDifference: [] };
+  const d = data.data;
+  return {
+    testimonials: (d.testimonials || []).map((m) => ({ ...m, url: m.url ? base + m.url : null })),
+    transformations: (d.transformations || []).map((m) => ({ ...m, url: m.url ? base + m.url : null })),
+    seeTheDifference: (d.seeTheDifference || []).map((m) => ({ ...m, url: m.url ? base + m.url : null })),
+  };
+};
+
 export default api;

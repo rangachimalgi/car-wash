@@ -7,6 +7,7 @@ import CustomerTestimonials from '../components/CustomerTestimonials';
 import SeeTheDifference from '../components/SeeTheDifference';
 import SeeTheTransformations from '../components/SeeTheTransformations';
 import { useTheme } from '../theme/ThemeContext';
+import { getMedia } from '../config/api';
 // import { getPopularServices } from '../services/serviceApi';
 
 const sliderCardWidth = Dimensions.get('window').width;
@@ -22,8 +23,7 @@ export default function HomeScreen({ navigation }) {
   const [imageErrors, setImageErrors] = useState({});
   const sliderRef = useRef(null);
   const [activeSlide, setActiveSlide] = useState(0);
-  // const [popularServices, setPopularServices] = useState([]);
-  // const [loadingPopular, setLoadingPopular] = useState(false);
+  const [media, setMedia] = useState({ testimonials: [], transformations: [], seeTheDifference: [] });
   const { theme, isLightMode } = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
 
@@ -75,6 +75,14 @@ export default function HomeScreen({ navigation }) {
     }, 3500);
 
     return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    getMedia()
+      .then((data) => { if (!cancelled) setMedia(data); })
+      .catch(() => {});
+    return () => { cancelled = true; };
   }, []);
 
   // Fetch popular services - commented out as section is removed
@@ -266,9 +274,9 @@ export default function HomeScreen({ navigation }) {
           </ScrollView>
         </View>
 
-        <CustomerTestimonials />
-        <SeeTheDifference />
-        <SeeTheTransformations />
+        <CustomerTestimonials items={media.testimonials.length ? media.testimonials : undefined} />
+        <SeeTheDifference slides={media.seeTheDifference.length ? media.seeTheDifference : undefined} />
+        <SeeTheTransformations items={media.transformations.length ? media.transformations : undefined} />
       </ScrollView>
     </View>
   );

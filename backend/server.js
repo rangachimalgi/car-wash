@@ -20,6 +20,7 @@ const app = express();
 // Ensure uploads directory exists (for employee documents)
 const uploadsDir = path.join(__dirname, 'uploads');
 fs.mkdirSync(path.join(uploadsDir, 'documents'), { recursive: true });
+fs.mkdirSync(path.join(uploadsDir, 'media'), { recursive: true });
 
 // Middleware
 app.use(cors());
@@ -47,9 +48,11 @@ import userRoutes from './routes/userRoutes.js';
 import attendanceRoutes from './routes/attendanceRoutes.js';
 import inventoryRoutes from './routes/inventoryRoutes.js';
 import slotRoutes from './routes/slotRoutes.js';
+import mediaRoutes from './routes/mediaRoutes.js';
 import { errorHandler } from './middleware/errorHandler.js';
 
 app.use('/api/services', serviceRoutes);
+app.use('/api/media', mediaRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/jobs', jobRoutes);

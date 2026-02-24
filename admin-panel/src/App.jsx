@@ -7,7 +7,7 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api'
 const UPLOADS_BASE = API_BASE_URL.replace(/\/api\/?$/, '')
 
 function App() {
-  const [activeTab, setActiveTab] = useState('services') // 'services', 'addons', 'coverage', 'orders', 'reviews', 'attendance', 'inventory'
+  const [activeTab, setActiveTab] = useState('services') // 'services', 'addons', 'coverage', 'orders', 'reviews', 'attendance', 'inventory', 'media'
   
   // Services form data
   const [formData, setFormData] = useState({
@@ -123,6 +123,15 @@ function App() {
   const [inventoryMessage, setInventoryMessage] = useState({ type: '', text: '' })
   const [stockUpdateModal, setStockUpdateModal] = useState({ open: false, item: null, quantity: '', operation: 'add' })
   const [sidebarOpen, setSidebarOpen] = useState(false)
+
+  // Media (testimonials, transformations, see the difference)
+  const [mediaList, setMediaList] = useState([])
+  const [loadingMedia, setLoadingMedia] = useState(false)
+  const [mediaMessage, setMediaMessage] = useState({ type: '', text: '' })
+  const [mediaForm, setMediaForm] = useState({ type: 'testimonials', name: '', file: null })
+  const [uploadingMedia, setUploadingMedia] = useState(false)
+  const [seeDiffFiles, setSeeDiffFiles] = useState({ image1: null, image2: null, image3: null })
+  const [uploadingSeeDiff, setUploadingSeeDiff] = useState(false)
 
   // Helper function to create fetch options with auth headers
   const getFetchOptions = (options = {}) => {
@@ -258,6 +267,9 @@ function App() {
     }
     if (activeTab === 'services') {
       fetchAllServices()
+    }
+    if (activeTab === 'media') {
+      fetchMedia()
     }
   }, [activeTab])
 
@@ -1627,6 +1639,97 @@ function App() {
     }
   }
 
+  const fetchMedia = async () => {
+    setLoadingMedia(true)
+    setMediaMessage({ type: '', text: '' })
+    try {
+      const res = await fetch(`${API_BASE_URL}/media`, getFetchOptions())
+      const data = await res.json()
+      if (data.success) setMediaList(data.data || [])
+      else setMediaMessage({ type: 'error', text: data.message || 'Failed to load media' })
+    } catch (e) {
+      setMediaMessage({ type: 'error', text: e.message || 'Failed to load media' })
+    } finally {
+      setLoadingMedia(false)
+    }
+  }
+
+  const uploadMediaFile = async () => {
+    if (!mediaForm.file) {
+      setMediaMessage({ type: 'error', text: 'Please select a video file' })
+      return
+    }
+    setUploadingMedia(true)
+    setMediaMessage({ type: '', text: '' })
+    try {
+      const formData = new FormData()
+      formData.append('type', mediaForm.type)
+      formData.append('name', mediaForm.name)
+      formData.append('file', mediaForm.file)
+      const opts = getFetchOptions()
+      const headers = { ...opts.headers }
+      delete headers['Content-Type']
+      const res = await fetch(`${API_BASE_URL}/media`, { ...opts, method: 'POST', headers, body: formData })
+      const data = await res.json()
+      if (data.success) {
+        setMediaMessage({ type: 'success', text: 'Uploaded successfully' })
+        setMediaForm({ type: mediaForm.type, name: '', file: null })
+        fetchMedia()
+      } else {
+        setMediaMessage({ type: 'error', text: data.message || 'Upload failed' })
+      }
+    } catch (e) {
+      setMediaMessage({ type: 'error', text: e.message || 'Upload failed' })
+    } finally {
+      setUploadingMedia(false)
+    }
+  }
+
+  const uploadSeeTheDifference = async () => {
+    if (!seeDiffFiles.image1 || !seeDiffFiles.image2 || !seeDiffFiles.image3) {
+      setMediaMessage({ type: 'error', text: 'Please select all 3 images' })
+      return
+    }
+    setUploadingSeeDiff(true)
+    setMediaMessage({ type: '', text: '' })
+    try {
+      const formData = new FormData()
+      formData.append('image1', seeDiffFiles.image1)
+      formData.append('image2', seeDiffFiles.image2)
+      formData.append('image3', seeDiffFiles.image3)
+      const opts = getFetchOptions()
+      const headers = { ...opts.headers }
+      delete headers['Content-Type']
+      const res = await fetch(`${API_BASE_URL}/media/see-the-difference`, { ...opts, method: 'POST', headers, body: formData })
+      const data = await res.json()
+      if (data.success) {
+        setMediaMessage({ type: 'success', text: 'See The Difference images updated' })
+        setSeeDiffFiles({ image1: null, image2: null, image3: null })
+        fetchMedia()
+      } else {
+        setMediaMessage({ type: 'error', text: data.message || 'Upload failed' })
+      }
+    } catch (e) {
+      setMediaMessage({ type: 'error', text: e.message || 'Upload failed' })
+    } finally {
+      setUploadingSeeDiff(false)
+    }
+  }
+
+  const deleteMediaItem = async (id) => {
+    if (!window.confirm('Delete this item?')) return
+    try {
+      const res = await fetch(`${API_BASE_URL}/media/${id}`, { ...getFetchOptions(), method: 'DELETE' })
+      const data = await res.json()
+      if (data.success) {
+        setMediaMessage({ type: 'success', text: 'Deleted' })
+        fetchMedia()
+      } else setMediaMessage({ type: 'error', text: data.message || 'Delete failed' })
+    } catch (e) {
+      setMediaMessage({ type: 'error', text: e.message || 'Delete failed' })
+    }
+  }
+
   const navItems = [
     { id: 'services', label: 'Services', icon: '🚗' },
     { id: 'addons', label: 'Add-Ons', icon: '➕' },
@@ -1634,6 +1737,7 @@ function App() {
     { id: 'slots', label: 'Time Slots', icon: '⏰' },
     { id: 'orders', label: 'Orders', icon: '📦' },
     { id: 'reviews', label: 'Reviews', icon: '⭐' },
+    { id: 'media', label: 'Media', icon: '🎬' },
     { id: 'employees', label: 'Employees', icon: '👤' },
     { id: 'attendance', label: 'Attendance', icon: '👥' },
     { id: 'inventory', label: 'Inventory', icon: '📦', badge: inventory.filter(item => item.isLowStock).length },
@@ -1646,6 +1750,7 @@ function App() {
     slots: 'Time Slots',
     orders: 'Orders',
     reviews: 'Reviews',
+    media: 'Media (Testimonials & Transformations)',
     employees: 'Employees',
     attendance: 'Employee Attendance',
     inventory: 'Inventory',
@@ -2925,6 +3030,107 @@ function App() {
                 </table>
               </div>
             )}
+          </div>
+        )}
+
+        {/* Media: Testimonials, Transformations, See The Difference */}
+        {activeTab === 'media' && (
+          <div className="orders-section">
+            <div className="section-header">
+              <h2 className="section-title">Media</h2>
+              <button type="button" className="secondary-button" onClick={fetchMedia} disabled={loadingMedia}>
+                {loadingMedia ? 'Loading...' : 'Refresh'}
+              </button>
+            </div>
+            {mediaMessage.text && (
+              <div className={mediaMessage.type === 'error' ? 'error-message' : 'success-message'} style={{ marginBottom: 12 }}>
+                {mediaMessage.text}
+              </div>
+            )}
+
+            {/* Testimonials: video upload */}
+            <div style={{ marginBottom: 28 }}>
+              <h3 style={{ fontSize: 18, marginBottom: 10 }}>Customer Testimonials (videos)</h3>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'flex-end', marginBottom: 12 }}>
+                <select
+                  value={mediaForm.type}
+                  onChange={(e) => setMediaForm((f) => ({ ...f, type: e.target.value }))}
+                  style={{ padding: '8px 12px', border: '1px solid #ddd', borderRadius: 6 }}
+                >
+                  <option value="testimonials">Testimonials</option>
+                  <option value="transformations">Transformations</option>
+                </select>
+                <input
+                  type="text"
+                  placeholder="Name (optional)"
+                  value={mediaForm.name}
+                  onChange={(e) => setMediaForm((f) => ({ ...f, name: e.target.value }))}
+                  style={{ padding: '8px 12px', border: '1px solid #ddd', borderRadius: 6, minWidth: 160 }}
+                />
+                <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span style={{ fontSize: 14 }}>Video:</span>
+                  <input
+                    type="file"
+                    accept="video/mp4,video/webm,video/quicktime"
+                    onChange={(e) => setMediaForm((f) => ({ ...f, file: e.target.files?.[0] || null }))}
+                  />
+                </label>
+                <button type="button" className="primary-button" onClick={uploadMediaFile} disabled={uploadingMedia || !mediaForm.file}>
+                  {uploadingMedia ? 'Uploading...' : 'Upload'}
+                </button>
+              </div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                {(mediaList.filter((m) => m.type === 'testimonials') || []).map((m) => (
+                  <div key={m._id} style={{ border: '1px solid #ddd', borderRadius: 8, padding: 8, display: 'flex', alignItems: 'center', gap: 8 }}>
+                    {m.url.match(/\.(mp4|webm|mov)$/i) ? (
+                      <video src={UPLOADS_BASE + m.url} controls style={{ width: 120, height: 68, objectFit: 'cover' }} />
+                    ) : (
+                      <img src={UPLOADS_BASE + m.url} alt="" style={{ width: 120, height: 68, objectFit: 'cover' }} />
+                    )}
+                    <span>{m.name || 'Video'}</span>
+                    <button type="button" className="secondary-button" style={{ padding: '4px 8px' }} onClick={() => deleteMediaItem(m._id)}>Delete</button>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Transformations: video upload (same form, type=transformations) - list below */}
+            <div style={{ marginBottom: 28 }}>
+              <h3 style={{ fontSize: 18, marginBottom: 10 }}>See The Transformations (videos)</h3>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                {(mediaList.filter((m) => m.type === 'transformations') || []).map((m) => (
+                  <div key={m._id} style={{ border: '1px solid #ddd', borderRadius: 8, padding: 8, display: 'flex', alignItems: 'center', gap: 8 }}>
+                    {m.url.match(/\.(mp4|webm|mov)$/i) ? (
+                      <video src={UPLOADS_BASE + m.url} controls style={{ width: 120, height: 68, objectFit: 'cover' }} />
+                    ) : (
+                      <img src={UPLOADS_BASE + m.url} alt="" style={{ width: 120, height: 68, objectFit: 'cover' }} />
+                    )}
+                    <span>{m.name || 'Video'}</span>
+                    <button type="button" className="secondary-button" style={{ padding: '4px 8px' }} onClick={() => deleteMediaItem(m._id)}>Delete</button>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* See The Difference: 3 images */}
+            <div style={{ marginBottom: 28 }}>
+              <h3 style={{ fontSize: 18, marginBottom: 10 }}>See The Difference (3 images)</h3>
+              <p style={{ fontSize: 14, color: '#666', marginBottom: 10 }}>Upload exactly 3 images. They will replace the current set.</p>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'flex-end', marginBottom: 12 }}>
+                <label>Image 1: <input type="file" accept="image/*" onChange={(e) => setSeeDiffFiles((f) => ({ ...f, image1: e.target.files?.[0] || null }))} /></label>
+                <label>Image 2: <input type="file" accept="image/*" onChange={(e) => setSeeDiffFiles((f) => ({ ...f, image2: e.target.files?.[0] || null }))} /></label>
+                <label>Image 3: <input type="file" accept="image/*" onChange={(e) => setSeeDiffFiles((f) => ({ ...f, image3: e.target.files?.[0] || null }))} /></label>
+                <button type="button" className="primary-button" onClick={uploadSeeTheDifference} disabled={uploadingSeeDiff}> {uploadingSeeDiff ? 'Uploading...' : 'Upload 3 images'} </button>
+              </div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                {(mediaList.filter((m) => m.type === 'seeTheDifference') || []).sort((a, b) => a.order - b.order).map((m) => (
+                  <div key={m._id} style={{ border: '1px solid #ddd', borderRadius: 8, padding: 8 }}>
+                    <img src={UPLOADS_BASE + m.url} alt={m.name} style={{ width: 160, height: 100, objectFit: 'cover', display: 'block' }} />
+                    <span style={{ fontSize: 13 }}>{m.name || `Slide ${m.order + 1}`}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
         )}
 

@@ -11,6 +11,8 @@ const DEFAULT_ITEMS = [
   { id: 'par1', name: 'Ron', image: require('../assets/cartestimonialtwo.jpeg') },
 ];
 
+const isVideoUrl = (url) => /\.(mp4|webm|mov)(\?|$)/i.test(url || '');
+
 export default function CustomerTestimonials({
   title = 'Customer Testimonials',
   items = DEFAULT_ITEMS,
@@ -28,30 +30,43 @@ export default function CustomerTestimonials({
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.row}
       >
-        {items.map((item) => (
-          <TouchableOpacity
-            key={item.id}
-            activeOpacity={0.9}
-            style={styles.card}
-            onPress={() => onPressItem?.(item)}
-          >
-            <Image source={item.image} style={styles.image} resizeMode="cover" />
-            <View style={styles.scrim} />
+        {items.map((item) => {
+          const key = item._id || item.id;
+          const hasRemoteUrl = typeof item.url === 'string' && item.url;
+          const isVideo = hasRemoteUrl && isVideoUrl(item.url);
+          const source = item.image ? item.image : hasRemoteUrl && !isVideo ? { uri: item.url } : null;
 
-            <View style={styles.playWrap}>
-              <View style={styles.playCircle}>
-                <MaterialCommunityIcons name="play" size={28} color="#FFFFFF" />
+          return (
+            <TouchableOpacity
+              key={key}
+              activeOpacity={0.9}
+              style={styles.card}
+              onPress={() => onPressItem?.(item)}
+            >
+              {source ? (
+                <Image source={source} style={styles.image} resizeMode="cover" />
+              ) : isVideo ? (
+                <View style={[styles.image, styles.videoPlaceholder]}>
+                  <MaterialCommunityIcons name="video-outline" size={48} color="rgba(255,255,255,0.7)" />
+                </View>
+              ) : null}
+              <View style={styles.scrim} />
+
+              <View style={styles.playWrap}>
+                <View style={styles.playCircle}>
+                  <MaterialCommunityIcons name="play" size={28} color="#FFFFFF" />
+                </View>
               </View>
-            </View>
 
-            <View style={styles.nameWrap}>
-              <View style={styles.nameAccent} />
-              <Text style={styles.name} numberOfLines={1}>
-                {item.name}
-              </Text>
-            </View>
-          </TouchableOpacity>
-        ))}
+              <View style={styles.nameWrap}>
+                <View style={styles.nameAccent} />
+                <Text style={styles.name} numberOfLines={1}>
+                  {item.name || 'Video'}
+                </Text>
+              </View>
+            </TouchableOpacity>
+          );
+        })}
       </ScrollView>
     </View>
   );
@@ -86,6 +101,11 @@ const createStyles = (theme) =>
     image: {
       width: '100%',
       height: '100%',
+    },
+    videoPlaceholder: {
+      backgroundColor: 'rgba(0,0,0,0.5)',
+      alignItems: 'center',
+      justifyContent: 'center',
     },
     scrim: {
       ...StyleSheet.absoluteFillObject,
