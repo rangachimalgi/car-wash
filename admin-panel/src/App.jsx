@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react'
 import './App.css'
 
-// API configuration: use env var or fallback for local backend
-// Set VITE_API_URL in .env (e.g. http://localhost:8000/api or http://YOUR_IP:8000/api)
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api'
+// API configuration for dev and prod
+// - Set VITE_API_URL at build time to override (e.g. in .env: VITE_API_URL=https://your-api.com/api)
+// - Or inject at runtime: window.__API_BASE_URL__ = 'https://your-api.com/api' in index.html before app loads
+// - Production build (npm run build) without either uses the same backend as the customer app (Render)
+const API_BASE_URL = (typeof window !== 'undefined' && window.__API_BASE_URL__) || import.meta.env.VITE_API_URL || (import.meta.env.PROD ? 'https://car-wash-vbry.onrender.com/api' : 'http://localhost:8000/api')
 const UPLOADS_BASE = API_BASE_URL.replace(/\/api\/?$/, '')
 
 function App() {
