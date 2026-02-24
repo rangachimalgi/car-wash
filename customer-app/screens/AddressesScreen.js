@@ -102,6 +102,7 @@ export default function AddressesScreen({ navigation, route }) {
   const [pickedCoords, setPickedCoords] = useState(null);
   const [pickedAddress, setPickedAddress] = useState('');
   const [pickedAddressTitle, setPickedAddressTitle] = useState('');
+  const [currentAddressText, setCurrentAddressText] = useState('');
   const [resolvingAddress, setResolvingAddress] = useState(false);
   const [mapSearchQuery, setMapSearchQuery] = useState('');
   const [mapSearchSuggestions, setMapSearchSuggestions] = useState([]);
@@ -156,8 +157,12 @@ export default function AddressesScreen({ navigation, route }) {
     const loadAddresses = async () => {
       try {
         const stored = await AsyncStorage.getItem('savedAddresses');
+        const current = await AsyncStorage.getItem('currentAddress');
         if (stored) {
           setSavedAddresses(JSON.parse(stored));
+        }
+        if (current) {
+          setCurrentAddressText(current);
         }
       } catch (error) {
         console.warn('Failed to load addresses:', error);
@@ -265,6 +270,7 @@ export default function AddressesScreen({ navigation, route }) {
     AsyncStorage.setItem('currentAddress', fullAddress).catch(error => {
       console.warn('Failed to store current address:', error);
     });
+    setCurrentAddressText(fullAddress);
     const hasCoords = typeof address.latitude === 'number' && typeof address.longitude === 'number';
     if (hasCoords) {
       AsyncStorage.setItem('currentLat', String(address.latitude)).catch(() => {});
@@ -524,8 +530,12 @@ export default function AddressesScreen({ navigation, route }) {
   return (
     <View style={styles.container}>
       <StatusBar style={isLightMode ? 'dark' : 'light'} />
-      <BackHeader navigation={navigation} title="Select Address" />
-      
+      <BackHeader
+        navigation={navigation}
+        title="Select Address"
+        subtitle={currentAddressText || undefined}
+      />
+
       <ScrollView 
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}

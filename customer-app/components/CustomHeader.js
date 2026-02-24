@@ -1,19 +1,42 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../theme/ThemeContext';
 import SavedVehiclesModal from './SavedVehiclesModal';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useFocusEffect } from '@react-navigation/native';
 
 export default function CustomHeader({ navigation, transparent = false }) {
   const insets = useSafeAreaInsets();
   const { theme } = useTheme();
   const [showVehiclesModal, setShowVehiclesModal] = useState(false);
+  const [currentAddress, setCurrentAddress] = useState('');
   
   const colors = {
     background: transparent ? 'transparent' : theme.headerBackground,
     text: theme.textPrimary,
   };
+
+  useFocusEffect(
+    useCallback(() => {
+      let isActive = true;
+      const loadAddress = async () => {
+        try {
+          const stored = await AsyncStorage.getItem('currentAddress');
+          if (isActive) {
+            setCurrentAddress(stored || '');
+          }
+        } catch (error) {
+          console.warn('Failed to load current address for header:', error);
+        }
+      };
+      loadAddress();
+      return () => {
+        isActive = false;
+      };
+    }, [])
+  );
 
   return (
     <>
@@ -31,7 +54,7 @@ export default function CustomHeader({ navigation, transparent = false }) {
               style={styles.locationIcon}
             />
             <Text style={[styles.addressText, { color: colors.text }]} numberOfLines={1} ellipsizeMode="tail">
-              Add Address
+              {currentAddress || 'Add Address'}
             </Text>
             <MaterialCommunityIcons 
               name="chevron-down" 
