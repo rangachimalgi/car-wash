@@ -61,3 +61,19 @@ export const getOrderById = async (orderId) => {
     throw error;
   }
 };
+
+/**
+ * Submit rating for a completed order (customer only)
+ * @param {String} orderId
+ * @param {Object} payload - { rating: 1-5, review?: string }
+ * @returns {Promise}
+ */
+export const submitOrderRating = async (orderId, payload) => {
+  try {
+    const response = await api.post(`/orders/${orderId}/rate`, payload);
+    return response.data;
+  } catch (error) {
+    console.error('Error submitting rating:', error);
+    throw error;
+  }
+};

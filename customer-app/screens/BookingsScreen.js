@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -7,7 +7,8 @@ import { useFocusEffect } from '@react-navigation/native';
 import CustomHeader from '../components/CustomHeader';
 import UpcomingWashCard from '../components/UpcomingWashCard';
 import RecentServiceCard from '../components/RecentServiceCard';
-import { getOrders } from '../services/orderApi';
+import RatingModal from '../components/RatingModal';
+import { getOrders, submitOrderRating } from '../services/orderApi';
 import { useTheme } from '../theme/ThemeContext';
 
 export default function BookingsScreen({ navigation }) {
@@ -15,6 +16,7 @@ export default function BookingsScreen({ navigation }) {
   const [upcomingWashes, setUpcomingWashes] = useState([]);
   const [recentServices, setRecentServices] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [ratingOrder, setRatingOrder] = useState(null);
   const { theme, isLightMode } = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
 
@@ -78,6 +80,8 @@ export default function BookingsScreen({ navigation }) {
       status: order.status || 'Completed',
       price: `₹${order.totalAmount?.toFixed(2)}`,
       image: getServiceImage(category),
+      rating: order.rating,
+      review: order.review,
     };
   };
 
@@ -108,6 +112,26 @@ export default function BookingsScreen({ navigation }) {
 
   const handleViewLocation = (wash) => {
     navigation.navigate('EmployeeLiveLocation', { orderId: wash.id });
+  };
+
+  const handleRateService = (service) => {
+    setRatingOrder({ id: service.id, serviceName: service.serviceName });
+  };
+
+  const handleRatingSubmit = async (payload) => {
+    if (!ratingOrder?.id) return;
+    try {
+      const res = await submitOrderRating(ratingOrder.id, payload);
+      if (res.success) {
+        await fetchOrders();
+      } else {
+        throw new Error(res.message || 'Failed to submit rating');
+      }
+    } catch (err) {
+      const message = err.response?.data?.message || err.message || 'Could not submit rating. Please try again.';
+      Alert.alert('Error', message);
+      throw err;
+    }
   };
 
   return (
@@ -163,19 +187,26 @@ export default function BookingsScreen({ navigation }) {
               <RecentServiceCard 
                 key={service.id} 
                 service={service}
-                onReBook={(service) => {
+                onReBook={(s) => {
                   // Handle re-book logic here
-                  console.log('Re-book service:', service);
+                  console.log('Re-book service:', s);
                 }}
                 onPress={() => {
-                  // Handle card press if needed
                   console.log('View service:', service);
                 }}
+                onRate={handleRateService}
               />
             ))
           )}
         </View>
       </ScrollView>
+
+      <RatingModal
+        visible={!!ratingOrder}
+        onClose={() => setRatingOrder(null)}
+        onSubmit={handleRatingSubmit}
+        serviceName={ratingOrder?.serviceName}
+      />
     </View>
   );
 }

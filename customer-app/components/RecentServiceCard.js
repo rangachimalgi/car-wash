@@ -3,9 +3,11 @@ import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTheme } from '../theme/ThemeContext';
 
-export default function RecentServiceCard({ service, onReBook, onPress }) {
+export default function RecentServiceCard({ service, onReBook, onPress, onRate }) {
   const { theme } = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
+  const isCompleted = service.status === 'Completed';
+  const hasRating = typeof service.rating === 'number' && service.rating >= 1 && service.rating <= 5;
 
   return (
     <TouchableOpacity 
@@ -45,6 +47,28 @@ export default function RecentServiceCard({ service, onReBook, onPress }) {
               <Text style={styles.timeText}>{service.time}</Text>
             </View>
           ) : null}
+
+          {isCompleted && (
+            <View style={styles.ratingRow}>
+              {hasRating ? (
+                <View style={styles.ratedBadge}>
+                  <MaterialCommunityIcons name="star" size={14} color="#FFC107" />
+                  <Text style={styles.ratedText}>You rated {service.rating} ★</Text>
+                </View>
+              ) : (
+                <TouchableOpacity
+                  style={styles.rateButton}
+                  onPress={(e) => {
+                    e.stopPropagation();
+                    onRate?.(service);
+                  }}
+                >
+                  <MaterialCommunityIcons name="star-outline" size={16} color={theme.accent} />
+                  <Text style={styles.rateButtonText}>Rate service</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          )}
 
           <View style={styles.footerRow}>
             <View>
@@ -156,6 +180,34 @@ const createStyles = theme => StyleSheet.create({
   timeText: {
     fontSize: 13,
     color: theme.textSecondary,
+  },
+  ratingRow: {
+    marginBottom: 8,
+  },
+  ratedBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  ratedText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: theme.textPrimary,
+  },
+  rateButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    alignSelf: 'flex-start',
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderRadius: 8,
+    backgroundColor: theme.accentSoft,
+  },
+  rateButtonText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: theme.accent,
   },
   footerRow: {
     flexDirection: 'row',

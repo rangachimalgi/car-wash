@@ -1170,6 +1170,49 @@
   justify-content: flex-end;
 }
 
+/* Reviews tab */
+.reviews-table-wrap {
+  overflow-x: auto;
+  background: white;
+  border-radius: 8px;
+  border: 2px solid #e0e0e0;
+}
+
+.reviews-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.reviews-table th,
+.reviews-table td {
+  padding: 0.75rem 1rem;
+  text-align: left;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.reviews-table th {
+  background: #f5f5f5;
+  font-weight: 600;
+  color: #1a1a1a;
+}
+
+.reviews-table tbody tr:hover {
+  background: #fafafa;
+}
+
+.review-rating {
+  color: #f59e0b;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.review-text {
+  max-width: 280px;
+  word-break: break-word;
+  color: #4a4a4a;
+}
+
 .order-status {
   padding: 0.25rem 0.75rem;
   border-radius: 12px;

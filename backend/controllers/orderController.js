@@ -350,6 +350,32 @@ export const getAllOrders = async (req, res) => {
   }
 };
 
+// @desc    Get all orders that have a rating (reviews) - for admin panel
+// @route   GET /api/orders/admin/reviews
+// @access  Public (for admin panel)
+export const getRatedOrders = async (req, res) => {
+  try {
+    const orders = await Order.find({ rating: { $exists: true, $gte: 1, $lte: 5 } })
+      .sort({ ratedAt: -1 })
+      .populate('items.service', 'name category')
+      .populate('items.addOns', 'name basePrice')
+      .populate('user', 'name phone');
+
+    res.status(200).json({
+      success: true,
+      count: orders.length,
+      data: orders,
+    });
+  } catch (error) {
+    console.error('Error fetching rated orders:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching reviews',
+      error: error.message,
+    });
+  }
+};
+
 // @desc    Update order status
 // @route   PATCH /api/orders/:id
 // @access  Protected (or employeeId query param for employees)
@@ -489,6 +515,84 @@ export const updateEmployeeLocation = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error updating employee location',
+      error: error.message,
+    });
+  }
+};
+
+// @desc    Submit rating for a completed order (customer only)
+// @route   POST /api/orders/:id/rate
+// @access  Protected
+export const rateOrder = async (req, res) => {
+  try {
+    const orderId = req.params.id;
+    const userId = req.user._id;
+    const { rating, review } = req.body;
+
+    const numRating = typeof rating === 'number' ? rating : parseInt(rating, 10);
+    if (!Number.isInteger(numRating) || numRating < 1 || numRating > 5) {
+      return res.status(400).json({
+        success: false,
+        message: 'Rating must be between 1 and 5',
+      });
+    }
+
+    const order = await Order.findOne({ _id: orderId, user: userId });
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message: 'Order not found',
+      });
+    }
+    if (order.status !== 'Completed') {
+      return res.status(400).json({
+        success: false,
+        message: 'You can only rate completed orders',
+      });
+    }
+    if (order.rating != null) {
+      return res.status(400).json({
+        success: false,
+        message: 'You have already rated this order',
+      });
+    }
+
+    const reviewText = typeof review === 'string' ? review.trim().slice(0, 500) : '';
+    order.rating = numRating;
+    order.review = reviewText;
+    order.ratedAt = new Date();
+    await order.save();
+
+    // Recalculate Service aggregate rating for the primary service in this order
+    const serviceId = order.items?.[0]?.service?._id || order.items?.[0]?.service;
+    if (serviceId) {
+      const completedWithRating = await Order.find({
+        status: 'Completed',
+        rating: { $exists: true, $gte: 1, $lte: 5 },
+        'items.0.service': serviceId,
+      }).select('rating');
+      const count = completedWithRating.length;
+      const sum = completedWithRating.reduce((s, o) => s + (o.rating || 0), 0);
+      const avg = count > 0 ? sum / count : 0;
+      await Service.findByIdAndUpdate(serviceId, {
+        rating: Math.round(avg * 10) / 10,
+        totalReviews: count,
+      });
+    }
+
+    const updated = await Order.findById(orderId)
+      .populate('items.service', 'name category')
+      .populate('items.addOns', 'name basePrice');
+
+    res.status(200).json({
+      success: true,
+      data: updated,
+    });
+  } catch (error) {
+    console.error('Error rating order:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error submitting rating',
       error: error.message,
     });
   }

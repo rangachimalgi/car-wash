@@ -6,7 +6,7 @@ import './App.css'
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api'
 
 function App() {
-  const [activeTab, setActiveTab] = useState('services') // 'services', 'addons', 'coverage', 'orders', 'attendance', 'inventory'
+  const [activeTab, setActiveTab] = useState('services') // 'services', 'addons', 'coverage', 'orders', 'reviews', 'attendance', 'inventory'
   
   // Services form data
   const [formData, setFormData] = useState({
@@ -61,6 +61,8 @@ function App() {
   const [addOnMessage, setAddOnMessage] = useState({ type: '', text: '' })
   const [coverageMessage, setCoverageMessage] = useState({ type: '', text: '' })
   const [orders, setOrders] = useState([])
+  const [reviews, setReviews] = useState([])
+  const [loadingReviews, setLoadingReviews] = useState(false)
   const [allServices, setAllServices] = useState([])
   const [serviceFilter, setServiceFilter] = useState('all') // 'all', 'car', 'bike'
   const [serviceSearch, setServiceSearch] = useState('') // Search query
@@ -247,6 +249,9 @@ function App() {
     if (activeTab === 'orders') {
       fetchOrders()
     }
+    if (activeTab === 'reviews') {
+      fetchReviews()
+    }
     if (activeTab === 'services') {
       fetchAllServices()
     }
@@ -319,6 +324,24 @@ function App() {
       setMessage({ type: 'error', text: `Network error: ${error.message}. Check if server is running on ${API_BASE_URL}` })
     } finally {
       setLoadingOrders(false)
+    }
+  }
+
+  const fetchReviews = async () => {
+    setLoadingReviews(true)
+    try {
+      const response = await fetch(`${API_BASE_URL}/orders/admin/reviews`)
+      const data = await response.json()
+      if (data.success) {
+        setReviews(data.data || [])
+      } else {
+        setMessage({ type: 'error', text: data.message || 'Error fetching reviews' })
+      }
+    } catch (error) {
+      console.error('Error fetching reviews:', error)
+      setMessage({ type: 'error', text: `Network error: ${error.message}` })
+    } finally {
+      setLoadingReviews(false)
     }
   }
 
@@ -1581,6 +1604,7 @@ function App() {
     { id: 'coverage', label: 'Coverage', icon: '📋' },
     { id: 'slots', label: 'Time Slots', icon: '⏰' },
     { id: 'orders', label: 'Orders', icon: '📦' },
+    { id: 'reviews', label: 'Reviews', icon: '⭐' },
     { id: 'attendance', label: 'Attendance', icon: '👥' },
     { id: 'inventory', label: 'Inventory', icon: '📦', badge: inventory.filter(item => item.isLowStock).length },
   ]
@@ -1591,6 +1615,7 @@ function App() {
     coverage: 'Coverage',
     slots: 'Time Slots',
     orders: 'Orders',
+    reviews: 'Reviews',
     attendance: 'Employee Attendance',
     inventory: 'Inventory',
   }
@@ -2811,6 +2836,65 @@ function App() {
               </form>
             </div>
           </>
+        )}
+
+        {/* Reviews */}
+        {activeTab === 'reviews' && (
+          <div className="orders-section">
+            <div className="section-header">
+              <h2 className="section-title">Customer Reviews</h2>
+              <button
+                type="button"
+                className="secondary-button"
+                onClick={fetchReviews}
+                disabled={loadingReviews}
+              >
+                {loadingReviews ? 'Loading...' : 'Refresh'}
+              </button>
+            </div>
+
+            {loadingReviews ? (
+              <div className="loading-text">Loading reviews...</div>
+            ) : reviews.length === 0 ? (
+              <div className="info-text">No reviews yet.</div>
+            ) : (
+              <div className="reviews-table-wrap">
+                <table className="reviews-table">
+                  <thead>
+                    <tr>
+                      <th>Customer</th>
+                      <th>Phone</th>
+                      <th>Service</th>
+                      <th>Rating</th>
+                      <th>Review</th>
+                      <th>Date</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {reviews.map((order) => {
+                      const serviceName = order.items?.[0]?.service?.name || '—'
+                      const customerName = order.customer?.name || order.user?.name || '—'
+                      const customerPhone = order.customer?.phone || order.user?.phone || '—'
+                      return (
+                        <tr key={order._id}>
+                          <td>{customerName}</td>
+                          <td>{customerPhone}</td>
+                          <td>{serviceName}</td>
+                          <td>
+                            <span className="review-rating">
+                              {'★'.repeat(order.rating || 0)}{'☆'.repeat(5 - (order.rating || 0))} {order.rating}/5
+                            </span>
+                          </td>
+                          <td className="review-text">{order.review || '—'}</td>
+                          <td>{order.ratedAt ? new Date(order.ratedAt).toLocaleString() : '—'}</td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
         )}
 
         {/* Orders */}

@@ -116,6 +116,10 @@ const orderSchema = new mongoose.Schema({
     longitude: { type: Number },
     updatedAt: { type: Date },
   },
+  // Customer rating after service is completed
+  rating: { type: Number, min: 1, max: 5 },
+  review: { type: String, default: '' },
+  ratedAt: { type: Date },
 }, {
   timestamps: true,
 });
