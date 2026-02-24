@@ -3217,6 +3217,35 @@ function App() {
                         );
                       })}
                     </div>
+                    {((order.servicePhotos?.beforePhotos?.length) || (order.servicePhotos?.afterPhotos?.length)) > 0 && (
+                      <div className="order-photos-section">
+                        <span className="detail-label">Service photos</span>
+                        {order.servicePhotos?.beforePhotos?.length > 0 && (
+                          <div className="order-photos-row">
+                            <span className="order-photos-label">Before:</span>
+                            <div className="order-photos-thumbs">
+                              {order.servicePhotos.beforePhotos.map((url, i) => (
+                                <a key={`before-${i}`} href={UPLOADS_BASE + url} target="_blank" rel="noopener noreferrer" className="order-photo-link">
+                                  <img src={UPLOADS_BASE + url} alt={`Before ${i + 1}`} className="order-photo-thumb" />
+                                </a>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        {order.servicePhotos?.afterPhotos?.length > 0 && (
+                          <div className="order-photos-row">
+                            <span className="order-photos-label">After:</span>
+                            <div className="order-photos-thumbs">
+                              {order.servicePhotos.afterPhotos.map((url, i) => (
+                                <a key={`after-${i}`} href={UPLOADS_BASE + url} target="_blank" rel="noopener noreferrer" className="order-photo-link">
+                                  <img src={UPLOADS_BASE + url} alt={`After ${i + 1}`} className="order-photo-thumb" />
+                                </a>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
                     <div className="order-card-actions">
                       <button
                         type="button"

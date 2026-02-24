@@ -21,6 +21,7 @@ const app = express();
 const uploadsDir = path.join(__dirname, 'uploads');
 fs.mkdirSync(path.join(uploadsDir, 'documents'), { recursive: true });
 fs.mkdirSync(path.join(uploadsDir, 'media'), { recursive: true });
+fs.mkdirSync(path.join(uploadsDir, 'order-photos'), { recursive: true });
 
 // Middleware
 app.use(cors());

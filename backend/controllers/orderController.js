@@ -490,6 +490,77 @@ export const updateOrderStatus = async (req, res) => {
   }
 };
 
+// @desc    Upload before/after photos for an order (employee during service)
+// @route   POST /api/orders/:id/photos
+// @access  Employee (employeeId query param) or Protected
+export const uploadOrderPhotos = async (req, res) => {
+  try {
+    const orderId = req.params.id;
+    const employeeId = req.query.employeeId;
+    const userId = req.user?._id;
+    const type = (req.body?.type || '').toLowerCase();
+
+    if (type !== 'before' && type !== 'after') {
+      return res.status(400).json({
+        success: false,
+        message: 'Query param type must be "before" or "after"',
+      });
+    }
+
+    const files = req.files;
+    if (!files || !Array.isArray(files) || files.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'No photos uploaded',
+      });
+    }
+
+    let query;
+    if (employeeId) {
+      query = { _id: orderId, assignments: { $elemMatch: { employeeId } } };
+    } else if (userId) {
+      query = { _id: orderId, user: userId };
+    } else {
+      return res.status(401).json({
+        success: false,
+        message: 'Authentication required',
+      });
+    }
+
+    const order = await Order.findOne(query);
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message: 'Order not found or you do not have access',
+      });
+    }
+
+    const urls = files.map((f) => `/uploads/order-photos/${f.filename}`);
+    const field = type === 'before' ? 'servicePhotos.beforePhotos' : 'servicePhotos.afterPhotos';
+    const existing = (order.servicePhotos && (type === 'before' ? order.servicePhotos.beforePhotos : order.servicePhotos.afterPhotos)) || [];
+    const combined = [...existing, ...urls].slice(-4);
+
+    await Order.findByIdAndUpdate(orderId, { [field]: combined });
+
+    const updated = await Order.findById(orderId)
+      .populate('items.service', 'name category')
+      .populate('items.addOns', 'name basePrice');
+
+    res.status(200).json({
+      success: true,
+      data: updated,
+      uploaded: urls.length,
+    });
+  } catch (error) {
+    console.error('Error uploading order photos:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error uploading photos',
+      error: error.message,
+    });
+  }
+};
+
 // @desc    Update employee live location for an order
 // @route   PATCH /api/orders/:id/employee-location
 // @access  Employee (employeeId query param) or Protected

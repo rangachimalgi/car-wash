@@ -1,7 +1,20 @@
 import React, { useEffect, useState } from 'react';
-import { Alert, Linking, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import {
+  Alert,
+  Image,
+  Linking,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+  ActivityIndicator,
+} from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import * as ImagePicker from 'expo-image-picker';
 import * as Location from 'expo-location';
 import { API_BASE_URL } from '../config/api';
 import {
@@ -10,6 +23,8 @@ import {
   startBackgroundLocationUpdates,
   stopBackgroundLocationUpdates,
 } from '../locationTask';
+
+const UPLOADS_BASE = API_BASE_URL.replace(/\/api\/?$/, '');
 
 export default function StartServiceScreen({ navigation, route }) {
   const insets = useSafeAreaInsets();
@@ -22,6 +37,10 @@ export default function StartServiceScreen({ navigation, route }) {
   const [codeInput, setCodeInput] = useState('');
   const [loadingVerify, setLoadingVerify] = useState(false);
   const [codeError, setCodeError] = useState('');
+  const [beforePhotos, setBeforePhotos] = useState([]);
+  const [afterPhotos, setAfterPhotos] = useState([]);
+  const [uploadingBefore, setUploadingBefore] = useState(false);
+  const [uploadingAfter, setUploadingAfter] = useState(false);
   const orderId = route?.params?.orderId;
   const employeeId = route?.params?.employeeId;
 
@@ -40,6 +59,8 @@ export default function StartServiceScreen({ navigation, route }) {
           setOrderStatus(data.data.status);
           if (data.data.totalAmount != null) setAmount(data.data.totalAmount);
           setAddress(data.data.customer?.address || '');
+          setBeforePhotos(data.data.servicePhotos?.beforePhotos || []);
+          setAfterPhotos(data.data.servicePhotos?.afterPhotos || []);
           const lat = data.data.customer?.latitude;
           const lng = data.data.customer?.longitude;
           if (typeof lat === 'number' && typeof lng === 'number') {
@@ -136,6 +157,63 @@ export default function StartServiceScreen({ navigation, route }) {
     }
   };
 
+  const pickAndUploadPhotos = async (type) => {
+    const isBefore = type === 'before';
+    const setUploading = isBefore ? setUploadingBefore : setUploadingAfter;
+    const setPhotos = isBefore ? setBeforePhotos : setAfterPhotos;
+    const current = isBefore ? beforePhotos : afterPhotos;
+    if (current.length >= 4) {
+      Alert.alert('Limit reached', 'You can upload up to 4 photos.');
+      return;
+    }
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Permission needed', 'Please allow access to photos to upload.');
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsMultipleSelection: true,
+      selectionLimit: 4 - current.length,
+      quality: 0.8,
+    });
+    if (result.canceled || !result.assets?.length) return;
+
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append('type', type);
+      result.assets.forEach((asset, i) => {
+        formData.append('photos', {
+          uri: asset.uri,
+          name: `photo-${i}.jpg`,
+          type: 'image/jpeg',
+        });
+      });
+      const url = employeeId
+        ? `${API_BASE_URL}/orders/${orderId}/photos?employeeId=${encodeURIComponent(employeeId)}`
+        : `${API_BASE_URL}/orders/${orderId}/photos`;
+      const res = await fetch(url, {
+        method: 'POST',
+        body: formData,
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.message || 'Upload failed');
+      }
+      const updated = data.data?.servicePhotos;
+      if (updated) {
+        setBeforePhotos(updated.beforePhotos || []);
+        setAfterPhotos(updated.afterPhotos || []);
+      }
+    } catch (e) {
+      console.error('Photo upload error:', e);
+      Alert.alert('Upload failed', e.message || 'Could not upload photos.');
+    } finally {
+      setUploading(false);
+    }
+  };
+
   const handleOpenMaps = async () => {
     if (!coords && !address) {
       Alert.alert('No location', 'Customer location not available.');
@@ -196,7 +274,11 @@ export default function StartServiceScreen({ navigation, route }) {
   const loading = orderId && orderStatus === null;
 
   return (
-    <View style={[styles.container, { paddingTop: 24 + insets.top }]}>
+    <ScrollView
+      style={[styles.container, { paddingTop: 24 + insets.top }]}
+      contentContainerStyle={styles.scrollContent}
+      showsVerticalScrollIndicator={false}
+    >
       <StatusBar style="dark" />
       <Text style={styles.title}>Start Service</Text>
 
@@ -244,17 +326,61 @@ export default function StartServiceScreen({ navigation, route }) {
 
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Before Photos</Text>
-            <Text style={styles.sectionHint}>Upload up to 4 images</Text>
-            <TouchableOpacity style={styles.uploadButton}>
-              <Text style={styles.uploadButtonText}>Upload Before Photos</Text>
+            <Text style={styles.sectionHint}>Upload up to 4 images ({beforePhotos.length}/4)</Text>
+            {beforePhotos.length > 0 && (
+              <View style={styles.photoRow}>
+                {beforePhotos.map((url, i) => (
+                  <Image
+                    key={`before-${i}`}
+                    source={{ uri: UPLOADS_BASE + url }}
+                    style={styles.photoThumb}
+                    resizeMode="cover"
+                  />
+                ))}
+              </View>
+            )}
+            <TouchableOpacity
+              style={[styles.uploadButton, uploadingBefore && styles.uploadButtonDisabled]}
+              onPress={() => pickAndUploadPhotos('before')}
+              disabled={uploadingBefore || beforePhotos.length >= 4}
+            >
+              {uploadingBefore ? (
+                <ActivityIndicator color="#2F5CF4" />
+              ) : (
+                <Text style={styles.uploadButtonText}>
+                  {beforePhotos.length >= 4 ? 'Before photos added' : 'Upload Before Photos'}
+                </Text>
+              )}
             </TouchableOpacity>
           </View>
 
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>After Photos</Text>
-            <Text style={styles.sectionHint}>Upload up to 4 images</Text>
-            <TouchableOpacity style={styles.uploadButton}>
-              <Text style={styles.uploadButtonText}>Upload After Photos</Text>
+            <Text style={styles.sectionHint}>Upload up to 4 images ({afterPhotos.length}/4)</Text>
+            {afterPhotos.length > 0 && (
+              <View style={styles.photoRow}>
+                {afterPhotos.map((url, i) => (
+                  <Image
+                    key={`after-${i}`}
+                    source={{ uri: UPLOADS_BASE + url }}
+                    style={styles.photoThumb}
+                    resizeMode="cover"
+                  />
+                ))}
+              </View>
+            )}
+            <TouchableOpacity
+              style={[styles.uploadButton, uploadingAfter && styles.uploadButtonDisabled]}
+              onPress={() => pickAndUploadPhotos('after')}
+              disabled={uploadingAfter || afterPhotos.length >= 4}
+            >
+              {uploadingAfter ? (
+                <ActivityIndicator color="#2F5CF4" />
+              ) : (
+                <Text style={styles.uploadButtonText}>
+                  {afterPhotos.length >= 4 ? 'After photos added' : 'Upload After Photos'}
+                </Text>
+              )}
             </TouchableOpacity>
           </View>
 
@@ -281,7 +407,7 @@ export default function StartServiceScreen({ navigation, route }) {
         </>
       )}
 
-    </View>
+    </ScrollView>
   );
 }
 
@@ -320,11 +446,29 @@ const styles = StyleSheet.create({
     color: '#6B7280',
     marginBottom: 12,
   },
+  photoRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 12,
+  },
+  photoThumb: {
+    width: 72,
+    height: 72,
+    borderRadius: 8,
+    backgroundColor: '#E2E8F0',
+  },
+  scrollContent: {
+    paddingBottom: 32,
+  },
   uploadButton: {
     backgroundColor: '#EEF2FF',
     borderRadius: 10,
     paddingVertical: 12,
     alignItems: 'center',
+  },
+  uploadButtonDisabled: {
+    opacity: 0.7,
   },
   uploadButtonText: {
     color: '#2F5CF4',

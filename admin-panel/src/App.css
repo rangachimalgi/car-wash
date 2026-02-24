@@ -1165,6 +1165,53 @@
   color: #4a4a4a;
 }
 
+.order-photos-section {
+  margin-bottom: 1rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid #e8e8e8;
+}
+
+.order-photos-section .detail-label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-size: 0.85rem;
+  color: #4a4a4a;
+}
+
+.order-photos-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+  font-size: 0.85rem;
+}
+
+.order-photos-label {
+  font-weight: 600;
+  color: #1a1a1a;
+  min-width: 3rem;
+}
+
+.order-photos-thumbs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.order-photo-link {
+  display: block;
+  border-radius: 6px;
+  overflow: hidden;
+  border: 1px solid #e2e8f0;
+}
+
+.order-photo-thumb {
+  width: 48px;
+  height: 48px;
+  object-fit: cover;
+  display: block;
+}
+
 .order-card-actions {
   display: flex;
   justify-content: flex-end;

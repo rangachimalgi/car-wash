@@ -118,6 +118,11 @@ const orderSchema = new mongoose.Schema({
   },
   startOtp: { type: String, default: '' },
   startOtpExpiresAt: { type: Date },
+  // Before/after photos uploaded by employee during service
+  servicePhotos: {
+    beforePhotos: { type: [String], default: [] },
+    afterPhotos: { type: [String], default: [] },
+  },
   // Customer rating after service is completed
   rating: { type: Number, min: 1, max: 5 },
   review: { type: String, default: '' },
