@@ -8,6 +8,123 @@ import { getOrderById } from '../services/orderApi';
 
 const FALLBACK_COORDS = { latitude: 0, longitude: 0 };
 
+const getGoogleMapsKey = () => (process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY || '').trim();
+
+// Data URLs for marker icons (bike = employee, pin = customer address)
+const BIKE_ICON_DATA =
+  'data:image/svg+xml,' +
+  encodeURIComponent(
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%231976D2" stroke="%23fff" stroke-width="1"><path d="M15.5 5.5c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zM5 12c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm14 0c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm-4.5 2.2l-1.4-2.2-2.9 1.2 1.4 2.2 2.9-1.2zm-5.5 0l-2.9-1.2-1.4 2.2 2.9 1.2 1.4-2.2z"/></svg>'
+  );
+const PIN_ICON_DATA =
+  'data:image/svg+xml,' +
+  encodeURIComponent(
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%23E53935" stroke="%23fff" stroke-width="1.2"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>'
+  );
+
+function getGoogleMapHtmlForTracking(centerLat, centerLng, employeeLat, employeeLng, customerLat, customerLng, apiKey) {
+  const key = apiKey.replace(/"/g, '&quot;');
+  const hasCustomer = typeof customerLat === 'number' && typeof customerLng === 'number';
+  const bikeIcon = BIKE_ICON_DATA.replace(/"/g, '&quot;');
+  const pinIcon = PIN_ICON_DATA.replace(/"/g, '&quot;');
+  return `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <style>html, body, #map { height: 100%; margin: 0; padding: 0; }</style>
+</head>
+<body>
+  <div id="map"></div>
+  <script>
+    var employeeMarker;
+    var directionsRenderer;
+    var directionsService;
+    var map;
+    var destLat = ${hasCustomer ? customerLat : 'null'};
+    var destLng = ${hasCustomer ? customerLng : 'null'};
+
+    function sendEta(minutes, text) {
+      if (window.ReactNativeWebView && text)
+        window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'eta', minutes: minutes, text: text }));
+    }
+
+    function drawRoute(originLat, originLng) {
+      if (destLat == null || destLng == null) return;
+      directionsService.route(
+        {
+          origin: { lat: originLat, lng: originLng },
+          destination: { lat: destLat, lng: destLng },
+          travelMode: google.maps.TravelMode.DRIVING
+        },
+        function(result, status) {
+          if (status === 'OK') {
+            directionsRenderer.setDirections(result);
+            var leg = result.routes[0] && result.routes[0].legs[0];
+            if (leg && leg.duration) {
+              sendEta(leg.duration.value / 60, leg.duration.text);
+            }
+          }
+        }
+      );
+    }
+
+    function initMap() {
+      map = new google.maps.Map(document.getElementById('map'), {
+        center: { lat: ${centerLat}, lng: ${centerLng} },
+        zoom: 15,
+        mapTypeId: 'roadmap',
+        gestureHandling: 'greedy',
+        zoomControl: true,
+        mapTypeControl: false,
+        streetViewControl: false,
+        fullscreenControl: true
+      });
+
+      directionsService = new google.maps.DirectionsService();
+      directionsRenderer = new google.maps.DirectionsRenderer({
+        map: map,
+        suppressMarkers: true,
+        polylineOptions: { strokeColor: '#5C9EED', strokeWeight: 6, strokeOpacity: 0.95 }
+      });
+
+      employeeMarker = new google.maps.Marker({
+        position: { lat: ${employeeLat}, lng: ${employeeLng} },
+        map: map,
+        icon: { url: "${bikeIcon}", scaledSize: new google.maps.Size(40, 40), anchor: new google.maps.Point(20, 20) },
+        title: 'On the way'
+      });
+
+      ${hasCustomer
+        ? `
+      new google.maps.Marker({
+        position: { lat: ${customerLat}, lng: ${customerLng} },
+        map: map,
+        icon: { url: "${pinIcon}", scaledSize: new google.maps.Size(36, 36), anchor: new google.maps.Point(18, 36) },
+        title: 'Your address'
+      });
+      drawRoute(${employeeLat}, ${employeeLng});
+      var bounds = new google.maps.LatLngBounds();
+      bounds.extend({ lat: ${employeeLat}, lng: ${employeeLng} });
+      bounds.extend({ lat: ${customerLat}, lng: ${customerLng} });
+      map.fitBounds(bounds, { top: 48, right: 24, bottom: 24, left: 24 });
+      `
+        : ''}
+
+      window.updateMarker = function(lat, lng) {
+        var pos = { lat: lat, lng: lng };
+        employeeMarker.setPosition(pos);
+        map.panTo(pos);
+        if (destLat != null && destLng != null) drawRoute(lat, lng);
+      };
+    }
+  </script>
+  <script async defer src="https://maps.googleapis.com/maps/api/js?key=${key}&callback=initMap"></script>
+</body>
+</html>`;
+}
+
 export default function EmployeeLiveLocationScreen({ route }) {
   const orderId = route?.params?.orderId;
   const { theme, isLightMode } = useTheme();
@@ -15,7 +132,15 @@ export default function EmployeeLiveLocationScreen({ route }) {
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [etaText, setEtaText] = useState(null);
   const webViewRef = useRef(null);
+
+  const handleWebViewMessage = useCallback((event) => {
+    try {
+      const data = JSON.parse(event.nativeEvent.data);
+      if (data.type === 'eta' && data.text) setEtaText(data.text);
+    } catch (_) {}
+  }, []);
 
   const fetchOrder = useCallback(async (showLoading = false) => {
     if (!orderId) return;
@@ -62,6 +187,20 @@ export default function EmployeeLiveLocationScreen({ route }) {
     const centerLng = hasLocation
       ? longitude
       : (hasCustomerLocation ? customerLng : FALLBACK_COORDS.longitude);
+    const empLat = hasLocation ? latitude : centerLat;
+    const empLng = hasLocation ? longitude : centerLng;
+    const key = getGoogleMapsKey();
+    if (key) {
+      return getGoogleMapHtmlForTracking(
+        centerLat,
+        centerLng,
+        empLat,
+        empLng,
+        hasCustomerLocation ? customerLat : undefined,
+        hasCustomerLocation ? customerLng : undefined,
+        key
+      );
+    }
     return `
       <!DOCTYPE html>
       <html>
@@ -121,7 +260,7 @@ export default function EmployeeLiveLocationScreen({ route }) {
         </body>
       </html>
     `;
-  }, [hasLocation, latitude, longitude]);
+  }, [hasLocation, latitude, longitude, hasCustomerLocation, customerLat, customerLng]);
 
   useEffect(() => {
     if (!hasLocation || !webViewRef.current) return;
@@ -134,10 +273,13 @@ export default function EmployeeLiveLocationScreen({ route }) {
       <StatusBar style={isLightMode ? 'dark' : 'light'} />
       <View style={styles.header}>
         <Text style={styles.title}>Live Location</Text>
-        <Text style={styles.subtitle}>{order?.status || 'In Progress'}</Text>
+        <View style={styles.headerRow}>
+          <Text style={styles.subtitle}>{order?.status || 'In Progress'}</Text>
+          {etaText ? <Text style={styles.etaText}>• {etaText}</Text> : null}
+        </View>
         <Text style={styles.metaText}>
           {hasLocation
-            ? `Emp: ${latitude.toFixed(5)}, ${longitude.toFixed(5)}${lastUpdated ? ` • ${lastUpdated}` : ''}`
+            ? `Route to your address${lastUpdated ? ` • Updated ${lastUpdated}` : ''}`
             : 'Employee location not received yet'}
         </Text>
       </View>
@@ -163,6 +305,7 @@ export default function EmployeeLiveLocationScreen({ route }) {
           source={{ html: mapHtml }}
           javaScriptEnabled
           domStorageEnabled
+          onMessage={handleWebViewMessage}
           style={styles.map}
         />
       )}
@@ -186,9 +329,20 @@ const createStyles = theme => StyleSheet.create({
     color: theme.textPrimary,
     marginBottom: 4,
   },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    flexWrap: 'wrap',
+  },
   subtitle: {
     fontSize: 14,
     color: theme.textSecondary,
+  },
+  etaText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: theme.accent,
   },
   metaText: {
     marginTop: 6,
