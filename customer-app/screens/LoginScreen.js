@@ -89,6 +89,9 @@ export default function LoginScreen({ navigation }) {
         await AsyncStorage.setItem('authToken', response.token);
         await AsyncStorage.setItem('authPhone', phoneNumber);
         await AsyncStorage.setItem('authName', response.user?.name || name);
+        if (response.user?.id) {
+          await AsyncStorage.setItem('userId', String(response.user.id));
+        }
         registerPushTokenWithBackend().catch(() => {});
       }
       navigation.navigate('Welcome');
@@ -146,6 +149,9 @@ export default function LoginScreen({ navigation }) {
         await AsyncStorage.setItem('authToken', response.token);
         await AsyncStorage.setItem('authPhone', phoneNumber);
         await AsyncStorage.setItem('authName', response.user?.name || name);
+        if (response.user?.id) {
+          await AsyncStorage.setItem('userId', String(response.user.id));
+        }
         registerPushTokenWithBackend().catch(() => {});
       }
       navigation.navigate('Welcome');

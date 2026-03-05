@@ -283,7 +283,7 @@ export default function ProfileScreen({ navigation }) {
                     onPress: async () => {
                       try {
                         // Clear all auth-related storage
-                        await AsyncStorage.multiRemove(['authToken', 'authPhone', 'authName']);
+                        await AsyncStorage.multiRemove(['authToken', 'authPhone', 'authName', 'userId']);
                         console.log('User logged out');
                         navigation.reset({
                           index: 0,

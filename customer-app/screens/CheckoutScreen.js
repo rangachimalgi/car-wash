@@ -5,6 +5,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import BackHeader from '../components/BackHeader';
 import { createOrder } from '../services/orderApi';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { getAddressKeys } from '../services/addressStorage';
 import { useTheme } from '../theme/ThemeContext';
 import { useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -54,11 +55,12 @@ export default function CheckoutScreen({ navigation, route }) {
   // Load address and vehicle data
   const loadAddressAndVehicle = useCallback(async () => {
     try {
+      const keys = await getAddressKeys();
       const [storedAddress, storedPhone, storedLat, storedLng] = await Promise.all([
-        AsyncStorage.getItem('currentAddress'),
+        AsyncStorage.getItem(keys.currentAddress),
         AsyncStorage.getItem('authPhone'),
-        AsyncStorage.getItem('currentLat'),
-        AsyncStorage.getItem('currentLng'),
+        AsyncStorage.getItem(keys.currentLat),
+        AsyncStorage.getItem(keys.currentLng),
       ]);
 
       if (storedAddress) {

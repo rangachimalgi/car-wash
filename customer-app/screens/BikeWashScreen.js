@@ -269,7 +269,7 @@ export default function BikeWashScreen({ navigation }) {
             ))
           )}
         </View>
-      </ScrollView>
+      </ScrollView> 
 
       {/* Bottom sheet for "View Details" – only sheet, no hero image */}
       {sheetService && (

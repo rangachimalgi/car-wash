@@ -5,6 +5,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import BackHeader from '../components/BackHeader';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Location from 'expo-location';
+import { getAddressKeys } from '../services/addressStorage';
 import { useTheme } from '../theme/ThemeContext';
 import { getAvailableSlots, getTimeSlots } from '../services/slotApi';
 
@@ -43,14 +44,15 @@ export default function SlotSelectionScreen({ navigation, route }) {
   useEffect(() => {
     const loadSavedAddress = async () => {
       try {
-        const saved = await AsyncStorage.getItem('currentAddress');
+        const keys = await getAddressKeys();
+        const saved = await AsyncStorage.getItem(keys.currentAddress);
         if (saved) {
           setLocationAddress(saved);
           return;
         }
-        const savedAddresses = await AsyncStorage.getItem('savedAddresses');
-        if (savedAddresses) {
-          const parsed = JSON.parse(savedAddresses);
+        const savedAddressesJson = await AsyncStorage.getItem(keys.savedAddresses);
+        if (savedAddressesJson) {
+          const parsed = JSON.parse(savedAddressesJson);
           if (Array.isArray(parsed) && parsed.length > 0) {
             const defaultAddress = parsed.find(addr => addr.isDefault) || parsed[0];
             const fullAddress = [
@@ -416,9 +418,10 @@ export default function SlotSelectionScreen({ navigation, route }) {
       }
 
       setLocationAddress(address);
-      await AsyncStorage.setItem('currentAddress', address);
-      await AsyncStorage.setItem('currentLat', String(position.coords.latitude));
-      await AsyncStorage.setItem('currentLng', String(position.coords.longitude));
+      const keys = await getAddressKeys();
+      await AsyncStorage.setItem(keys.currentAddress, address);
+      await AsyncStorage.setItem(keys.currentLat, String(position.coords.latitude));
+      await AsyncStorage.setItem(keys.currentLng, String(position.coords.longitude));
     } catch (error) {
       console.error('Error getting location:', error);
       setLocationError('Unable to get current location');

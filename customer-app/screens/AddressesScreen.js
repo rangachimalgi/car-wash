@@ -6,6 +6,7 @@ import { WebView } from 'react-native-webview';
 import BackHeader from '../components/BackHeader';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Location from 'expo-location';
+import { getAddressKeys } from '../services/addressStorage';
 import { useTheme } from '../theme/ThemeContext';
 import { searchAddress, reverseGeocode } from '../services/geocoding';
 
@@ -156,8 +157,11 @@ export default function AddressesScreen({ navigation, route }) {
   useEffect(() => {
     const loadAddresses = async () => {
       try {
-        const stored = await AsyncStorage.getItem('savedAddresses');
-        const current = await AsyncStorage.getItem('currentAddress');
+        const keys = await getAddressKeys();
+        const [stored, current] = await Promise.all([
+          AsyncStorage.getItem(keys.savedAddresses),
+          AsyncStorage.getItem(keys.currentAddress),
+        ]);
         if (stored) {
           setSavedAddresses(JSON.parse(stored));
         }
@@ -208,7 +212,8 @@ export default function AddressesScreen({ navigation, route }) {
 
   const persistAddresses = async (addresses) => {
     setSavedAddresses(addresses);
-    await AsyncStorage.setItem('savedAddresses', JSON.stringify(addresses));
+    const keys = await getAddressKeys();
+    await AsyncStorage.setItem(keys.savedAddresses, JSON.stringify(addresses));
   };
 
   const handleUseCurrentLocation = async () => {
@@ -258,7 +263,7 @@ export default function AddressesScreen({ navigation, route }) {
     }
   };
 
-  const handleSelectAddress = (address) => {
+  const handleSelectAddress = async (address) => {
     // If address is selected from route params, pass it back
     if (route?.params?.onSelectAddress) {
       route.params.onSelectAddress(address);
@@ -267,17 +272,20 @@ export default function AddressesScreen({ navigation, route }) {
     const fullAddress = [address.address, address.area, address.city, address.pincode]
       .filter(Boolean)
       .join(', ');
-    AsyncStorage.setItem('currentAddress', fullAddress).catch(error => {
+    try {
+      const keys = await getAddressKeys();
+      await AsyncStorage.setItem(keys.currentAddress, fullAddress);
+      setCurrentAddressText(fullAddress);
+      const hasCoords = typeof address.latitude === 'number' && typeof address.longitude === 'number';
+      if (hasCoords) {
+        await AsyncStorage.setItem(keys.currentLat, String(address.latitude));
+        await AsyncStorage.setItem(keys.currentLng, String(address.longitude));
+      } else {
+        await AsyncStorage.removeItem(keys.currentLat);
+        await AsyncStorage.removeItem(keys.currentLng);
+      }
+    } catch (error) {
       console.warn('Failed to store current address:', error);
-    });
-    setCurrentAddressText(fullAddress);
-    const hasCoords = typeof address.latitude === 'number' && typeof address.longitude === 'number';
-    if (hasCoords) {
-      AsyncStorage.setItem('currentLat', String(address.latitude)).catch(() => {});
-      AsyncStorage.setItem('currentLng', String(address.longitude)).catch(() => {});
-    } else {
-      AsyncStorage.removeItem('currentLat').catch(() => {});
-      AsyncStorage.removeItem('currentLng').catch(() => {});
     }
     navigation.goBack();
   };

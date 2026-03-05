@@ -6,6 +6,7 @@ import { useTheme } from '../theme/ThemeContext';
 import SavedVehiclesModal from './SavedVehiclesModal';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
+import { getAddressKeys } from '../services/addressStorage';
 
 export default function CustomHeader({ navigation, transparent = false }) {
   const insets = useSafeAreaInsets();
@@ -23,7 +24,8 @@ export default function CustomHeader({ navigation, transparent = false }) {
       let isActive = true;
       const loadAddress = async () => {
         try {
-          const stored = await AsyncStorage.getItem('currentAddress');
+          const keys = await getAddressKeys();
+          const stored = await AsyncStorage.getItem(keys.currentAddress);
           if (isActive) {
             setCurrentAddress(stored || '');
           }

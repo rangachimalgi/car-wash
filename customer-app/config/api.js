@@ -82,7 +82,7 @@ api.interceptors.response.use(
       // If unauthorized (401), clear the token
       if (error.response.status === 401) {
         try {
-          await AsyncStorage.multiRemove(['authToken', 'authPhone', 'authName']);
+          await AsyncStorage.multiRemove(['authToken', 'authPhone', 'authName', 'userId']);
           console.log('Token cleared due to 401 error');
         } catch (storageError) {
           console.error('Error clearing storage:', storageError);
