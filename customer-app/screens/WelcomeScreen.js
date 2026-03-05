@@ -73,7 +73,7 @@ export default function WelcomeScreen({ navigation }) {
           {/* Bike Wash & Care Card */}
           <TouchableOpacity 
             style={styles.serviceCard}
-            onPress={() => navigation.navigate('MainTabs')}
+            onPress={() => navigation.navigate('BikeWash')}
             activeOpacity={0.9}
           >
             <View style={styles.cardContent}>
