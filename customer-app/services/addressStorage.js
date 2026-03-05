@@ -45,3 +45,33 @@ export async function getAddressKeys() {
     currentLng: getCurrentLngKey(prefix),
   };
 }
+
+export function getVehicleTypeKey(prefix) {
+  return `userVehicleType_${prefix}`;
+}
+
+export function getVehicleModelKey(prefix) {
+  return `userVehicleModel_${prefix}`;
+}
+
+export function getUserVehiclesKey(prefix) {
+  return `userVehicles_${prefix}`;
+}
+
+export function getSelectedVehicleIdKey(prefix) {
+  return `selectedVehicleId_${prefix}`;
+}
+
+/**
+ * Get all vehicle-related storage keys for the current user.
+ */
+export async function getVehicleKeys() {
+  const prefix = await getAddressPrefix();
+  return {
+    prefix,
+    vehicleType: getVehicleTypeKey(prefix),
+    vehicleModel: getVehicleModelKey(prefix),
+    vehicles: getUserVehiclesKey(prefix),
+    selectedVehicleId: getSelectedVehicleIdKey(prefix),
+  };
+}

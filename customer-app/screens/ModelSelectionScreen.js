@@ -8,6 +8,7 @@ import { FlashList } from '@shopify/flash-list';
 import { getModelsForBrand } from '../services/carsData';
 import { addVehicle, setSelectedVehicle } from '../services/vehicleApi';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { getVehicleKeys } from '../services/addressStorage';
 
 const FALLBACK_CAR_IMAGE = require('../assets/carVehicle.png');
 
@@ -140,9 +141,10 @@ export default function ModelSelectionScreen({ route, navigation }) {
         const vehicleId = savedVehicle._id || savedVehicle.id;
         await setSelectedVehicle(phone, vehicleId);
         
-        // Also save to AsyncStorage for quick access
-        await AsyncStorage.setItem(`userVehicleType:${phone}`, vehicleType);
-        await AsyncStorage.setItem(`userVehicleModel:${phone}`, vehicleModel);
+        // Also save to AsyncStorage for quick access (user-scoped)
+        const keys = await getVehicleKeys();
+        await AsyncStorage.setItem(keys.vehicleType, vehicleType);
+        await AsyncStorage.setItem(keys.vehicleModel, vehicleModel);
       }
       
       // Show success message

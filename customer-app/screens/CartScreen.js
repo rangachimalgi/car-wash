@@ -7,7 +7,7 @@ import AddOnCard from '../components/AddOnCard';
 import MonthlyPackageCard from '../components/MonthlyPackageCard';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTheme } from '../theme/ThemeContext';
-import { getAddressKeys } from '../services/addressStorage';
+import { getAddressKeys, getVehicleKeys } from '../services/addressStorage';
 import { getServiceById } from '../services/serviceApi';
 import { useFocusEffect } from '@react-navigation/native';
 import { getVehicles } from '../services/vehicleApi';
@@ -86,10 +86,11 @@ export default function CartScreen({ navigation, route }) {
       }
 
       if (storedPhone) {
-        // Load selected vehicle from AsyncStorage (faster than API)
+        // Load selected vehicle from AsyncStorage (user-scoped keys)
+        const vKeys = await getVehicleKeys();
         const [storedVehicleType, storedVehicleModel] = await Promise.all([
-          AsyncStorage.getItem(`userVehicleType:${storedPhone}`),
-          AsyncStorage.getItem(`userVehicleModel:${storedPhone}`),
+          AsyncStorage.getItem(vKeys.vehicleType),
+          AsyncStorage.getItem(vKeys.vehicleModel),
         ]);
         
         if (storedVehicleType && storedVehicleModel) {
@@ -120,19 +121,21 @@ export default function CartScreen({ navigation, route }) {
       const storedPhone = await AsyncStorage.getItem('authPhone');
       if (!storedPhone) return;
       
-      // Try AsyncStorage first (faster)
-      const cachedVehicles = await AsyncStorage.getItem(`userVehicles:${storedPhone}`);
+      // Try AsyncStorage first (user-scoped key)
+      const vKeys = await getVehicleKeys();
+      const cachedVehicles = await AsyncStorage.getItem(vKeys.vehicles);
       if (cachedVehicles) {
         try {
           const parsed = JSON.parse(cachedVehicles);
           if (Array.isArray(parsed) && parsed.length > 0) {
             setAllVehicles(parsed);
             // Still sync from API in background but don't wait
-            getVehicles(storedPhone).then(vehicles => {
+            getVehicles(storedPhone).then(async (vehicles) => {
               if (vehicles && Array.isArray(vehicles) && vehicles.length >= 0) {
                 setAllVehicles(vehicles);
                 if (vehicles.length > 0) {
-                  AsyncStorage.setItem(`userVehicles:${storedPhone}`, JSON.stringify(vehicles));
+                  const keys = await getVehicleKeys();
+                  await AsyncStorage.setItem(keys.vehicles, JSON.stringify(vehicles));
                 }
               }
             }).catch(() => {});
@@ -147,7 +150,8 @@ export default function CartScreen({ navigation, route }) {
       const vehicles = await getVehicles(storedPhone);
       setAllVehicles(vehicles || []);
       if (vehicles && vehicles.length > 0) {
-        AsyncStorage.setItem(`userVehicles:${storedPhone}`, JSON.stringify(vehicles));
+        const keys = await getVehicleKeys();
+        await AsyncStorage.setItem(keys.vehicles, JSON.stringify(vehicles));
       }
     } catch (e) {
       console.warn('Error loading vehicles:', e);
@@ -452,9 +456,10 @@ export default function CartScreen({ navigation, route }) {
     const vehicleType = selectedVehicle.vehicleType;
     const vehicleModel = selectedVehicle.vehicleModel;
 
-    // Save to AsyncStorage
-    await AsyncStorage.setItem(`userVehicleType:${phone}`, vehicleType);
-    await AsyncStorage.setItem(`userVehicleModel:${phone}`, vehicleModel);
+    // Save to AsyncStorage (user-scoped)
+    const vKeys = await getVehicleKeys();
+    await AsyncStorage.setItem(vKeys.vehicleType, vehicleType);
+    await AsyncStorage.setItem(vKeys.vehicleModel, vehicleModel);
 
     setVehicle({
       type: vehicleType,

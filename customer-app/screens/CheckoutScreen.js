@@ -5,7 +5,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import BackHeader from '../components/BackHeader';
 import { createOrder } from '../services/orderApi';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { getAddressKeys } from '../services/addressStorage';
+import { getAddressKeys, getVehicleKeys } from '../services/addressStorage';
 import { useTheme } from '../theme/ThemeContext';
 import { useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -74,9 +74,10 @@ export default function CheckoutScreen({ navigation, route }) {
       }
 
       if (storedPhone) {
+        const vKeys = await getVehicleKeys();
         const [storedVehicleType, storedVehicleModel] = await Promise.all([
-          AsyncStorage.getItem(`userVehicleType:${storedPhone}`),
-          AsyncStorage.getItem(`userVehicleModel:${storedPhone}`),
+          AsyncStorage.getItem(vKeys.vehicleType),
+          AsyncStorage.getItem(vKeys.vehicleModel),
         ]);
 
         if (storedVehicleType && storedVehicleModel) {

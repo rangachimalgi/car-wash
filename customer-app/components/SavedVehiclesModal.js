@@ -7,6 +7,7 @@ import { useTheme } from '../theme/ThemeContext';
 import { Image } from 'expo-image';
 import { getVehicles, deleteVehicle, setSelectedVehicle, addVehicle } from '../services/vehicleApi';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { getVehicleKeys } from '../services/addressStorage';
 
 const FALLBACK_CAR_IMAGE = require('../assets/carVehicle.png');
 const FALLBACK_BIKE_IMAGE = require('../assets/fallbackBike.png');
@@ -39,9 +40,10 @@ export default function SavedVehiclesModal({ visible, onClose, navigation }) {
       // Ensure we have an array
       let vehiclesArray = Array.isArray(userVehicles) ? userVehicles : [];
       
-      // If no vehicles from API, check AsyncStorage directly
+      // If no vehicles from API, check AsyncStorage directly (user-scoped key)
       if (vehiclesArray.length === 0) {
-        const storedVehicles = await AsyncStorage.getItem(`userVehicles:${phone}`);
+        const vKeys = await getVehicleKeys();
+        const storedVehicles = await AsyncStorage.getItem(vKeys.vehicles);
         if (storedVehicles) {
           try {
             const parsed = JSON.parse(storedVehicles);
@@ -65,8 +67,9 @@ export default function SavedVehiclesModal({ visible, onClose, navigation }) {
       
       setVehicles(vehiclesArray);
 
-      // Get selected vehicle ID
-      const storedSelectedId = await AsyncStorage.getItem(`selectedVehicleId:${phone}`);
+      // Get selected vehicle ID (user-scoped key)
+      const vKeysForSelected = await getVehicleKeys();
+      const storedSelectedId = await AsyncStorage.getItem(vKeysForSelected.selectedVehicleId);
       if (storedSelectedId) {
         setSelectedVehicleId(storedSelectedId);
       } else if (vehiclesArray.length > 0) {
@@ -106,12 +109,13 @@ export default function SavedVehiclesModal({ visible, onClose, navigation }) {
       await setSelectedVehicle(phone, vehicleId.toString());
       setSelectedVehicleId(vehicleId.toString());
 
-      // Save to AsyncStorage for quick access
+      // Save to AsyncStorage for quick access (user-scoped)
+      const vKeys = await getVehicleKeys();
       const vehicleModel = vehicle.vehicleModel || '';
       const vehicleType = vehicle.vehicleType || '';
-      await AsyncStorage.setItem(`userVehicleType:${phone}`, vehicleType);
-      await AsyncStorage.setItem(`userVehicleModel:${phone}`, vehicleModel);
-      await AsyncStorage.setItem(`selectedVehicleId:${phone}`, vehicleId.toString());
+      await AsyncStorage.setItem(vKeys.vehicleType, vehicleType);
+      await AsyncStorage.setItem(vKeys.vehicleModel, vehicleModel);
+      await AsyncStorage.setItem(vKeys.selectedVehicleId, vehicleId.toString());
 
       // Close modal after selection
       onClose();
@@ -145,12 +149,13 @@ export default function SavedVehiclesModal({ visible, onClose, navigation }) {
               // Reload vehicles
               await loadVehicles();
 
-              // If deleted vehicle was selected, clear selection
+              // If deleted vehicle was selected, clear selection (user-scoped keys)
               if (selectedVehicleId === vehicleId.toString()) {
                 setSelectedVehicleId(null);
-                await AsyncStorage.removeItem(`userVehicleType:${phone}`);
-                await AsyncStorage.removeItem(`userVehicleModel:${phone}`);
-                await AsyncStorage.removeItem(`selectedVehicleId:${phone}`);
+                const vKeys = await getVehicleKeys();
+                await AsyncStorage.removeItem(vKeys.vehicleType);
+                await AsyncStorage.removeItem(vKeys.vehicleModel);
+                await AsyncStorage.removeItem(vKeys.selectedVehicleId);
               }
             } catch (error) {
               console.error('Error deleting vehicle:', error);
@@ -223,9 +228,10 @@ export default function SavedVehiclesModal({ visible, onClose, navigation }) {
         const vehicleId = savedVehicle._id || savedVehicle.id;
         await setSelectedVehicle(phone, vehicleId);
         
-        // Also save to AsyncStorage for quick access
-        await AsyncStorage.setItem(`userVehicleType:${phone}`, vehicleType);
-        await AsyncStorage.setItem(`userVehicleModel:${phone}`, vehicleModel);
+        // Also save to AsyncStorage for quick access (user-scoped)
+        const vKeys = await getVehicleKeys();
+        await AsyncStorage.setItem(vKeys.vehicleType, vehicleType);
+        await AsyncStorage.setItem(vKeys.vehicleModel, vehicleModel);
       }
       
       // Reload vehicles list

@@ -6,6 +6,7 @@ import { useTheme } from '../theme/ThemeContext';
 import { Image } from 'expo-image';
 import { addVehicle, setSelectedVehicle } from '../services/vehicleApi';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { getVehicleKeys } from '../services/addressStorage';
 
 export default function VehicleDetailsScreen({ navigation }) {
   const insets = useSafeAreaInsets();
@@ -47,9 +48,10 @@ export default function VehicleDetailsScreen({ navigation }) {
           const vehicleId = savedVehicle._id || savedVehicle.id;
           await setSelectedVehicle(phone, vehicleId);
           
-          // Also save to AsyncStorage for quick access
-          await AsyncStorage.setItem(`userVehicleType:${phone}`, '2WHEELER');
-          await AsyncStorage.setItem(`userVehicleModel:${phone}`, 'BIKE');
+          // Also save to AsyncStorage for quick access (user-scoped)
+          const keys = await getVehicleKeys();
+          await AsyncStorage.setItem(keys.vehicleType, '2WHEELER');
+          await AsyncStorage.setItem(keys.vehicleModel, 'BIKE');
         }
         
         // Show success message

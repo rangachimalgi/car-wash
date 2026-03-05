@@ -1,5 +1,6 @@
 import api from '../config/api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { getVehicleKeys } from './addressStorage';
 
 // Get all vehicles for a user
 export const getVehicles = async (phone) => {
@@ -30,9 +31,10 @@ export const getVehicles = async (phone) => {
   } catch (error) {
     console.warn('Error fetching vehicles from server:', error);
     console.warn('Error details:', error.response?.data || error.message);
-    // Fallback to AsyncStorage
+    // Fallback to AsyncStorage (user-scoped key)
     try {
-      const stored = await AsyncStorage.getItem(`userVehicles:${phone}`);
+      const keys = await getVehicleKeys();
+      const stored = await AsyncStorage.getItem(keys.vehicles);
       return stored ? JSON.parse(stored) : [];
     } catch (storageError) {
       console.warn('Error reading from AsyncStorage:', storageError);
@@ -61,7 +63,8 @@ export const addVehicle = async (phone, vehicleData) => {
       
       if (!exists) {
         vehiclesArray.push(savedVehicle);
-        await AsyncStorage.setItem(`userVehicles:${phone}`, JSON.stringify(vehiclesArray));
+        const keys = await getVehicleKeys();
+        await AsyncStorage.setItem(keys.vehicles, JSON.stringify(vehiclesArray));
       } else {
         // Update existing vehicle
         const index = vehiclesArray.findIndex(v => {
@@ -70,7 +73,8 @@ export const addVehicle = async (phone, vehicleData) => {
         });
         if (index !== -1) {
           vehiclesArray[index] = savedVehicle;
-          await AsyncStorage.setItem(`userVehicles:${phone}`, JSON.stringify(vehiclesArray));
+          const keys = await getVehicleKeys();
+          await AsyncStorage.setItem(keys.vehicles, JSON.stringify(vehiclesArray));
         }
       }
     } catch (storageError) {
@@ -81,7 +85,7 @@ export const addVehicle = async (phone, vehicleData) => {
     return savedVehicle;
   } catch (error) {
     console.warn('Error adding vehicle to server:', error);
-    // Save locally as fallback
+    // Save locally as fallback (user-scoped key)
     const vehicles = await getVehicles(phone);
     const vehiclesArray = Array.isArray(vehicles) ? vehicles : [];
     const newVehicle = {
@@ -90,7 +94,8 @@ export const addVehicle = async (phone, vehicleData) => {
       createdAt: new Date().toISOString(),
     };
     vehiclesArray.push(newVehicle);
-    await AsyncStorage.setItem(`userVehicles:${phone}`, JSON.stringify(vehiclesArray));
+    const keys = await getVehicleKeys();
+    await AsyncStorage.setItem(keys.vehicles, JSON.stringify(vehiclesArray));
     return newVehicle;
   }
 };
@@ -105,7 +110,8 @@ export const deleteVehicle = async (phone, vehicleId) => {
       const id = v._id || v.id;
       return id && id.toString() !== vehicleId.toString();
     });
-    await AsyncStorage.setItem(`userVehicles:${phone}`, JSON.stringify(filtered));
+    const keys = await getVehicleKeys();
+    await AsyncStorage.setItem(keys.vehicles, JSON.stringify(filtered));
     return true;
   } catch (error) {
     console.warn('Error deleting vehicle from server:', error);
@@ -116,7 +122,8 @@ export const deleteVehicle = async (phone, vehicleId) => {
         const id = v._id || v.id;
         return id && id.toString() !== vehicleId.toString();
       });
-      await AsyncStorage.setItem(`userVehicles:${phone}`, JSON.stringify(filtered));
+      const keys = await getVehicleKeys();
+      await AsyncStorage.setItem(keys.vehicles, JSON.stringify(filtered));
       return true;
     } catch (localError) {
       console.error('Error deleting vehicle locally:', localError);
@@ -131,7 +138,8 @@ export const setSelectedVehicle = async (phone, vehicleId) => {
     await api.put(`/users/${phone}/vehicles/${vehicleId}/select`);
   } catch (error) {
     console.warn('Error setting selected vehicle on server:', error);
-    // Save locally as fallback
-    await AsyncStorage.setItem(`selectedVehicleId:${phone}`, vehicleId);
+    // Save locally as fallback (user-scoped key)
+    const keys = await getVehicleKeys();
+    await AsyncStorage.setItem(keys.selectedVehicleId, vehicleId);
   }
 };

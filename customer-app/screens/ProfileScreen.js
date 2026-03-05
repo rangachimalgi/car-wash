@@ -5,6 +5,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import CustomHeader from '../components/CustomHeader';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { getVehicleKeys } from '../services/addressStorage';
 import { useTheme } from '../theme/ThemeContext';
 import { useFocusEffect } from '@react-navigation/native';
 
@@ -37,9 +38,10 @@ export default function ProfileScreen({ navigation }) {
           phone: storedPhone || prev.phone,
         }));
         if (storedPhone) {
+          const vKeys = await getVehicleKeys();
           const [storedVehicleType, storedVehicleModel] = await Promise.all([
-            AsyncStorage.getItem(`userVehicleType:${storedPhone}`),
-            AsyncStorage.getItem(`userVehicleModel:${storedPhone}`),
+            AsyncStorage.getItem(vKeys.vehicleType),
+            AsyncStorage.getItem(vKeys.vehicleModel),
           ]);
           if (storedVehicleType) setVehicleType(storedVehicleType);
           if (storedVehicleModel) setVehicleModel(storedVehicleModel);
@@ -57,9 +59,10 @@ export default function ProfileScreen({ navigation }) {
         try {
           const storedPhone = await AsyncStorage.getItem('authPhone');
           if (!storedPhone) return;
+          const vKeys = await getVehicleKeys();
           const [storedVehicleType, storedVehicleModel] = await Promise.all([
-            AsyncStorage.getItem(`userVehicleType:${storedPhone}`),
-            AsyncStorage.getItem(`userVehicleModel:${storedPhone}`),
+            AsyncStorage.getItem(vKeys.vehicleType),
+            AsyncStorage.getItem(vKeys.vehicleModel),
           ]);
           setVehicleType(storedVehicleType || 'SUV');
           setVehicleModel(storedVehicleModel || '');
