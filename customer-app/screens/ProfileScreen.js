@@ -6,9 +6,11 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import CustomHeader from '../components/CustomHeader';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getVehicleKeys } from '../services/addressStorage';
+import { getVehicles } from '../services/vehicleApi';
 import { getWallet } from '../services/walletApi';
 import { useTheme } from '../theme/ThemeContext';
 import { useFocusEffect } from '@react-navigation/native';
+import SavedVehiclesModal from '../components/SavedVehiclesModal';
 
 export default function ProfileScreen({ navigation }) {
   const insets = useSafeAreaInsets();
@@ -20,10 +22,11 @@ export default function ProfileScreen({ navigation }) {
     phone: '',
     walletBalance: null,
     addresses: [],
-    vehicles: [],
   });
   const [vehicleType, setVehicleType] = useState('SUV');
   const [vehicleModel, setVehicleModel] = useState('');
+  const [vehicleCount, setVehicleCount] = useState(0);
+  const [showVehiclesModal, setShowVehiclesModal] = useState(false);
 
   useEffect(() => {
     const loadProfile = async () => {
@@ -51,12 +54,20 @@ export default function ProfileScreen({ navigation }) {
 
         if (storedPhone) {
           const vKeys = await getVehicleKeys();
-          const [storedVehicleType, storedVehicleModel] = await Promise.all([
+          const [storedVehicleType, storedVehicleModel, vehicles] = await Promise.all([
             AsyncStorage.getItem(vKeys.vehicleType),
             AsyncStorage.getItem(vKeys.vehicleModel),
+            getVehicles(storedPhone),
           ]);
           if (storedVehicleType) setVehicleType(storedVehicleType);
           if (storedVehicleModel) setVehicleModel(storedVehicleModel);
+          if (Array.isArray(vehicles)) {
+            setVehicleCount(vehicles.length);
+          } else {
+            setVehicleCount(0);
+          }
+        } else {
+          setVehicleCount(0);
         }
       } catch (error) {
         console.error('Error loading profile:', error);
@@ -72,12 +83,18 @@ export default function ProfileScreen({ navigation }) {
           const storedPhone = await AsyncStorage.getItem('authPhone');
           if (!storedPhone) return;
           const vKeys = await getVehicleKeys();
-          const [storedVehicleType, storedVehicleModel] = await Promise.all([
+          const [storedVehicleType, storedVehicleModel, vehicles] = await Promise.all([
             AsyncStorage.getItem(vKeys.vehicleType),
             AsyncStorage.getItem(vKeys.vehicleModel),
+            getVehicles(storedPhone),
           ]);
           setVehicleType(storedVehicleType || 'SUV');
           setVehicleModel(storedVehicleModel || '');
+          if (Array.isArray(vehicles)) {
+            setVehicleCount(vehicles.length);
+          } else {
+            setVehicleCount(0);
+          }
         } catch (error) {
           console.warn('Failed to refresh vehicle:', error);
         }
@@ -234,6 +251,13 @@ export default function ProfileScreen({ navigation }) {
           <View style={styles.sectionHeader}>
             <MaterialCommunityIcons name="car" size={24} color={theme.accent} />
             <Text style={styles.sectionTitle}>My Vehicle</Text>
+            {vehicleCount > 0 && (
+              <View style={styles.vehicleCountBadge}>
+                <Text style={styles.vehicleCountText}>
+                  {vehicleCount} {vehicleCount === 1 ? 'Vehicle' : 'Vehicles'}
+                </Text>
+              </View>
+            )}
             <TouchableOpacity style={styles.addButton} onPress={() => navigation.navigate('SelectVehicle')}>
               <MaterialCommunityIcons name="pencil" size={20} color={theme.accent} />
             </TouchableOpacity>
@@ -259,6 +283,12 @@ export default function ProfileScreen({ navigation }) {
               onPress={() => navigation.navigate('SelectVehicle')}
             >
               <Text style={styles.saveVehicleText}>Edit Vehicle</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.viewVehiclesButton}
+              onPress={() => setShowVehiclesModal(true)}
+            >
+              <Text style={styles.viewVehiclesText}>View All Vehicles</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -331,6 +361,11 @@ export default function ProfileScreen({ navigation }) {
           </TouchableOpacity>
         </View>
       </ScrollView>
+      <SavedVehiclesModal
+        visible={showVehiclesModal}
+        onClose={() => setShowVehiclesModal(false)}
+        navigation={navigation}
+      />
     </View>
   );
 }
@@ -643,6 +678,31 @@ const createStyles = theme => StyleSheet.create({
     color: '#000000',
     fontWeight: '700',
     fontSize: 14,
+  },
+  viewVehiclesButton: {
+    marginTop: 8,
+    borderRadius: 12,
+    paddingVertical: 10,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: theme.cardBorder,
+  },
+  viewVehiclesText: {
+    color: theme.textSecondary,
+    fontWeight: '600',
+    fontSize: 13,
+  },
+  vehicleCountBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+    backgroundColor: theme.accentSoft,
+    marginRight: 8,
+  },
+  vehicleCountText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: theme.accent,
   },
   settingCard: {
     backgroundColor: theme.cardBackground,
