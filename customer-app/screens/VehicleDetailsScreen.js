@@ -4,7 +4,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../theme/ThemeContext';
 import { Image } from 'expo-image';
-import { addVehicle, setSelectedVehicle } from '../services/vehicleApi';
+import { addVehicle, setSelectedVehicle, getVehicles } from '../services/vehicleApi';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getVehicleKeys } from '../services/addressStorage';
 
@@ -33,19 +33,40 @@ export default function VehicleDetailsScreen({ navigation }) {
           setSaving(false);
           return;
         }
-        
-        // Prepare vehicle data for bike - just save as "2WHEELER" or "BIKE"
-        const vehicleData = {
-          vehicleType: '2WHEELER',
-          vehicleModel: 'BIKE',
-        };
-        
-        // Save vehicle to database
-        const savedVehicle = await addVehicle(phone, vehicleData);
-        
-        // Set as selected vehicle if it has an ID
-        if (savedVehicle?._id || savedVehicle?.id) {
-          const vehicleId = savedVehicle._id || savedVehicle.id;
+        // Check if a bike (2-wheeler) already exists for this user
+        const existingVehicles = await getVehicles(phone);
+        const existingBike = Array.isArray(existingVehicles)
+          ? existingVehicles.find(
+              (v) =>
+                (v.vehicleType === '2WHEELER' ||
+                  v.vehicleType === '2wheeler' ||
+                  v.vehicleType === '2-Wheeler') &&
+                (v.vehicleModel === 'BIKE' || !v.vehicleModel)
+            )
+          : null;
+
+        let vehicleId = null;
+
+        if (existingBike && (existingBike._id || existingBike.id)) {
+          // Reuse existing bike entry instead of creating a duplicate
+          vehicleId = existingBike._id || existingBike.id;
+        } else {
+          // Prepare vehicle data for bike - just save as "2WHEELER" or "BIKE"
+          const vehicleData = {
+            vehicleType: '2WHEELER',
+            vehicleModel: 'BIKE',
+          };
+
+          // Save vehicle to database
+          const savedVehicle = await addVehicle(phone, vehicleData);
+
+          if (savedVehicle?._id || savedVehicle?.id) {
+            vehicleId = savedVehicle._id || savedVehicle.id;
+          }
+        }
+
+        // Set as selected vehicle if we have a valid ID
+        if (vehicleId) {
           await setSelectedVehicle(phone, vehicleId);
           
           // Also save to AsyncStorage for quick access (user-scoped)
