@@ -27,6 +27,42 @@ const userSchema = new mongoose.Schema({
     default: '',
     trim: true,
   },
+  walletBalance: {
+    type: Number,
+    default: 0,
+    min: 0,
+  },
+  walletTransactions: [
+    {
+      amount: {
+        type: Number,
+        required: true,
+      },
+      type: {
+        type: String,
+        enum: ['CREDIT', 'DEBIT'],
+        required: true,
+      },
+      source: {
+        type: String,
+        default: 'ADMIN',
+        trim: true,
+      },
+      note: {
+        type: String,
+        default: '',
+        trim: true,
+      },
+      balanceAfter: {
+        type: Number,
+        required: true,
+      },
+      createdAt: {
+        type: Date,
+        default: Date.now,
+      },
+    },
+  ],
   vehicles: [{
     vehicleType: {
       type: String,

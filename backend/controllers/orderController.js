@@ -236,6 +236,33 @@ export const createOrder = async (req, res) => {
     const tax = Number((subtotal * TAX_RATE).toFixed(2));
     const totalAmount = Number((subtotal + tax).toFixed(2));
 
+    // Handle wallet usage (optional)
+    const requestedWallet = Number(req.body?.walletUsedAmount || 0);
+    let walletUsed = 0;
+
+    if (requestedWallet > 0) {
+      const user = await User.findById(userId);
+      const currentBalance = user?.walletBalance || 0;
+      if (user && currentBalance > 0) {
+        walletUsed = Math.min(requestedWallet, currentBalance, totalAmount);
+        if (walletUsed > 0) {
+          const newBalance = Number((currentBalance - walletUsed).toFixed(2));
+          user.walletBalance = newBalance;
+          user.walletTransactions = user.walletTransactions || [];
+          user.walletTransactions.push({
+            amount: walletUsed,
+            type: 'DEBIT',
+            source: 'ORDER',
+            note: 'Order payment using wallet',
+            balanceAfter: newBalance,
+          });
+          await user.save();
+        }
+      }
+    }
+
+    const netAmount = Number((totalAmount - walletUsed).toFixed(2));
+
     const normalizedEmployeeIds = Array.isArray(employeeIds)
       ? employeeIds.filter(Boolean)
       : [];
@@ -266,6 +293,8 @@ export const createOrder = async (req, res) => {
       subtotal,
       tax,
       totalAmount,
+      walletUsed,
+      netAmount,
       customer: {
         name: customer?.name || '',
         phone: customer?.phone || '',

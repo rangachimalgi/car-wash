@@ -271,3 +271,107 @@ export const setSelectedVehicle = async (req, res) => {
     });
   }
 };
+
+// @desc    Get wallet details for a user
+// @route   GET /api/users/:phone/wallet
+// @access  Public (tied to phone-based auth on client)
+export const getWallet = async (req, res) => {
+  try {
+    const { phone } = req.params;
+
+    if (!phone) {
+      return res.status(400).json({
+        success: false,
+        message: 'Phone number is required',
+      });
+    }
+
+    const user = await User.findOne({ phone });
+
+    if (!user) {
+      return res.status(200).json({
+        success: true,
+        data: {
+          walletBalance: 0,
+          transactions: [],
+        },
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: {
+        walletBalance: user.walletBalance || 0,
+        // Only return latest 20 transactions for now
+        transactions: (user.walletTransactions || []).slice(-20).reverse(),
+      },
+    });
+  } catch (error) {
+    console.error('Error getting wallet:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error getting wallet',
+      error: error.message,
+    });
+  }
+};
+
+// @desc    Credit wallet for a user (admin action)
+// @route   POST /api/users/:phone/wallet/credit
+// @access  Public for now (lock down later when admin auth is ready)
+export const creditWallet = async (req, res) => {
+  try {
+    const { phone } = req.params;
+    const { amount, note } = req.body;
+
+    const numericAmount = Number(amount);
+
+    if (!phone) {
+      return res.status(400).json({
+        success: false,
+        message: 'Phone number is required',
+      });
+    }
+
+    if (!numericAmount || numericAmount <= 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Amount must be greater than zero',
+      });
+    }
+
+    let user = await User.findOne({ phone });
+    if (!user) {
+      user = await User.create({ phone });
+    }
+
+    const previousBalance = user.walletBalance || 0;
+    const newBalance = previousBalance + numericAmount;
+
+    user.walletBalance = newBalance;
+    user.walletTransactions = user.walletTransactions || [];
+    user.walletTransactions.push({
+      amount: numericAmount,
+      type: 'CREDIT',
+      source: 'ADMIN',
+      note: note || '',
+      balanceAfter: newBalance,
+    });
+
+    await user.save();
+
+    res.status(200).json({
+      success: true,
+      data: {
+        walletBalance: user.walletBalance,
+      },
+    });
+  } catch (error) {
+    console.error('Error crediting wallet:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error crediting wallet',
+      error: error.message,
+    });
+  }
+};

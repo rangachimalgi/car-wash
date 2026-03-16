@@ -6,6 +6,8 @@ import {
   deleteVehicle, 
   setSelectedVehicle,
   updatePushToken,
+  getWallet,
+  creditWallet,
 } from '../controllers/userController.js';
 import { protect } from '../middleware/authMiddleware.js';
 
@@ -17,5 +19,7 @@ router.get('/:phone/vehicles', getVehicles);
 router.post('/:phone/vehicles', addVehicle);
 router.delete('/:phone/vehicles/:vehicleId', deleteVehicle);
 router.put('/:phone/vehicles/:vehicleId/select', setSelectedVehicle);
+router.get('/:phone/wallet', getWallet);
+router.post('/:phone/wallet/credit', creditWallet);
 
 export default router;

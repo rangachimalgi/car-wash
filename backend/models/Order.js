@@ -73,6 +73,16 @@ const orderSchema = new mongoose.Schema({
     type: Number,
     required: true,
   },
+  // Wallet usage for this order
+  walletUsed: {
+    type: Number,
+    default: 0,
+  },
+  // Final amount after wallet and discounts (for future payment integrations)
+  netAmount: {
+    type: Number,
+    required: true,
+  },
   status: {
     type: String,
     enum: ['Pending', 'Paid', 'Scheduled', 'In Progress', 'Completed', 'Cancelled'],

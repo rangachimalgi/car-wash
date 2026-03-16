@@ -345,6 +345,38 @@ function App() {
     }
   }
 
+  // Credit customer wallet from admin panel
+  const creditCustomerWallet = async ({ phone, amount, note }) => {
+    const numericAmount = Number(amount)
+    if (!phone || !numericAmount || numericAmount <= 0) {
+      window.alert('Phone and a positive amount are required.')
+      return null
+    }
+
+    try {
+      const res = await fetch(`${API_BASE_URL}/users/${encodeURIComponent(phone)}/wallet/credit`, getFetchOptions({
+        method: 'POST',
+        body: JSON.stringify({
+          amount: numericAmount,
+          note: note || '',
+        }),
+      }))
+
+      const data = await res.json()
+      if (!data.success) {
+        console.error('Error crediting wallet:', data.message || data.error)
+        window.alert(data.message || 'Failed to credit wallet.')
+        return null
+      }
+
+      return data.data || {}
+    } catch (error) {
+      console.error('Network error crediting wallet:', error)
+      window.alert(`Network error: ${error.message}`)
+      return null
+    }
+  }
+
   const fetchReviews = async () => {
     setLoadingReviews(true)
     try {
@@ -3219,6 +3251,30 @@ function App() {
                         );
                       })}
                     </div>
+                    {order.customer?.phone && (
+                      <div className="order-card-actions">
+                        <button
+                          type="button"
+                          className="primary-button"
+                          onClick={async () => {
+                            const phone = order.customer?.phone
+                            const amountInput = window.prompt(`Add amount to wallet for ${phone}`, '500')
+                            if (!amountInput) return
+                            const noteInput = window.prompt('Add a note (optional)', 'Admin credit')
+                            const result = await creditCustomerWallet({
+                              phone,
+                              amount: amountInput,
+                              note: noteInput || '',
+                            })
+                            if (result && typeof result.walletBalance === 'number') {
+                              window.alert(`Wallet updated. New balance: ₹${result.walletBalance}`)
+                            }
+                          }}
+                        >
+                          Add to Wallet
+                        </button>
+                      </div>
+                    )}
                     {((order.servicePhotos?.beforePhotos?.length) || (order.servicePhotos?.afterPhotos?.length)) > 0 && (
                       <div className="order-photos-section">
                         <span className="detail-label">Service photos</span>

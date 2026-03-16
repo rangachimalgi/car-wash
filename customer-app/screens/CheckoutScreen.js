@@ -6,6 +6,7 @@ import BackHeader from '../components/BackHeader';
 import { createOrder } from '../services/orderApi';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getAddressKeys, getVehicleKeys } from '../services/addressStorage';
+import { getWallet } from '../services/walletApi';
 import { useTheme } from '../theme/ThemeContext';
 import { useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -36,6 +37,9 @@ export default function CheckoutScreen({ navigation, route }) {
   const [toastData, setToastData] = useState({ title: 'Booking confirmed', subtitle: 'Your service has been booked successfully.', orderId: '' });
   const [address, setAddress] = useState(null);
   const [vehicle, setVehicle] = useState(null);
+  const [walletBalance, setWalletBalance] = useState(0);
+  const [walletLoading, setWalletLoading] = useState(false);
+  const [useWallet, setUseWallet] = useState(false);
   const { theme, isLightMode } = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
   const insets = useSafeAreaInsets();
@@ -91,6 +95,22 @@ export default function CheckoutScreen({ navigation, route }) {
       } else {
         setVehicle(null);
       }
+
+      // Load wallet balance (if logged in)
+      if (storedPhone) {
+        try {
+          setWalletLoading(true);
+          const wallet = await getWallet();
+          setWalletBalance(wallet.walletBalance || 0);
+        } catch (err) {
+          console.warn('Failed to load wallet:', err);
+          setWalletBalance(0);
+        } finally {
+          setWalletLoading(false);
+        }
+      } else {
+        setWalletBalance(0);
+      }
     } catch (error) {
       console.error('Error loading address/vehicle:', error);
     }
@@ -137,7 +157,9 @@ export default function CheckoutScreen({ navigation, route }) {
     setDiscount(0);
   };
 
-  const finalTotal = total - discount;
+  const baseTotalAfterDiscount = total - discount;
+  const walletUsable = useWallet ? Math.min(walletBalance, baseTotalAfterDiscount) : 0;
+  const finalTotal = baseTotalAfterDiscount - walletUsable;
 
   const isScheduleComplete = (item) => {
     const packageType = item?.packageType || 'OneTime';
@@ -254,6 +276,7 @@ export default function CheckoutScreen({ navigation, route }) {
           latitude: address.latitude || undefined,
           longitude: address.longitude || undefined,
         },
+        walletUsedAmount: walletUsable,
       });
       console.log('Order created:', response);
 
@@ -466,6 +489,40 @@ export default function CheckoutScreen({ navigation, route }) {
           )}
         </View>
 
+        {/* Wallet Section */}
+        {walletBalance > 0 && (
+          <View style={styles.walletSection}>
+            <View style={styles.walletHeader}>
+              <MaterialCommunityIcons name="wallet" size={20} color={LIGHT_BLUE} />
+              <Text style={styles.sectionTitle}>Wallet</Text>
+            </View>
+            <View style={styles.walletCard}>
+              <View style={styles.walletRow}>
+                <View>
+                  <Text style={styles.walletBalanceLabel}>Available balance</Text>
+                  <Text style={styles.walletBalanceValue}>₹{walletBalance.toFixed(2)}</Text>
+                </View>
+                <TouchableOpacity
+                  style={[styles.walletToggle, useWallet && styles.walletToggleActive]}
+                  onPress={() => setUseWallet(!useWallet)}
+                  disabled={walletLoading || baseTotalAfterDiscount <= 0}
+                  activeOpacity={0.8}
+                >
+                  <Text style={[styles.walletToggleText, useWallet && styles.walletToggleTextActive]}>
+                    {useWallet ? 'Using wallet' : 'Use wallet'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+              {useWallet && walletUsable > 0 && (
+                <View style={styles.walletAppliedRow}>
+                  <Text style={styles.walletAppliedLabel}>Wallet applied</Text>
+                  <Text style={styles.walletAppliedValue}>-₹{walletUsable.toFixed(2)}</Text>
+                </View>
+              )}
+            </View>
+          </View>
+        )}
+
         {/* Payment Summary Section */}
         <View style={styles.paymentSummarySection}>
           <Text style={styles.sectionTitle}>Payment Summary</Text>
@@ -483,6 +540,14 @@ export default function CheckoutScreen({ navigation, route }) {
                 <Text style={styles.summaryLabel}>Discount ({appliedCoupon})</Text>
                 <Text style={[styles.summaryValue, styles.discountValue]}>
                   -₹{discount.toFixed(2)}
+                </Text>
+              </View>
+            )}
+            {walletUsable > 0 && (
+              <View style={styles.summaryRow}>
+                <Text style={styles.summaryLabel}>Wallet used</Text>
+                <Text style={[styles.summaryValue, styles.discountValue]}>
+                  -₹{walletUsable.toFixed(2)}
                 </Text>
               </View>
             )}
@@ -845,5 +910,71 @@ const createStyles = theme => StyleSheet.create({
     fontSize: 14,
     fontWeight: '700',
     color: '#0B0B0B',
+  },
+  walletSection: {
+    marginTop: 24,
+    paddingHorizontal: 16,
+  },
+  walletHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  walletCard: {
+    backgroundColor: theme.cardBackground,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: theme.cardBorder,
+    padding: 16,
+  },
+  walletRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  walletBalanceLabel: {
+    fontSize: 13,
+    color: theme.textSecondary,
+    marginBottom: 4,
+  },
+  walletBalanceValue: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: theme.textPrimary,
+  },
+  walletToggle: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: theme.cardBorder,
+    backgroundColor: theme.background,
+  },
+  walletToggleActive: {
+    borderColor: LIGHT_BLUE,
+    backgroundColor: '#E0F7FF',
+  },
+  walletToggleText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: theme.textSecondary,
+  },
+  walletToggleTextActive: {
+    color: '#000000',
+  },
+  walletAppliedRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 12,
+  },
+  walletAppliedLabel: {
+    fontSize: 13,
+    color: theme.textSecondary,
+  },
+  walletAppliedValue: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: LIGHT_BLUE,
   },
 });

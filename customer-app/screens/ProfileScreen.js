@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import CustomHeader from '../components/CustomHeader';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getVehicleKeys } from '../services/addressStorage';
+import { getWallet } from '../services/walletApi';
 import { useTheme } from '../theme/ThemeContext';
 import { useFocusEffect } from '@react-navigation/native';
 
@@ -14,11 +15,10 @@ export default function ProfileScreen({ navigation }) {
   const { theme, isLightMode, toggleColorScheme } = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
   
-  // Mock user data
   const [userData, setUserData] = useState({
     name: 'John Doe',
     phone: '',
-    walletBalance: '₹2,500',
+    walletBalance: null,
     addresses: [],
     vehicles: [],
   });
@@ -32,11 +32,23 @@ export default function ProfileScreen({ navigation }) {
           AsyncStorage.getItem('authName'),
           AsyncStorage.getItem('authPhone'),
         ]);
+
+        let walletBalance = null;
+        if (storedPhone) {
+          const wallet = await getWallet();
+          // Only show if positive balance
+          if (wallet.walletBalance && wallet.walletBalance > 0) {
+            walletBalance = `₹${wallet.walletBalance}`;
+          }
+        }
+
         setUserData(prev => ({
           ...prev,
           name: storedName || prev.name,
           phone: storedPhone || prev.phone,
+          walletBalance,
         }));
+
         if (storedPhone) {
           const vKeys = await getVehicleKeys();
           const [storedVehicleType, storedVehicleModel] = await Promise.all([
@@ -98,41 +110,49 @@ export default function ProfileScreen({ navigation }) {
           <Text style={styles.userEmail}>{userData.phone ? `+91 ${userData.phone}` : 'Phone not set'}</Text>
         </View>
 
-        {/* Wallet Section */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <MaterialCommunityIcons name="wallet" size={24} color={theme.accent} />
-            <Text style={styles.sectionTitle}>Wallet</Text>
-          </View>
-          <TouchableOpacity style={styles.walletCard} activeOpacity={0.8}>
-            <View style={styles.walletContent}>
-              <View>
-                <Text style={styles.walletLabel}>Balance</Text>
-                <Text style={styles.walletBalance}>{userData.walletBalance}</Text>
+        {/* Wallet Section - show only when balance is available (set from admin) */}
+        {userData.walletBalance != null && userData.walletBalance !== '' && (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <MaterialCommunityIcons name="wallet" size={24} color={theme.accent} />
+              <Text style={styles.sectionTitle}>Wallet</Text>
+            </View>
+            <View style={styles.walletCard}>
+              <View style={styles.walletContent}>
+                <View>
+                  <Text style={styles.walletLabel}>Balance</Text>
+                  <Text style={styles.walletBalance}>{userData.walletBalance}</Text>
+                </View>
+                {/*
+                  Add Money button temporarily disabled – balance is controlled by admin top-ups only.
+                  <TouchableOpacity style={styles.addMoneyButton}>
+                    <MaterialCommunityIcons name="plus" size={20} color="#000000" />
+                    <Text style={styles.addMoneyText}>Add Money</Text>
+                  </TouchableOpacity>
+                */}
               </View>
-              <TouchableOpacity style={styles.addMoneyButton}>
-                <MaterialCommunityIcons name="plus" size={20} color="#000000" />
-                <Text style={styles.addMoneyText}>Add Money</Text>
-              </TouchableOpacity>
+              {/*
+                Send / Receive / History actions are commented out for now.
+                <View style={styles.walletFooter}>
+                  <TouchableOpacity style={styles.walletAction}>
+                    <MaterialCommunityIcons name="arrow-up" size={18} color="#000000" />
+                    <Text style={styles.walletActionText}>Send</Text>
+                  </TouchableOpacity>
+                  <View style={styles.divider} />
+                  <TouchableOpacity style={styles.walletAction}>
+                    <MaterialCommunityIcons name="arrow-down" size={18} color="#000000" />
+                    <Text style={styles.walletActionText}>Receive</Text>
+                  </TouchableOpacity>
+                  <View style={styles.divider} />
+                  <TouchableOpacity style={styles.walletAction}>
+                    <MaterialCommunityIcons name="history" size={18} color="#000000" />
+                    <Text style={styles.walletActionText}>History</Text>
+                  </TouchableOpacity>
+                </View>
+              */}
             </View>
-            <View style={styles.walletFooter}>
-              <TouchableOpacity style={styles.walletAction}>
-                <MaterialCommunityIcons name="arrow-up" size={18} color="#000000" />
-                <Text style={styles.walletActionText}>Send</Text>
-              </TouchableOpacity>
-              <View style={styles.divider} />
-              <TouchableOpacity style={styles.walletAction}>
-                <MaterialCommunityIcons name="arrow-down" size={18} color="#000000" />
-                <Text style={styles.walletActionText}>Receive</Text>
-              </TouchableOpacity>
-              <View style={styles.divider} />
-              <TouchableOpacity style={styles.walletAction}>
-                <MaterialCommunityIcons name="history" size={18} color="#000000" />
-                <Text style={styles.walletActionText}>History</Text>
-              </TouchableOpacity>
-            </View>
-          </TouchableOpacity>
-        </View>
+          </View>
+        )}
 
         {/* Personal Information Section */}
         <View style={styles.section}>
