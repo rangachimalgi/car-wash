@@ -10,9 +10,13 @@ export const requestOtp = async (phone, name) => {
   }
 };
 
-export const verifyOtp = async (phone, otp, name) => {
+export const verifyOtp = async (phone, otp, name, referralCode) => {
   try {
-    const response = await api.post('/auth/verify-otp', { phone, otp, name });
+    const payload = { phone, otp, name };
+    if (referralCode && referralCode.trim()) {
+      payload.referralCode = referralCode.trim();
+    }
+    const response = await api.post('/auth/verify-otp', payload);
     return response.data;
   } catch (error) {
     console.error('Error verifying OTP:', error);

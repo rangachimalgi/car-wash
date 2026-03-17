@@ -1,4 +1,5 @@
 import User from '../models/User.js';
+import Referral from '../models/Referral.js';
 
 // @desc    Update current user's Expo push token (for start-service OTP notifications)
 // @route   PUT /api/users/me/push-token
@@ -371,6 +372,81 @@ export const creditWallet = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error crediting wallet',
+      error: error.message,
+    });
+  }
+};
+
+// @desc    Get referral info for a user (by phone)
+// @route   GET /api/users/:phone/referral-info
+// @access  Public (tied to phone-based auth on client)
+export const getReferralInfo = async (req, res) => {
+  try {
+    const { phone } = req.params;
+
+    if (!phone) {
+      return res.status(400).json({
+        success: false,
+        message: 'Phone number is required',
+      });
+    }
+
+    const user = await User.findOne({ phone });
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found',
+      });
+    }
+
+    // Ensure referralCode exists
+    if (!user.referralCode) {
+      const base = 'WOOSH';
+      const random = Math.random().toString(36).substring(2, 8).toUpperCase();
+      const candidate = `${base}${random}`;
+
+      // Very low chance of collision; if it happens, next request will regenerate
+      user.referralCode = candidate;
+      try {
+        await user.save();
+      } catch (e) {
+        console.warn('Error saving referralCode, possibly duplicate:', e.message);
+      }
+    }
+
+    // Aggregate completed referrals
+    const completedReferrals = await Referral.find({
+      referrerUserId: user._id,
+      status: 'COMPLETED',
+    });
+
+    const totalReferrals = completedReferrals.length;
+    const totalReferralEarnings = completedReferrals.reduce(
+      (sum, r) => sum + (r.referrerRewardAmount || 0),
+      0
+    );
+
+    const REFERRAL_BONUS_REFERRER = Number(process.env.REFERRAL_BONUS_REFERRER || 100);
+    const REFERRAL_BONUS_REFERRED = Number(process.env.REFERRAL_BONUS_REFERRED || 100);
+    const REFERRAL_ACTIVE = (process.env.REFERRAL_ACTIVE || 'true').toLowerCase() === 'true';
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        referralCode: user.referralCode,
+        totalReferrals,
+        totalReferralEarnings,
+        perReferralRewardReferrer: REFERRAL_BONUS_REFERRER,
+        perReferralRewardReferred: REFERRAL_BONUS_REFERRED,
+        referralActive: REFERRAL_ACTIVE,
+      },
+    });
+  } catch (error) {
+    console.error('Error getting referral info:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error getting referral info',
       error: error.message,
     });
   }

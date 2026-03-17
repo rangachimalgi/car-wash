@@ -2,6 +2,7 @@ import Order from '../models/Order.js';
 import Service from '../models/Service.js';
 import Employee from '../models/Employee.js';
 import User from '../models/User.js';
+import Referral from '../models/Referral.js';
 
 const TAX_RATE = 0.18;
 
@@ -505,6 +506,54 @@ export const updateOrderStatus = async (req, res) => {
       });
     }
 
+    // If order just moved to Completed, handle referral bonus for first completed order
+    if (status === 'Completed') {
+      try {
+        const completedCount = await Order.countDocuments({
+          user: order.user,
+          status: 'Completed',
+        });
+
+        if (completedCount === 1) {
+          const user = await User.findById(order.user);
+          if (user && user.referredByUserId) {
+            const referrerId = user.referredByUserId;
+
+            const referral = await Referral.findOne({
+              referrerUserId: referrerId,
+              referredUserId: user._id,
+              status: 'PENDING',
+            });
+
+            if (referral) {
+              const REFERRAL_BONUS_REFERRER = referral.referrerRewardAmount || Number(process.env.REFERRAL_BONUS_REFERRER || 100);
+              const REFERRAL_BONUS_REFERRED = referral.referredRewardAmount || Number(process.env.REFERRAL_BONUS_REFERRED || 100);
+
+              const maxRewardsEnv = process.env.REFERRAL_MAX_REWARDS_PER_USER;
+              const maxRewards = maxRewardsEnv ? Number(maxRewardsEnv) : null;
+
+              if (maxRewards && !Number.isNaN(maxRewards)) {
+                const completedForReferrer = await Referral.countDocuments({
+                  referrerUserId: referrerId,
+                  status: 'COMPLETED',
+                });
+                if (completedForReferrer >= maxRewards) {
+                  referral.status = 'REJECTED';
+                  await referral.save();
+                } else {
+                  await applyReferralRewards({ user, referrerId, referral, REFERRAL_BONUS_REFERRER, REFERRAL_BONUS_REFERRED });
+                }
+              } else {
+                await applyReferralRewards({ user, referrerId, referral, REFERRAL_BONUS_REFERRER, REFERRAL_BONUS_REFERRED });
+              }
+            }
+          }
+        }
+      } catch (referralError) {
+        console.error('Error processing referral bonus on order completion:', referralError);
+      }
+    }
+
     res.status(200).json({
       success: true,
       data: order,
@@ -518,6 +567,67 @@ export const updateOrderStatus = async (req, res) => {
     });
   }
 };
+
+async function applyReferralRewards({ user, referrerId, referral, REFERRAL_BONUS_REFERRER, REFERRAL_BONUS_REFERRED }) {
+  // Credit referred user (B)
+  const referredUser = user;
+  const referrerUser = await User.findById(referrerId);
+
+  if (!referredUser || !referrerUser) {
+    referral.status = 'REJECTED';
+    await referral.save();
+    return;
+  }
+
+  // Helper to credit wallet and log transaction
+  const creditUserWallet = async (targetUser, amount, sourceNote) => {
+    const prevBalance = targetUser.walletBalance || 0;
+    const newBalance = prevBalance + amount;
+    targetUser.walletBalance = newBalance;
+    targetUser.walletTransactions = targetUser.walletTransactions || [];
+    targetUser.walletTransactions.push({
+      amount,
+      type: 'CREDIT',
+      source: 'REFERRAL',
+      note: sourceNote,
+      balanceAfter: newBalance,
+    });
+    await targetUser.save();
+  };
+
+  if (REFERRAL_BONUS_REFERRED > 0) {
+    await creditUserWallet(
+      referredUser,
+      REFERRAL_BONUS_REFERRED,
+      'Referral bonus for first completed order'
+    );
+  }
+
+  if (REFERRAL_BONUS_REFERRER > 0) {
+    await creditUserWallet(
+      referrerUser,
+      REFERRAL_BONUS_REFERRER,
+      `Referral bonus for inviting ${referredUser.phone || 'a friend'}`
+    );
+  }
+
+  referral.status = 'COMPLETED';
+  referral.completedAt = new Date();
+  await referral.save();
+
+  // Optionally update simple stats on referrer user
+  try {
+    referrerUser.referralStats = referrerUser.referralStats || {
+      totalReferrals: 0,
+      totalReferralEarnings: 0,
+    };
+    referrerUser.referralStats.totalReferrals += 1;
+    referrerUser.referralStats.totalReferralEarnings += REFERRAL_BONUS_REFERRER;
+    await referrerUser.save();
+  } catch (statsError) {
+    console.warn('Error updating referrer referralStats:', statsError.message);
+  }
+}
 
 // @desc    Upload before/after photos for an order (employee during service)
 // @route   POST /api/orders/:id/photos

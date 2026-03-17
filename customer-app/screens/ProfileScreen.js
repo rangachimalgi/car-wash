@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState, useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Alert, Switch } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Switch, Share } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -7,7 +7,7 @@ import CustomHeader from '../components/CustomHeader';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getVehicleKeys } from '../services/addressStorage';
 import { getVehicles } from '../services/vehicleApi';
-import { getWallet } from '../services/walletApi';
+import { getWallet, getReferralInfo } from '../services/walletApi';
 import { useTheme } from '../theme/ThemeContext';
 import { useFocusEffect } from '@react-navigation/native';
 import SavedVehiclesModal from '../components/SavedVehiclesModal';
@@ -27,6 +27,13 @@ export default function ProfileScreen({ navigation }) {
   const [vehicleModel, setVehicleModel] = useState('');
   const [vehicleCount, setVehicleCount] = useState(0);
   const [showVehiclesModal, setShowVehiclesModal] = useState(false);
+  const [referralInfo, setReferralInfo] = useState({
+    code: '',
+    totalReferrals: 0,
+    totalEarnings: 0,
+    perReferralRewardReferrer: 100,
+    perReferralRewardReferred: 100,
+  });
 
   useEffect(() => {
     const loadProfile = async () => {
@@ -54,10 +61,11 @@ export default function ProfileScreen({ navigation }) {
 
         if (storedPhone) {
           const vKeys = await getVehicleKeys();
-          const [storedVehicleType, storedVehicleModel, vehicles] = await Promise.all([
+          const [storedVehicleType, storedVehicleModel, vehicles, referral] = await Promise.all([
             AsyncStorage.getItem(vKeys.vehicleType),
             AsyncStorage.getItem(vKeys.vehicleModel),
             getVehicles(storedPhone),
+            getReferralInfo(storedPhone),
           ]);
           if (storedVehicleType) setVehicleType(storedVehicleType);
           if (storedVehicleModel) setVehicleModel(storedVehicleModel);
@@ -65,6 +73,16 @@ export default function ProfileScreen({ navigation }) {
             setVehicleCount(vehicles.length);
           } else {
             setVehicleCount(0);
+          }
+          if (referral) {
+            setReferralInfo(prev => ({
+              ...prev,
+              code: referral.referralCode || '',
+              totalReferrals: referral.totalReferrals || 0,
+              totalEarnings: referral.totalReferralEarnings || 0,
+              perReferralRewardReferrer: referral.perReferralRewardReferrer ?? prev.perReferralRewardReferrer,
+              perReferralRewardReferred: referral.perReferralRewardReferred ?? prev.perReferralRewardReferred,
+            }));
           }
         } else {
           setVehicleCount(0);
@@ -83,10 +101,11 @@ export default function ProfileScreen({ navigation }) {
           const storedPhone = await AsyncStorage.getItem('authPhone');
           if (!storedPhone) return;
           const vKeys = await getVehicleKeys();
-          const [storedVehicleType, storedVehicleModel, vehicles] = await Promise.all([
+          const [storedVehicleType, storedVehicleModel, vehicles, referral] = await Promise.all([
             AsyncStorage.getItem(vKeys.vehicleType),
             AsyncStorage.getItem(vKeys.vehicleModel),
             getVehicles(storedPhone),
+            getReferralInfo(storedPhone),
           ]);
           setVehicleType(storedVehicleType || 'SUV');
           setVehicleModel(storedVehicleModel || '');
@@ -94,6 +113,16 @@ export default function ProfileScreen({ navigation }) {
             setVehicleCount(vehicles.length);
           } else {
             setVehicleCount(0);
+          }
+          if (referral) {
+            setReferralInfo(prev => ({
+              ...prev,
+              code: referral.referralCode || '',
+              totalReferrals: referral.totalReferrals || 0,
+              totalEarnings: referral.totalReferralEarnings || 0,
+              perReferralRewardReferrer: referral.perReferralRewardReferrer ?? prev.perReferralRewardReferrer,
+              perReferralRewardReferred: referral.perReferralRewardReferred ?? prev.perReferralRewardReferred,
+            }));
           }
         } catch (error) {
           console.warn('Failed to refresh vehicle:', error);
@@ -170,6 +199,50 @@ export default function ProfileScreen({ navigation }) {
             </View>
           </View>
         )}
+
+        {/* Refer & Earn Section */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <MaterialCommunityIcons name="gift" size={24} color={theme.accent} />
+            <Text style={styles.sectionTitle}>Refer &amp; Earn</Text>
+            <View style={styles.referralBadge}>
+              <Text style={styles.referralBadgeText}>
+                Get ₹{referralInfo.perReferralRewardReferrer || 100}
+              </Text>
+            </View>
+          </View>
+          <View style={styles.referralCard}>
+            <Text style={styles.referralSubtitle}>
+              Invite friends and you both get ₹
+              {referralInfo.perReferralRewardReferred || 100}
+              {' '}in wallet on their first order.
+            </Text>
+            <View style={styles.referralRow}>
+              <View>
+                <Text style={styles.referralLabel}>Your code</Text>
+                <Text style={styles.referralCode}>
+                  {referralInfo.code || 'Coming soon'}
+                </Text>
+              </View>
+            </View>
+            <TouchableOpacity
+              style={styles.referralShareButton}
+              activeOpacity={0.8}
+              onPress={() => {
+                const codeText = referralInfo.code || 'your Woosh referral code';
+                Share.share({
+                  message: `Use my Woosh referral code ${codeText} and you and I both get ₹${referralInfo.perReferralRewardReferred || 100} in wallet on your first order!`,
+                }).catch(() => {});
+              }}
+            >
+              <MaterialCommunityIcons name="share-variant" size={18} color="#000000" />
+              <Text style={styles.referralShareText}>Share Invite Link</Text>
+            </TouchableOpacity>
+            <Text style={styles.referralStatsText}>
+              Friends joined: {referralInfo.totalReferrals} · Rewards earned: ₹{referralInfo.totalEarnings}
+            </Text>
+          </View>
+        </View>
 
         {/* Personal Information Section */}
         <View style={styles.section}>
@@ -700,6 +773,65 @@ const createStyles = theme => StyleSheet.create({
     marginRight: 8,
   },
   vehicleCountText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: theme.accent,
+  },
+  referralCard: {
+    backgroundColor: theme.cardBackground,
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: theme.cardBorder,
+  },
+  referralSubtitle: {
+    fontSize: 13,
+    color: theme.textSecondary,
+    marginBottom: 12,
+  },
+  referralRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+  },
+  referralLabel: {
+    fontSize: 12,
+    color: theme.textSecondary,
+    marginBottom: 4,
+  },
+  referralCode: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: theme.textPrimary,
+  },
+  referralShareButton: {
+    marginTop: 4,
+    backgroundColor: theme.accent,
+    borderRadius: 12,
+    paddingVertical: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
+    gap: 8,
+  },
+  referralShareText: {
+    color: '#000000',
+    fontWeight: '600',
+    fontSize: 14,
+  },
+  referralStatsText: {
+    marginTop: 10,
+    fontSize: 12,
+    color: theme.textSecondary,
+  },
+  referralBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+    backgroundColor: theme.accentSoft,
+  },
+  referralBadgeText: {
     fontSize: 12,
     fontWeight: '600',
     color: theme.accent,

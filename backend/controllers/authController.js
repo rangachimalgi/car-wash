@@ -1,5 +1,6 @@
 import jwt from 'jsonwebtoken';
 import User from '../models/User.js';
+import Referral from '../models/Referral.js';
 
 const FIXED_OTP = '1234';
 
@@ -36,7 +37,7 @@ export const requestOtp = async (req, res) => {
 // @access  Public
 export const verifyOtp = async (req, res) => {
   try {
-    const { phone, otp, name } = req.body;
+    const { phone, otp, name, referralCode } = req.body;
     if (!phone || !otp) {
       return res.status(400).json({
         success: false,
@@ -52,10 +53,46 @@ export const verifyOtp = async (req, res) => {
     }
 
     let user = await User.findOne({ phone });
+    const trimmedName = name?.trim?.() || '';
+
     if (!user) {
-      user = await User.create({ phone, name: name?.trim?.() || '' });
-    } else if (name && name.trim()) {
-      user.name = name.trim();
+      // New user – optionally link referral
+      let referredByUserId = null;
+
+      if (referralCode && typeof referralCode === 'string' && referralCode.trim()) {
+        const referrer = await User.findOne({ referralCode: referralCode.trim() });
+        if (referrer && referrer.phone !== phone) {
+          referredByUserId = referrer._id;
+        }
+      }
+
+      user = await User.create({
+        phone,
+        name: trimmedName,
+        referredByUserId: referredByUserId || null,
+      });
+
+      if (referredByUserId) {
+        const REFERRAL_BONUS_REFERRER = Number(process.env.REFERRAL_BONUS_REFERRER || 100);
+        const REFERRAL_BONUS_REFERRED = Number(process.env.REFERRAL_BONUS_REFERRED || 100);
+
+        try {
+          await Referral.create({
+            referrerUserId: referredByUserId,
+            referredUserId: user._id,
+            status: 'PENDING',
+            referrerRewardAmount: REFERRAL_BONUS_REFERRER,
+            referredRewardAmount: REFERRAL_BONUS_REFERRED,
+          });
+        } catch (referralError) {
+          console.warn('Error creating referral record:', referralError.message);
+        }
+      }
+    } else {
+      if (trimmedName) {
+        user.name = trimmedName;
+      }
+      // Existing user – ignore referralCode for now to avoid abuse
       await user.save();
     }
 

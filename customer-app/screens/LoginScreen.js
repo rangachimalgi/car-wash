@@ -16,6 +16,7 @@ export default function LoginScreen({ navigation }) {
   const styles = useMemo(() => createStyles(theme), [theme]);
   const [phoneNumber, setPhoneNumber] = useState('');
   const [name, setName] = useState('');
+  const [referralCode, setReferralCode] = useState('');
   const [otp, setOtp] = useState(['', '', '', '']);
   const [otpSent, setOtpSent] = useState(false);
   const [errors, setErrors] = useState({});
@@ -83,7 +84,7 @@ export default function LoginScreen({ navigation }) {
     if (!validateOtp()) return;
     const otpString = otp.join('');
     try {
-      const response = await verifyOtp(phoneNumber, otpString, name);
+      const response = await verifyOtp(phoneNumber, otpString, name, referralCode);
       console.log('Verify OTP response:', response);
       if (response?.success && response?.token) {
         await AsyncStorage.setItem('authToken', response.token);
@@ -143,7 +144,7 @@ export default function LoginScreen({ navigation }) {
 
   const verifyOtpWithString = async (otpString) => {
     try {
-      const response = await verifyOtp(phoneNumber, otpString, name);
+      const response = await verifyOtp(phoneNumber, otpString, name, referralCode);
       console.log('Verify OTP response:', response);
       if (response?.success && response?.token) {
         await AsyncStorage.setItem('authToken', response.token);
@@ -239,6 +240,25 @@ export default function LoginScreen({ navigation }) {
                     />
                   </View>
                   {errors.name && <Text style={styles.errorText}>{errors.name}</Text>}
+                </View>
+              )}
+
+              {/* Referral Code (optional) */}
+              {phoneNumber.length === 10 && (
+                <View style={styles.inputContainer}>
+                  <View style={styles.inputWrapper}>
+                    <TextInput
+                      style={styles.input}
+                      placeholder="Referral Code (optional)"
+                      placeholderTextColor="#9CA3AF"
+                      value={referralCode}
+                      onChangeText={(text) => {
+                        setReferralCode(text.toUpperCase().trimStart());
+                      }}
+                      autoCapitalize="characters"
+                      autoCorrect={false}
+                    />
+                  </View>
                 </View>
               )}
 

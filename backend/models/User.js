@@ -88,6 +88,27 @@ const userSchema = new mongoose.Schema({
     type: Boolean,
     default: true,
   },
+  referralCode: {
+    type: String,
+    unique: true,
+    sparse: true,
+    trim: true,
+  },
+  referredByUserId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    default: null,
+  },
+  referralStats: {
+    totalReferrals: {
+      type: Number,
+      default: 0,
+    },
+    totalReferralEarnings: {
+      type: Number,
+      default: 0,
+    },
+  },
 }, {
   timestamps: true,
 });

@@ -21,3 +21,13 @@ export const getWallet = async () => {
   }
 };
 
+export const getReferralInfo = async (phone) => {
+  try {
+    const response = await api.get(`/users/${phone}/referral-info`);
+    return response.data?.data || null;
+  } catch (error) {
+    console.warn('Error fetching referral info:', error.response?.data || error.message);
+    return null;
+  }
+};
+
