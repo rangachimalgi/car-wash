@@ -113,17 +113,61 @@
 }
 
 .nav-item.active {
-  background: rgba(99, 102, 241, 0.35);
-  color: #c7d2fe;
+  background: rgba(255,255,255,0.12);
+  color: #ffffff;
 }
 
 .nav-icon {
-  font-size: 1.1rem;
+  width: 18px;
+  height: 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   flex-shrink: 0;
+  color: rgba(255, 255, 255, 0.92);
+  opacity: 0.92;
 }
 
 .nav-label {
   flex: 1;
+}
+
+.nav-chevron {
+  width: 18px;
+  height: 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(255, 255, 255, 0.8);
+  transition: transform 0.2s ease, opacity 0.2s ease;
+  opacity: 0.85;
+}
+
+.nav-group-toggle.open .nav-chevron {
+  transform: rotate(180deg);
+  opacity: 1;
+}
+
+.nav-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.nav-group-items {
+  display: none;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding-left: 0.5rem;
+}
+
+.nav-group-items.open {
+  display: flex;
+}
+
+.nav-subitem {
+  padding-left: 1.5rem;
+  border-radius: 10px;
 }
 
 .nav-badge {

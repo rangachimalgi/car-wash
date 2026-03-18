@@ -4,10 +4,8 @@ import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import EarningsHistoryScreen from './EarningsHistoryScreen';
-import InventoryScreen from './InventoryScreen';
 
-export default function ProfileScreen({ onLogout, employeeId }) {
+export default function ProfileScreen({ onLogout }) {
   const insets = useSafeAreaInsets();
   const [profile, setProfile] = useState({
     employeeId: '',
@@ -15,7 +13,6 @@ export default function ProfileScreen({ onLogout, employeeId }) {
     phone: '',
   });
   const [loading, setLoading] = useState(true);
-  const [activeView, setActiveView] = useState('profile'); // 'profile', 'earnings', 'inventory'
 
   useEffect(() => {
     const loadProfile = async () => {
@@ -47,7 +44,7 @@ export default function ProfileScreen({ onLogout, employeeId }) {
     }
   };
 
-  if (loading && activeView === 'profile') {
+  if (loading) {
     return (
       <View style={[styles.container, styles.loadingContainer, { paddingTop: 24 + insets.top }]}>
         <StatusBar style="dark" />
@@ -57,54 +54,18 @@ export default function ProfileScreen({ onLogout, employeeId }) {
     );
   }
 
-  // Show Earnings screen
-  if (activeView === 'earnings') {
-    return (
-      <View style={[styles.container, { paddingTop: 24 + insets.top }]}>
-        <StatusBar style="dark" />
-        <View style={styles.headerRow}>
-          <TouchableOpacity style={styles.backButton} onPress={() => setActiveView('profile')}>
-            <MaterialCommunityIcons name="arrow-left" size={20} color="#2F5CF4" />
-            <Text style={styles.backText}>Back</Text>
-          </TouchableOpacity>
-          <Text style={styles.title}>Earnings</Text>
-          <View style={styles.headerSpacer} />
-        </View>
-        <EarningsHistoryScreen />
-      </View>
-    );
-  }
-
-  // Show Inventory screen
-  if (activeView === 'inventory') {
-    return (
-      <View style={[styles.container, { paddingTop: 24 + insets.top }]}>
-        <StatusBar style="dark" />
-        <View style={styles.headerRow}>
-          <TouchableOpacity style={styles.backButton} onPress={() => setActiveView('profile')}>
-            <MaterialCommunityIcons name="arrow-left" size={20} color="#2F5CF4" />
-            <Text style={styles.backText}>Back</Text>
-          </TouchableOpacity>
-          <Text style={styles.title}>Inventory</Text>
-          <View style={styles.headerSpacer} />
-        </View>
-        <InventoryScreen employeeId={employeeId} />
-      </View>
-    );
-  }
-
   // Show Profile screen
   return (
-    <ScrollView 
-      style={[styles.container, { paddingTop: 24 + insets.top }]}
-      contentContainerStyle={styles.scrollContent}
-      showsVerticalScrollIndicator={false}
-    >
+    <View style={[styles.container, { paddingTop: 24 + insets.top }]}>
       <StatusBar style="dark" />
-      <Text style={styles.title}>Profile</Text>
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: 24 + insets.bottom + 88 }]}
+        showsVerticalScrollIndicator={false}
+      >
+        <Text style={styles.title}>Profile</Text>
 
-      <View style={styles.card}>
-        <View style={styles.avatarRow}>
+        <View style={styles.header}>
           <View style={styles.avatarWrap}>
             <Image
               source={require('../assets/icon.png')}
@@ -112,40 +73,63 @@ export default function ProfileScreen({ onLogout, employeeId }) {
               resizeMode="cover"
             />
           </View>
-          <View>
+          <View style={styles.headerText}>
             <Text style={styles.nameText}>{profile.name || 'Employee'}</Text>
             <Text style={styles.employeeText}>{profile.employeeId || 'N/A'}</Text>
           </View>
         </View>
 
-        <View style={styles.infoRow}>
-          <Text style={styles.infoLabel}>Employee ID</Text>
-          <Text style={styles.infoValue}>{profile.employeeId || 'N/A'}</Text>
+        <View style={styles.list}>
+          <ListRow
+            icon="badge-account-horizontal-outline"
+            label="Employee ID"
+            value={profile.employeeId || 'N/A'}
+          />
+          <Divider />
+          <ListRow icon="account-outline" label="Name" value={profile.name || 'N/A'} />
+          <Divider />
+          <ListRow icon="phone-outline" label="Phone" value={profile.phone || 'N/A'} />
         </View>
-        <View style={styles.infoRow}>
-          <Text style={styles.infoLabel}>Name</Text>
-          <Text style={styles.infoValue}>{profile.name || 'N/A'}</Text>
-        </View>
-        <View style={styles.infoRow}>
-          <Text style={styles.infoLabel}>Phone Number</Text>
-          <Text style={styles.infoValue}>{profile.phone || 'N/A'}</Text>
+      </ScrollView>
+
+      <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 12) }]}>
+        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout} activeOpacity={0.85}>
+          <MaterialCommunityIcons name="logout" size={18} color="#DC2626" />
+          <Text style={styles.logoutText}>Logout</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+}
+
+function Divider() {
+  return <View style={styles.divider} />;
+}
+
+function ListRow({ icon, label, value, onPress, tone = 'default', showChevron = true }) {
+  const isDanger = tone === 'danger';
+  const Container = onPress ? TouchableOpacity : View;
+  return (
+    <Container
+      onPress={onPress}
+      activeOpacity={0.8}
+      style={[styles.row, isDanger && styles.rowDanger]}
+    >
+      <View style={styles.rowLeft}>
+        <MaterialCommunityIcons
+          name={icon}
+          size={22}
+          color={isDanger ? '#DC2626' : '#111827'}
+        />
+        <View style={styles.rowText}>
+          <Text style={[styles.rowLabel, isDanger && styles.rowLabelDanger]}>{label}</Text>
+          {value ? <Text style={styles.rowValue}>{value}</Text> : null}
         </View>
       </View>
-
-      <TouchableOpacity style={styles.earningsButton} onPress={() => setActiveView('earnings')}>
-        <MaterialCommunityIcons name="cash-multiple" size={20} color="#FFFFFF" />
-        <Text style={styles.earningsText}>Earnings</Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity style={styles.inventoryButton} onPress={() => setActiveView('inventory')}>
-        <MaterialCommunityIcons name="package-variant-closed" size={20} color="#FFFFFF" />
-        <Text style={styles.inventoryText}>Inventory</Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-        <Text style={styles.logoutText}>Logout</Text>
-      </TouchableOpacity>
-    </ScrollView>
+      {showChevron ? (
+        <MaterialCommunityIcons name="chevron-right" size={22} color="#9CA3AF" />
+      ) : null}
+    </Container>
   );
 }
 
@@ -155,31 +139,11 @@ const styles = StyleSheet.create({
     backgroundColor: '#F5F6F8',
     paddingHorizontal: 20,
   },
+  scroll: {
+    flex: 1,
+  },
   scrollContent: {
-    paddingBottom: 24,
-  },
-  headerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 16,
-  },
-  backButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    backgroundColor: '#EEF2FF',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 10,
-  },
-  backText: {
-    color: '#2F5CF4',
-    fontWeight: '700',
-    fontSize: 12,
-  },
-  headerSpacer: {
-    width: 60,
+    flexGrow: 1,
   },
   title: {
     fontSize: 24,
@@ -187,18 +151,14 @@ const styles = StyleSheet.create({
     color: '#1A1A1A',
     marginBottom: 16,
   },
-  card: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    padding: 16,
-  },
-  avatarRow: {
+  header: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 16,
-    gap: 12,
+    gap: 14,
+    marginBottom: 18,
+  },
+  headerText: {
+    flex: 1,
   },
   avatarWrap: {
     width: 64,
@@ -224,64 +184,69 @@ const styles = StyleSheet.create({
     color: '#6B7280',
     marginTop: 4,
   },
-  infoRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingVertical: 10,
-    borderTopWidth: 1,
-    borderTopColor: '#E2E8F0',
+  list: {
+    marginTop: 12,
   },
-  infoLabel: {
-    fontSize: 13,
+  divider: {
+    height: 1,
+    backgroundColor: '#E5E7EB',
+    marginLeft: 54,
+  },
+  row: {
+    paddingHorizontal: 14,
+    paddingVertical: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#FFFFFF',
+  },
+  rowDanger: {
+    paddingVertical: 16,
+  },
+  rowLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    flex: 1,
+  },
+  rowText: {
+    flex: 1,
+  },
+  rowLabel: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#111827',
+  },
+  rowLabelDanger: {
+    color: '#DC2626',
+  },
+  rowValue: {
+    marginTop: 2,
+    fontSize: 12,
     color: '#6B7280',
     fontWeight: '600',
   },
-  infoValue: {
-    fontSize: 13,
-    color: '#111827',
-    fontWeight: '600',
-  },
-  earningsButton: {
-    marginTop: 24,
-    backgroundColor: '#22C55E',
-    borderRadius: 12,
-    paddingVertical: 14,
-    flexDirection: 'row',
+  footer: {
+    paddingTop: 10,
+    backgroundColor: '#F5F6F8',
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-  },
-  earningsText: {
-    color: '#FFFFFF',
-    fontWeight: '700',
-    fontSize: 14,
-  },
-  inventoryButton: {
-    marginTop: 12,
-    backgroundColor: '#2F8CF4',
-    borderRadius: 12,
-    paddingVertical: 14,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-  },
-  inventoryText: {
-    color: '#FFFFFF',
-    fontWeight: '700',
-    fontSize: 14,
   },
   logoutButton: {
-    marginTop: 12,
-    backgroundColor: '#EF4444',
-    borderRadius: 12,
-    paddingVertical: 14,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 999,
+    paddingVertical: 10,
+    paddingHorizontal: 18,
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(220, 38, 38, 0.25)',
   },
   logoutText: {
-    color: '#FFFFFF',
-    fontWeight: '700',
-    fontSize: 14,
+    color: '#DC2626',
+    fontWeight: '800',
+    fontSize: 13,
   },
   loadingContainer: {
     justifyContent: 'center',

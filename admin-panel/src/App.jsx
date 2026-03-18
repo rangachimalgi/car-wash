@@ -125,6 +125,7 @@ function App() {
   const [inventoryMessage, setInventoryMessage] = useState({ type: '', text: '' })
   const [stockUpdateModal, setStockUpdateModal] = useState({ open: false, item: null, quantity: '', operation: 'add' })
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [navOpen, setNavOpen] = useState({ customer: true, employees: true })
 
   // Media (testimonials, transformations, see the difference)
   const [mediaList, setMediaList] = useState([])
@@ -1764,17 +1765,142 @@ function App() {
     }
   }
 
-  const navItems = [
-    { id: 'services', label: 'Services', icon: '🚗' },
-    { id: 'addons', label: 'Add-Ons', icon: '➕' },
-    { id: 'coverage', label: 'Coverage', icon: '📋' },
-    { id: 'slots', label: 'Time Slots', icon: '⏰' },
-    { id: 'orders', label: 'Orders', icon: '📦' },
-    { id: 'reviews', label: 'Reviews', icon: '⭐' },
-    { id: 'media', label: 'Media', icon: '🎬' },
-    { id: 'employees', label: 'Employees', icon: '👤' },
-    { id: 'attendance', label: 'Attendance', icon: '👥' },
-    { id: 'inventory', label: 'Inventory', icon: '📦', badge: inventory.filter(item => item.isLowStock).length },
+  const inventoryLowStockCount = inventory.filter(item => item.isLowStock).length
+
+  const iconStroke = 'currentColor'
+  const Icon = ({ name }) => {
+    const common = {
+      width: 18,
+      height: 18,
+      viewBox: '0 0 24 24',
+      fill: 'none',
+      xmlns: 'http://www.w3.org/2000/svg',
+    }
+
+    switch (name) {
+      case 'chevronDown':
+        return (
+          <svg {...common}>
+            <path d="M6 9l6 6 6-6" stroke={iconStroke} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        )
+      case 'customer':
+        return (
+          <svg {...common}>
+            <path d="M4 6h16M4 12h10M4 18h16" stroke={iconStroke} strokeWidth="2" strokeLinecap="round" />
+          </svg>
+        )
+      case 'services':
+        return (
+          <svg {...common}>
+            <path d="M4 7h16M7 7v10M17 7v10M6 17h12" stroke={iconStroke} strokeWidth="2" strokeLinecap="round" />
+          </svg>
+        )
+      case 'addons':
+        return (
+          <svg {...common}>
+            <path d="M12 5v14M5 12h14" stroke={iconStroke} strokeWidth="2" strokeLinecap="round" />
+          </svg>
+        )
+      case 'coverage':
+        return (
+          <svg {...common}>
+            <path d="M12 3l8 4v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V7l8-4z" stroke={iconStroke} strokeWidth="2" strokeLinejoin="round" />
+          </svg>
+        )
+      case 'slots':
+        return (
+          <svg {...common}>
+            <path d="M8 3v3M16 3v3M4.5 8h15" stroke={iconStroke} strokeWidth="2" strokeLinecap="round" />
+            <path d="M6 6h12a2 2 0 012 2v12a2 2 0 01-2 2H6a2 2 0 01-2-2V8a2 2 0 012-2z" stroke={iconStroke} strokeWidth="2" strokeLinejoin="round" />
+          </svg>
+        )
+      case 'orders':
+        return (
+          <svg {...common}>
+            <path d="M6 7h12l-1 14H7L6 7z" stroke={iconStroke} strokeWidth="2" strokeLinejoin="round" />
+            <path d="M9 7a3 3 0 016 0" stroke={iconStroke} strokeWidth="2" strokeLinecap="round" />
+          </svg>
+        )
+      case 'reviews':
+        return (
+          <svg {...common}>
+            <path d="M12 3l2.7 5.5 6.1.9-4.4 4.3 1 6.1L12 17.8 6.6 20.8l1-6.1-4.4-4.3 6.1-.9L12 3z" stroke={iconStroke} strokeWidth="2" strokeLinejoin="round" />
+          </svg>
+        )
+      case 'media':
+        return (
+          <svg {...common}>
+            <path d="M4 7a2 2 0 012-2h12a2 2 0 012 2v10a2 2 0 01-2 2H6a2 2 0 01-2-2V7z" stroke={iconStroke} strokeWidth="2" />
+            <path d="M10 9l6 3-6 3V9z" stroke={iconStroke} strokeWidth="2" strokeLinejoin="round" />
+          </svg>
+        )
+      case 'employeesGroup':
+        return (
+          <svg {...common}>
+            <path d="M16 11a4 4 0 10-8 0 4 4 0 008 0z" stroke={iconStroke} strokeWidth="2" />
+            <path d="M4 21a8 8 0 0116 0" stroke={iconStroke} strokeWidth="2" strokeLinecap="round" />
+          </svg>
+        )
+      case 'employees':
+        return (
+          <svg {...common}>
+            <path d="M16 8a4 4 0 10-8 0 4 4 0 008 0z" stroke={iconStroke} strokeWidth="2" />
+            <path d="M6 21a6 6 0 0112 0" stroke={iconStroke} strokeWidth="2" strokeLinecap="round" />
+          </svg>
+        )
+      case 'attendance':
+        return (
+          <svg {...common}>
+            <path d="M8 3v3M16 3v3M4.5 8h15" stroke={iconStroke} strokeWidth="2" strokeLinecap="round" />
+            <path d="M6 6h12a2 2 0 012 2v12a2 2 0 01-2 2H6a2 2 0 01-2-2V8a2 2 0 012-2z" stroke={iconStroke} strokeWidth="2" strokeLinejoin="round" />
+            <path d="M8 13l2 2 4-4" stroke={iconStroke} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        )
+      case 'inventory':
+        return (
+          <svg {...common}>
+            <path d="M4 7l8-4 8 4-8 4-8-4z" stroke={iconStroke} strokeWidth="2" strokeLinejoin="round" />
+            <path d="M4 7v10l8 4 8-4V7" stroke={iconStroke} strokeWidth="2" strokeLinejoin="round" />
+            <path d="M12 11v10" stroke={iconStroke} strokeWidth="2" strokeLinecap="round" />
+          </svg>
+        )
+      default:
+        return (
+          <svg {...common}>
+            <path d="M12 2v20M2 12h20" stroke={iconStroke} strokeWidth="2" strokeLinecap="round" />
+          </svg>
+        )
+    }
+  }
+
+  const navStructure = [
+    {
+      type: 'group',
+      id: 'customer',
+      label: 'Customer app',
+      icon: 'customer',
+      items: [
+        { id: 'services', label: 'Services', icon: 'services' },
+        { id: 'addons', label: 'Add ons', icon: 'addons' },
+        { id: 'coverage', label: 'Coverage', icon: 'coverage' },
+        { id: 'slots', label: 'Time slots', icon: 'slots' },
+      ],
+    },
+    { type: 'item', id: 'orders', label: 'Orders', icon: 'orders' },
+    { type: 'item', id: 'reviews', label: 'Reviews', icon: 'reviews' },
+    { type: 'item', id: 'media', label: 'Media', icon: 'media' },
+    {
+      type: 'group',
+      id: 'employees',
+      label: 'Employees',
+      icon: 'employeesGroup',
+      items: [
+        { id: 'employees', label: 'Employee', icon: 'employees' },
+        { id: 'attendance', label: 'Attendance', icon: 'attendance' },
+        { id: 'inventory', label: 'Inventory', icon: 'inventory', badge: inventoryLowStockCount },
+      ],
+    },
   ]
 
   const pageTitles = {
@@ -1810,21 +1936,64 @@ function App() {
           </div>
         </div>
         <nav className="sidebar-nav">
-          {navItems.map(({ id, label, icon, badge }) => (
-            <button
-              key={id}
-              type="button"
-              className={`nav-item ${activeTab === id ? 'active' : ''}`}
-              onClick={() => {
-                setActiveTab(id)
-                setSidebarOpen(false)
-              }}
-            >
-              <span className="nav-icon">{icon}</span>
-              <span className="nav-label">{label}</span>
-              {badge > 0 && <span className="nav-badge">{badge}</span>}
-            </button>
-          ))}
+          {navStructure.map((node) => {
+            if (node.type === 'item') {
+              return (
+                <button
+                  key={node.id}
+                  type="button"
+                  className={`nav-item ${activeTab === node.id ? 'active' : ''}`}
+                  onClick={() => {
+                    setActiveTab(node.id)
+                    setSidebarOpen(false)
+                  }}
+                >
+                  <span className="nav-icon" aria-hidden="true">
+                    <Icon name={node.icon} />
+                  </span>
+                  <span className="nav-label">{node.label}</span>
+                </button>
+              )
+            }
+
+            const open = !!navOpen[node.id]
+            return (
+              <div key={node.id} className="nav-group">
+                <button
+                  type="button"
+                  className={`nav-item nav-group-toggle ${open ? 'open' : ''}`}
+                  onClick={() => setNavOpen((s) => ({ ...s, [node.id]: !s[node.id] }))}
+                >
+                  <span className="nav-icon" aria-hidden="true">
+                    <Icon name={node.icon} />
+                  </span>
+                  <span className="nav-label">{node.label}</span>
+                  <span className="nav-chevron" aria-hidden="true">
+                    <Icon name="chevronDown" />
+                  </span>
+                </button>
+                <div className={`nav-group-items ${open ? 'open' : ''}`}>
+                  {node.items.map((item) => (
+                    <button
+                      key={item.id}
+                      type="button"
+                      className={`nav-item nav-subitem ${activeTab === item.id ? 'active' : ''}`}
+                      onClick={() => {
+                        setActiveTab(item.id)
+                        setSidebarOpen(false)
+                      }}
+                    >
+                      <span className="nav-icon" aria-hidden="true">
+                        <Icon name={item.icon} />
+                      </span>
+                      <span className="nav-label">{item.label}</span>
+                      {item.badge > 0 && <span className="nav-badge">{item.badge}</span>}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )
+          })}
         </nav>
         <div className="sidebar-footer">
           <details className="auth-details">

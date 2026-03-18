@@ -3,9 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useJobNotifications } from '../context/JobNotificationsContext';
-import AttendanceScreen from '../screens/AttendanceScreen';
-import JobQueueScreen from '../screens/JobQueueScreen';
+import HomeScreen from '../screens/HomeScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 
 const Tab = createBottomTabNavigator();
@@ -18,7 +16,7 @@ const theme = {
   cardBorder: '#E2E8F0',
 };
 
-function SimpleTabBar({ state, descriptors, navigation, incomingJobCount = 0 }) {
+function SimpleTabBar({ state, descriptors, navigation }) {
   const insets = useSafeAreaInsets();
   const styles = useMemo(() => createStyles(theme), []);
 
@@ -27,7 +25,6 @@ function SimpleTabBar({ state, descriptors, navigation, incomingJobCount = 0 }) 
       {state.routes.map((route, index) => {
         const focused = state.index === index;
         const label = descriptors[route.key]?.options?.tabBarLabel ?? route.name;
-        const showBadge = route.name === 'Jobs' && incomingJobCount > 0;
 
         const onPress = () => {
           const event = navigation.emit({
@@ -42,8 +39,7 @@ function SimpleTabBar({ state, descriptors, navigation, incomingJobCount = 0 }) 
         };
 
         const iconName = {
-          Attendance: focused ? 'calendar-check' : 'calendar-check-outline',
-          Jobs: focused ? 'clipboard-list' : 'clipboard-list-outline',
+          Home: focused ? 'home' : 'home-outline',
           Profile: focused ? 'account' : 'account-outline',
         }[route.name] || 'circle-outline';
 
@@ -60,13 +56,6 @@ function SimpleTabBar({ state, descriptors, navigation, incomingJobCount = 0 }) 
                 size={24}
                 color={focused ? theme.textPrimary : theme.textSecondary}
               />
-              {showBadge && (
-                <View style={styles.badge}>
-                  <Text style={styles.badgeText}>
-                    {incomingJobCount > 99 ? '99+' : incomingJobCount}
-                  </Text>
-                </View>
-              )}
             </View>
             <Text style={[styles.tabLabel, focused && styles.tabLabelActive]} numberOfLines={1}>
               {label}
@@ -80,7 +69,6 @@ function SimpleTabBar({ state, descriptors, navigation, incomingJobCount = 0 }) 
 
 export default function MainTabs({ onLogout, employeeId, navigation }) {
   const insets = useSafeAreaInsets();
-  const { incomingCount } = useJobNotifications();
 
   return (
     <Tab.Navigator
@@ -101,38 +89,23 @@ export default function MainTabs({ onLogout, employeeId, navigation }) {
         tabBarActiveTintColor: theme.textPrimary,
         tabBarInactiveTintColor: theme.textSecondary,
       }}
-      tabBar={(props) => <SimpleTabBar {...props} incomingJobCount={incomingCount} />}
+      tabBar={(props) => <SimpleTabBar {...props} />}
     >
-      <Tab.Screen 
-        name="Attendance" 
-        component={AttendanceScreen}
+      <Tab.Screen
+        name="Home"
         options={{
-          title: 'Attendance',
-          tabBarLabel: 'Attendance',
+          title: 'Home',
+          tabBarLabel: 'Home',
           tabBarIcon: ({ color, focused }) => (
-            <MaterialCommunityIcons 
-              name={focused ? 'calendar-check' : 'calendar-check-outline'} 
-              color={color} 
-              size={24} 
-            />
-          ),
-        }}
-      />
-      <Tab.Screen 
-        name="Jobs" 
-        options={{
-          title: 'Jobs',
-          tabBarLabel: 'Jobs',
-          tabBarIcon: ({ color, focused }) => (
-            <MaterialCommunityIcons 
-              name={focused ? 'clipboard-list' : 'clipboard-list-outline'} 
-              color={color} 
-              size={24} 
+            <MaterialCommunityIcons
+              name={focused ? 'home' : 'home-outline'}
+              color={color}
+              size={24}
             />
           ),
         }}
       >
-        {(props) => <JobQueueScreen {...props} employeeId={employeeId} navigation={navigation} />}
+        {(props) => <HomeScreen {...props} employeeId={employeeId} />}
       </Tab.Screen>
       <Tab.Screen 
         name="Profile" 
@@ -167,23 +140,6 @@ const createStyles = (theme) => StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 4,
-  },
-  badge: {
-    position: 'absolute',
-    top: -6,
-    right: -10,
-    minWidth: 18,
-    height: 18,
-    borderRadius: 9,
-    backgroundColor: '#DC2626',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 4,
-  },
-  badgeText: {
-    color: '#FFFFFF',
-    fontSize: 10,
-    fontWeight: '800',
   },
   tabLabel: {
     fontSize: 12,

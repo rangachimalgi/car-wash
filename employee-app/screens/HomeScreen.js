@@ -1,75 +1,11 @@
-import React, { useEffect, useState, useCallback } from 'react';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View, ActivityIndicator } from 'react-native';
+import React from 'react';
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import api from '../services/api';
-import { getTodayAttendance } from '../services/attendanceApi';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 
-export default function HomeScreen({ onOpenAttendance, employeeId }) {
+export default function HomeScreen({ navigation }) {
   const insets = useSafeAreaInsets();
-  const [incomingJob, setIncomingJob] = useState(null);
-  const [loadingJob, setLoadingJob] = useState(false);
-  const [todayAttendance, setTodayAttendance] = useState(null);
-  const [loadingAttendance, setLoadingAttendance] = useState(true);
-
-  const fetchTodayAttendance = useCallback(async () => {
-    try {
-      setLoadingAttendance(true);
-      const response = await getTodayAttendance();
-      if (response.success) {
-        setTodayAttendance(response.data);
-      }
-    } catch (error) {
-      console.error('Error fetching today attendance:', error);
-      setTodayAttendance(null);
-    } finally {
-      setLoadingAttendance(false);
-    }
-  }, []);
-
-  const fetchIncomingJob = async () => {
-    if (!employeeId) return;
-    setLoadingJob(true);
-    try {
-      const response = await api.get(`/jobs/incoming?employeeId=${employeeId}`);
-      const data = response.data;
-      const first = data?.data?.[0];
-      if (!first) {
-        setIncomingJob(null);
-      } else {
-        const firstItem = first.items?.[0];
-        setIncomingJob({
-          id: first._id,
-          service: firstItem?.service?.name || 'Service',
-          customer: first.customer?.name || 'Customer',
-          time: firstItem?.scheduledTimeSlot || 'Time slot',
-        });
-      }
-    } catch (error) {
-      console.error('Error fetching incoming job:', error);
-      setIncomingJob(null);
-    } finally {
-      setLoadingJob(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchTodayAttendance();
-    fetchIncomingJob();
-  }, [employeeId, fetchTodayAttendance]);
-
-  // Format time from ISO string
-  const formatTime = (isoString) => {
-    if (!isoString) return '—';
-    const date = new Date(isoString);
-    return date.toLocaleTimeString('en-IN', {
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  };
-
-  const attendanceStatus = todayAttendance?.checkIn ? 'Marked' : 'Not marked';
-  const attendanceTime = todayAttendance?.checkIn ? formatTime(todayAttendance.checkIn) : '—';
 
   return (
     <ScrollView
@@ -78,170 +14,135 @@ export default function HomeScreen({ onOpenAttendance, employeeId }) {
       showsVerticalScrollIndicator={false}
     >
       <StatusBar style="dark" />
-      <Text style={styles.title}>Employee Home</Text>
+      <Text style={styles.kicker}>Dashboard</Text>
 
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Attendance</Text>
-        <View style={styles.card}>
-          {loadingAttendance ? (
-            <View style={styles.loadingContainer}>
-              <ActivityIndicator size="small" color="#2F8CF4" />
-              <Text style={styles.cardMeta}>Loading attendance...</Text>
-            </View>
-          ) : (
-            <>
-              <View style={styles.row}>
-                <Text style={styles.cardTitle}>Today</Text>
-                <Text style={[
-                  styles.badge,
-                  attendanceStatus === 'Marked' && styles.badgeMarked
-                ]}>
-                  {attendanceStatus}
-                </Text>
-              </View>
-              {todayAttendance?.checkIn ? (
-                <Text style={styles.cardMeta}>Marked at: {attendanceTime}</Text>
-              ) : (
-                <Text style={styles.cardMeta}>Not marked yet</Text>
-              )}
-              {!todayAttendance?.checkIn && (
-                <TouchableOpacity 
-                  style={styles.primaryButton} 
-                  onPress={() => {
-                    onOpenAttendance();
-                    // Refresh attendance after opening attendance screen
-                    setTimeout(() => {
-                      fetchTodayAttendance();
-                    }, 1000);
-                  }}
-                >
-                  <Text style={styles.primaryButtonText}>Mark Attendance</Text>
-                </TouchableOpacity>
-              )}
-            </>
-          )}
-        </View>
-      </View>
-
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>New Job</Text>
-        {incomingJob ? (
-          <View style={styles.card}>
-            <Text style={styles.cardTitle}>{incomingJob.service}</Text>
-            <Text style={styles.cardMeta}>{incomingJob.customer}</Text>
-            <Text style={styles.cardMeta}>{incomingJob.time}</Text>
-            <View style={styles.row}>
-              <Text style={styles.cardHint}>Job ID {incomingJob.id}</Text>
-              <TouchableOpacity style={styles.secondaryButton}>
-                <Text style={styles.secondaryButtonText}>View Job</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        ) : (
-          <View style={styles.card}>
-            <Text style={styles.cardMeta}>
-              {loadingJob ? 'Loading jobs...' : 'No new jobs right now.'}
-            </Text>
-            <TouchableOpacity style={styles.secondaryButton} onPress={fetchIncomingJob}>
-              <Text style={styles.secondaryButtonText}>Refresh</Text>
-            </TouchableOpacity>
-          </View>
-        )}
+      <View style={styles.tilesGrid}>
+        <Tile
+          title="Earnings"
+          subtitle="View history"
+          icon="cash-multiple"
+          onPress={() => navigation.navigate('Earnings')}
+        />
+        <Tile
+          title="Inventory"
+          subtitle="Stock & items"
+          icon="package-variant-closed"
+          onPress={() => navigation.navigate('Inventory')}
+        />
+        <Tile
+          title="Attendance"
+          subtitle="Check-in/out"
+          icon="calendar-check"
+          onPress={() => navigation.navigate('Attendance')}
+        />
+        <Tile
+          title="Jobs"
+          subtitle="Queue"
+          icon="clipboard-list"
+          onPress={() => navigation.navigate('Jobs')}
+        />
       </View>
     </ScrollView>
+  );
+}
+
+function Tile({ title, subtitle, icon, onPress }) {
+  return (
+    <TouchableOpacity style={styles.tile} onPress={onPress} activeOpacity={0.88}>
+      <View style={styles.tileTopRow}>
+        <View style={styles.tileIconWrap}>
+          <MaterialCommunityIcons name={icon} size={24} color="#2F5CF4" />
+        </View>
+        <View style={styles.tileChevronWrap}>
+          <MaterialCommunityIcons name="chevron-right" size={20} color="#9CA3AF" />
+        </View>
+      </View>
+      <Text style={styles.tileTitle}>{title}</Text>
+      <Text style={styles.tileSubtitle} numberOfLines={1}>
+        {subtitle}
+      </Text>
+      <View style={styles.tileAccent} />
+    </TouchableOpacity>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F5F6F8',
+    backgroundColor: '#F6F7FB',
   },
   content: {
     paddingHorizontal: 20,
     paddingBottom: 24,
   },
-  title: {
-    fontSize: 28,
-    fontWeight: '700',
-    color: '#1A1A1A',
-    marginBottom: 8,
-  },
-  section: {
-    marginTop: 20,
-  },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#1A1A1A',
-    marginBottom: 10,
-  },
-  card: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    padding: 16,
-  },
-  row: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  cardTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#1A1A1A',
-  },
-  cardMeta: {
-    fontSize: 13,
+  kicker: {
+    fontSize: 12,
+    fontWeight: '800',
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
     color: '#6B7280',
     marginBottom: 6,
   },
-  cardHint: {
+  tilesGrid: {
+    marginTop: 12,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+    justifyContent: 'center',
+  },
+  tile: {
+    width: '48%',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: 'rgba(226, 232, 240, 0.9)',
+    padding: 16,
+    minHeight: 140,
+    shadowColor: '#0B1220',
+    shadowOpacity: 0.08,
+    shadowRadius: 14,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 3,
+    overflow: 'hidden',
+  },
+  tileTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 10,
+  },
+  tileIconWrap: {
+    width: 42,
+    height: 42,
+    borderRadius: 14,
+    backgroundColor: 'rgba(47, 92, 244, 0.10)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  tileChevronWrap: {
+    width: 28,
+    height: 28,
+    borderRadius: 10,
+    backgroundColor: '#F3F4F6',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  tileTitle: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: '#1A1A1A',
+    marginBottom: 4,
+  },
+  tileSubtitle: {
     fontSize: 12,
     color: '#6B7280',
   },
-  badge: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#B45309',
-    backgroundColor: '#FEF3C7',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
-  },
-  badgeMarked: {
-    color: '#15803D',
-    backgroundColor: '#DCFCE7',
-  },
-  loadingContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  primaryButton: {
-    marginTop: 8,
-    backgroundColor: '#2F8CF4',
-    borderRadius: 12,
-    paddingVertical: 12,
-    alignItems: 'center',
-  },
-  primaryButtonText: {
-    color: '#FFFFFF',
-    fontWeight: '700',
-    fontSize: 13,
-  },
-  secondaryButton: {
-    backgroundColor: '#EEF2FF',
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-  },
-  secondaryButtonText: {
-    color: '#2F5CF4',
-    fontWeight: '700',
-    fontSize: 12,
+  tileAccent: {
+    position: 'absolute',
+    left: 0,
+    bottom: 0,
+    height: 4,
+    width: '100%',
+    backgroundColor: 'rgba(47, 92, 244, 0.18)',
   },
 });
