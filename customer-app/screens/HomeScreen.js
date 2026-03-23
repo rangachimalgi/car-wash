@@ -209,24 +209,40 @@ export default function HomeScreen({ navigation }) {
             </TouchableOpacity>
           </View>
 
-          {/* Below: Bike/Scooter Wash full-width card */}
-          <TouchableOpacity
-            style={styles.wideBikeCard}
-            onPress={() => navigation.navigate('BikeWash')}
-            activeOpacity={0.9}
-          >
-            <View style={styles.wideBikeImageWrap}>
-              <Image
-                source={require('../assets/carpiceight.png')}
-                style={styles.wideBikeImage}
-                resizeMode="contain"
-              />
-            </View>
-            <View style={styles.wideBikeTextWrap}>
-              <Text style={styles.wideBikeTitle}>Bike Wash & Care</Text>
-              <Text style={styles.wideBikeSubtitle}>Bike / Scooter Wash</Text>
-            </View>
-          </TouchableOpacity>
+          {/* Below: Bike + Auto cards */}
+          <View style={styles.bottomServicesRow}>
+            <TouchableOpacity
+              style={styles.halfCard}
+              onPress={() => navigation.navigate('BikeWash')}
+              activeOpacity={0.9}
+            >
+              <Text style={styles.halfCardTitle}>Bike Wash</Text>
+              <Text style={styles.halfCardTitle}>& Care</Text>
+              <View style={styles.halfCardImageWrap}>
+                <Image
+                  source={require('../assets/carpiceight.png')}
+                  style={styles.halfCardImage}
+                  resizeMode="contain"
+                />
+              </View>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.halfCard}
+              onPress={() => navigation.navigate('CarWash')}
+              activeOpacity={0.9}
+            >
+              <Text style={styles.halfCardTitle}>Auto Wash</Text>
+              <Text style={styles.halfCardTitle}>& Care</Text>
+              <View style={styles.halfCardImageWrap}>
+                <Image
+                  source={require('../assets/carpicseven.png')}
+                  style={styles.halfCardImage}
+                  resizeMode="contain"
+                />
+              </View>
+            </TouchableOpacity>
+          </View>
         </View>
 
         {/* Why Choose Woosh Section */}
@@ -348,6 +364,11 @@ const createStyles = theme => StyleSheet.create({
     flexDirection: 'row',
     gap: 14,
     marginTop: 2,
+  },
+  bottomServicesRow: {
+    flexDirection: 'row',
+    gap: 14,
+    marginTop: 14,
   },
   sectionHeader: {
     flexDirection: 'row',
