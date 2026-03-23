@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTheme } from '../theme/ThemeContext';
 
-export default function UpcomingWashCard({ wash, onPress, onViewLocation }) {
+export default function UpcomingWashCard({ wash, onPress, onViewLocation, onPayNow }) {
   const { theme } = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
   const statusLabel = wash.status === 'In Progress' ? 'Ongoing' : (wash.status || 'Upcoming');
@@ -67,18 +67,32 @@ export default function UpcomingWashCard({ wash, onPress, onViewLocation }) {
               <Text style={styles.priceLabel}>Total</Text>
               <Text style={styles.priceText}>{wash.price}</Text>
             </View>
-            {wash.status === 'In Progress' && (
-              <TouchableOpacity
-                style={styles.viewLocationButton}
-                onPress={(e) => {
-                  e.stopPropagation();
-                  onViewLocation?.(wash);
-                }}
-              >
-                <MaterialCommunityIcons name="map-marker" size={18} color="#87CEEB" />
-                <Text style={styles.viewLocationText}>View Location</Text>
-              </TouchableOpacity>
-            )}
+            <View style={styles.actionsRow}>
+              {wash.status === 'Pending' && (
+                <TouchableOpacity
+                  style={styles.payNowButton}
+                  onPress={(e) => {
+                    e.stopPropagation();
+                    onPayNow?.(wash);
+                  }}
+                >
+                  <MaterialCommunityIcons name="credit-card-outline" size={16} color="#FFFFFF" />
+                  <Text style={styles.payNowText}>Pay Now</Text>
+                </TouchableOpacity>
+              )}
+              {wash.status === 'In Progress' && (
+                <TouchableOpacity
+                  style={styles.viewLocationButton}
+                  onPress={(e) => {
+                    e.stopPropagation();
+                    onViewLocation?.(wash);
+                  }}
+                >
+                  <MaterialCommunityIcons name="map-marker" size={18} color="#87CEEB" />
+                  <Text style={styles.viewLocationText}>View Location</Text>
+                </TouchableOpacity>
+              )}
+            </View>
           </View>
         </View>
       </View>
@@ -248,5 +262,24 @@ const createStyles = theme => StyleSheet.create({
     fontSize: 13,
     fontWeight: '600',
     color: '#87CEEB',
+  },
+  actionsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  payNowButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#111111',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    gap: 6,
+  },
+  payNowText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#FFFFFF',
   },
 });

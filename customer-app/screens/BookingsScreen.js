@@ -129,6 +129,14 @@ export default function BookingsScreen({ navigation }) {
     setRatingOrder({ id: service.id, serviceName: service.serviceName });
   };
 
+  const handlePayNow = (wash) => {
+    navigation.navigate('PaymentMethods', {
+      orderId: wash.id,
+      amount: wash.price,
+      serviceName: wash.serviceName,
+    });
+  };
+
   const handleRatingSubmit = async (payload) => {
     if (!ratingOrder?.id) return;
     try {
@@ -180,6 +188,7 @@ export default function BookingsScreen({ navigation }) {
                 key={wash.id} 
                 wash={wash}
                 onViewLocation={handleViewLocation}
+                onPayNow={handlePayNow}
                 onPress={() => {
                   // Handle card press if needed
                   console.log('View wash:', wash);

@@ -20,6 +20,7 @@ import EmployeeLiveLocationScreen from '../screens/EmployeeLiveLocationScreen';
 import VehicleDetailsScreen from '../screens/VehicleDetailsScreen';
 import BrandsScreen from '../screens/BrandsScreen';
 import ModelSelectionScreen from '../screens/ModelSelectionScreen';
+import PaymentMethodsScreen from '../screens/PaymentMethodsScreen';
 
 const Stack = createStackNavigator();
 
@@ -149,6 +150,11 @@ export default function HeaderNavigator() {
       <Stack.Screen
         name="ModelSelection"
         component={ModelSelectionScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="PaymentMethods"
+        component={PaymentMethodsScreen}
         options={{ headerShown: false }}
       />
     </Stack.Navigator>
