@@ -67,7 +67,7 @@ function App() {
   const [reviews, setReviews] = useState([])
   const [loadingReviews, setLoadingReviews] = useState(false)
   const [allServices, setAllServices] = useState([])
-  const [serviceFilter, setServiceFilter] = useState('all') // 'all', 'car', 'bike'
+  const [serviceFilter, setServiceFilter] = useState('car') // 'all', 'car', 'bike'
   const [serviceSearch, setServiceSearch] = useState('') // Search query
   const [editingServiceId, setEditingServiceId] = useState(null) // Track which service is being edited
   const [servicesError, setServicesError] = useState('')
@@ -275,6 +275,12 @@ function App() {
       fetchMedia()
     }
   }, [activeTab])
+
+  useEffect(() => {
+    if (activeTab === 'services' && serviceFilter === 'all') {
+      setServiceFilter('car')
+    }
+  }, [activeTab, serviceFilter])
 
   const fetchAddOns = async () => {
     setLoadingAddOns(true)
@@ -2032,23 +2038,29 @@ function App() {
             {/* Services List Section */}
             <div className="services-section">
               <div className="section-header">
-                <h2 className="section-title">Services</h2>
-                <button
-                  type="button"
-                  className="refresh-button"
-                  onClick={fetchAllServices}
-                  disabled={loadingAllServices}
-                  title="Refresh services list"
-                >
-                  <span className="refresh-icon">↻</span>
-                  {loadingAllServices ? 'Loading...' : 'Refresh'}
-                </button>
               </div>
 
               {/* Search and Filters */}
               <div className="services-controls">
                 <div className="search-box">
-                  <span className="search-icon">🔍</span>
+                  <span className="search-icon" aria-hidden="true">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path
+                        d="M10.5 18a7.5 7.5 0 1 1 0-15 7.5 7.5 0 0 1 0 15Z"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                      <path
+                        d="M16.5 16.5 21 21"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
+                  </span>
                   <input
                     type="text"
                     placeholder="Search services by name or description..."
@@ -2070,24 +2082,17 @@ function App() {
                 <div className="filter-tabs">
                   <button
                     type="button"
-                    className={`filter-tab ${serviceFilter === 'all' ? 'active' : ''}`}
-                    onClick={() => setServiceFilter('all')}
-                  >
-                    All ({allServices.length})
-                  </button>
-                  <button
-                    type="button"
                     className={`filter-tab ${serviceFilter === 'car' ? 'active' : ''}`}
                     onClick={() => setServiceFilter('car')}
                   >
-                    🚗 Car Wash ({allServices.filter(s => s.category === 'CarWash').length})
+                    Car wash ({allServices.filter(s => s.category === 'CarWash').length})
                   </button>
                   <button
                     type="button"
                     className={`filter-tab ${serviceFilter === 'bike' ? 'active' : ''}`}
                     onClick={() => setServiceFilter('bike')}
                   >
-                    🏍️ Bike Wash ({allServices.filter(s => s.category === 'BikeWash').length})
+                    Bike wash ({allServices.filter(s => s.category === 'BikeWash').length})
                   </button>
                 </div>
               </div>
@@ -2121,90 +2126,25 @@ function App() {
                 </div>
               ) : (
                 <>
-                  <div className="services-stats">
-                    Showing {filteredServices.length} of {allServices.length} services
-                  </div>
-                  <div className="services-grid">
+                  <div className="services-mini-grid">
                     {filteredServices.map(service => (
-                      <div key={service._id} className="service-card">
-                        {service.image && (
-                          <div className="service-card-image">
-                            <img src={service.image} alt={service.name} onError={(e) => { e.target.style.display = 'none' }} />
-                          </div>
-                        )}
-                        <div className="service-card-content">
-                          <div className="service-card-header">
-                            <div className="service-card-title-row">
-                              <span className="service-category-icon">
-                                {service.category === 'CarWash' ? '🚗' : '🏍️'}
-                              </span>
-                              <h3 className="service-card-title">{service.name}</h3>
-                            </div>
-                            <span className={`service-status ${service.isActive ? 'active' : 'inactive'}`}>
-                              {service.isActive ? '✓ Active' : '✗ Inactive'}
-                            </span>
-                          </div>
-                          
-                          {service.description && (
-                            <p className="service-card-description">
-                              {service.description.length > 100 
-                                ? `${service.description.substring(0, 100)}...` 
-                                : service.description}
-                            </p>
-                          )}
-                          
-                          <div className="service-card-details">
-                            <div className="service-detail">
-                              <span className="service-detail-icon">💰</span>
-                              <div>
-                                <span className="service-detail-label">Price</span>
-                                <span className="service-detail-value">₹{service.basePrice}</span>
-                              </div>
-                            </div>
-                            <div className="service-detail">
-                              <span className="service-detail-icon">⏱️</span>
-                              <div>
-                                <span className="service-detail-label">Duration</span>
-                                <span className="service-detail-value">{service.duration || 'N/A'}</span>
-                              </div>
-                            </div>
-                            {service.rating > 0 && (
-                              <div className="service-detail">
-                                <span className="service-detail-icon">⭐</span>
-                                <div>
-                                  <span className="service-detail-label">Rating</span>
-                                  <span className="service-detail-value">
-                                    {service.rating.toFixed(1)} ({service.totalReviews || 0} reviews)
-                                  </span>
-                                </div>
-                              </div>
-                            )}
-                          </div>
-
-                          {service.packages && (
-                            (service.packages.monthly?.length > 0 || 
-                             service.packages.quarterly?.length > 0 || 
-                             service.packages.yearly?.length > 0) && (
-                              <div className="service-packages-badge">
-                                📦 {[
-                                  service.packages.monthly?.length > 0 && `${service.packages.monthly.length} Monthly`,
-                                  service.packages.quarterly?.length > 0 && `${service.packages.quarterly.length} Quarterly`,
-                                  service.packages.yearly?.length > 0 && `${service.packages.yearly.length} Yearly`,
-                                ].filter(Boolean).join(' • ')}
-                              </div>
-                            )
-                          )}
-                          
-                          <div className="service-card-actions">
-                            <button
-                              type="button"
-                              className="edit-button"
-                              onClick={() => handleEditService(service._id)}
-                            >
-                              ✏️ Edit Service
-                            </button>
-                          </div>
+                      <div key={service._id} className="service-mini-card">
+                        <div className="service-mini-top">
+                          <h3 className="service-mini-name" title={service.name}>{service.name}</h3>
+                          <div className="service-mini-price">₹{service.basePrice}</div>
                         </div>
+                        {service.description ? (
+                          <p className="service-mini-desc" title={service.description}>
+                            {service.description}
+                          </p>
+                        ) : null}
+                        <button
+                          type="button"
+                          className="bw-button"
+                          onClick={() => handleEditService(service._id)}
+                        >
+                          Edit
+                        </button>
                       </div>
                     ))}
                   </div>
@@ -2213,11 +2153,11 @@ function App() {
             </div>
 
             {/* Create/Edit Service Form */}
-            <div className="form-section">
+            <div className="form-section form-section-flat">
               <div className="section-header">
                 <div>
                   <h2 className="section-title">
-                    {editingServiceId ? '✏️ Edit Service' : '➕ Create New Service'}
+                    {editingServiceId ? '✏️ Edit Service' : 'Create New Service'}
                   </h2>
                   {editingServiceId && (
                     <p style={{ margin: '0.25rem 0 0 0', fontSize: '0.85rem', color: '#64748b' }}>
@@ -2418,7 +2358,7 @@ function App() {
 
               {/* Add-Ons are auto-attached based on service category */}
               {(formData.category === 'CarWash' || formData.category === 'BikeWash') && (
-                <div className="form-group">
+                <div className="form-group auto-addons-section">
                   <label>Auto Add-Ons</label>
               {loadingAddOns ? (
                 <div className="loading-text">Loading add-ons...</div>
@@ -2454,7 +2394,11 @@ function App() {
               )}
 
                 <div className="form-actions">
-                  <button type="submit" className="submit-button" disabled={loading}>
+                  <button
+                    type="submit"
+                    className={`submit-button ${editingServiceId ? '' : 'submit-button-create'}`.trim()}
+                    disabled={loading}
+                  >
                     {loading ? (
                       <>
                         <span className="spinner-small"></span>
@@ -2462,7 +2406,7 @@ function App() {
                       </>
                     ) : (
                       <>
-                        {editingServiceId ? '💾 Update Service' : '✨ Create Service'}
+                        {editingServiceId ? 'Update Service' : 'Create Service'}
                       </>
                     )}
                   </button>

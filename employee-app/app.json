@@ -17,8 +17,12 @@
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "We use your location to share live service status with customers.",
         "NSLocationAlwaysAndWhenInUseUsageDescription": "We use your location to share live service status with customers.",
-        "UIBackgroundModes": ["location"]
-      }
+        "UIBackgroundModes": [
+          "location",
+          "location"
+        ]
+      },
+      "bundleIdentifier": "com.ranga-chimalgi.employeeapp"
     },
     "android": {
       "adaptiveIcon": {
