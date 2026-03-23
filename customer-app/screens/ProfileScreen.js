@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState, useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Switch, Share } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Switch, Share, Linking } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -11,6 +11,8 @@ import { getWallet, getReferralInfo } from '../services/walletApi';
 import { useTheme } from '../theme/ThemeContext';
 import { useFocusEffect } from '@react-navigation/native';
 import SavedVehiclesModal from '../components/SavedVehiclesModal';
+
+const SUPPORT_WHATSAPP_NUMBER = process.env.EXPO_PUBLIC_SUPPORT_WHATSAPP || '918744050709';
 
 export default function ProfileScreen({ navigation }) {
   const insets = useSafeAreaInsets();
@@ -131,6 +133,23 @@ export default function ProfileScreen({ navigation }) {
       refreshVehicle();
     }, [])
   );
+
+  const handleWhatsAppHelp = async () => {
+    const message = encodeURIComponent('Hi Woosh team, I need help with my booking.');
+    const appUrl = `whatsapp://send?phone=${SUPPORT_WHATSAPP_NUMBER}&text=${message}`;
+    const webUrl = `https://wa.me/${SUPPORT_WHATSAPP_NUMBER}?text=${message}`;
+
+    try {
+      const supported = await Linking.canOpenURL(appUrl);
+      if (supported) {
+        await Linking.openURL(appUrl);
+        return;
+      }
+      await Linking.openURL(webUrl);
+    } catch (error) {
+      Alert.alert('Unable to open WhatsApp', 'Please make sure WhatsApp is installed.');
+    }
+  };
 
 
   return (
@@ -389,6 +408,24 @@ export default function ProfileScreen({ navigation }) {
           </View>
         </View>
         */}
+
+        {/* Help & Support */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <MaterialCommunityIcons name="lifebuoy" size={24} color={theme.accent} />
+            <Text style={styles.sectionTitle}>Help &amp; Support</Text>
+          </View>
+          <TouchableOpacity style={styles.infoCard} activeOpacity={0.8} onPress={handleWhatsAppHelp}>
+            <View style={styles.infoContent}>
+              <MaterialCommunityIcons name="whatsapp" size={20} color="#25D366" />
+              <View style={styles.infoTextContainer}>
+                <Text style={styles.infoLabel}>Need help?</Text>
+                <Text style={styles.infoValue}>Chat with us on WhatsApp</Text>
+              </View>
+            </View>
+            <MaterialCommunityIcons name="chevron-right" size={24} color={theme.textSecondary} />
+          </TouchableOpacity>
+        </View>
 
         {/* Logout Button */}
         <View style={styles.logoutSection}>
