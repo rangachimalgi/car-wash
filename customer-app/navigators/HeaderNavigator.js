@@ -11,6 +11,7 @@ import ServiceDetailsScreen from '../screens/ServiceDetailsScreen';
 import CartScreen from '../screens/CartScreen';
 import SlotSelectionScreen from '../screens/SlotSelectionScreen';
 import CheckoutScreen from '../screens/CheckoutScreen';
+import BookingConfirmationScreen from '../screens/BookingConfirmationScreen';
 import LoginScreen from '../screens/LoginScreen';
 import RegisterScreen from '../screens/RegisterScreen';
 import WelcomeScreen from '../screens/WelcomeScreen';
@@ -118,6 +119,11 @@ export default function HeaderNavigator() {
       <Stack.Screen 
         name="Checkout" 
         component={CheckoutScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="BookingConfirmation"
+        component={BookingConfirmationScreen}
         options={{ headerShown: false }}
       />
       <Stack.Screen 

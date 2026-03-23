@@ -1,5 +1,5 @@
-import React, { useMemo, useState, useEffect, useCallback, useRef } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, TextInput, Dimensions, Alert, Animated } from 'react-native';
+import React, { useMemo, useState, useEffect, useCallback } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, TextInput, Dimensions, Alert } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import BackHeader from '../components/BackHeader';
@@ -9,7 +9,6 @@ import { getAddressKeys, getVehicleKeys } from '../services/addressStorage';
 import { getWallet } from '../services/walletApi';
 import { useTheme } from '../theme/ThemeContext';
 import { useFocusEffect } from '@react-navigation/native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const { width } = Dimensions.get('window');
 const LIGHT_BLUE = '#85E4FC';
@@ -33,8 +32,6 @@ export default function CheckoutScreen({ navigation, route }) {
   const [couponCode, setCouponCode] = useState('');
   const [appliedCoupon, setAppliedCoupon] = useState(null);
   const [discount, setDiscount] = useState(0);
-  const [showToast, setShowToast] = useState(false);
-  const [toastData, setToastData] = useState({ title: 'Booking confirmed', subtitle: 'Your service has been booked successfully.', orderId: '' });
   const [address, setAddress] = useState(null);
   const [vehicle, setVehicle] = useState(null);
   const [walletBalance, setWalletBalance] = useState(0);
@@ -42,20 +39,6 @@ export default function CheckoutScreen({ navigation, route }) {
   const [useWallet, setUseWallet] = useState(false);
   const { theme, isLightMode } = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
-  const insets = useSafeAreaInsets();
-  const toastAnim = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    if (!showToast) return;
-    toastAnim.setValue(0);
-    Animated.spring(toastAnim, {
-      toValue: 1,
-      useNativeDriver: true,
-      friction: 7,
-      tension: 90,
-    }).start();
-  }, [showToast, toastAnim]);
-
   // Load address and vehicle data
   const loadAddressAndVehicle = useCallback(async () => {
     try {
@@ -282,30 +265,12 @@ export default function CheckoutScreen({ navigation, route }) {
 
       await AsyncStorage.removeItem('cartItems');
 
-      // Show toast notification
       const orderId = response?.data?._id ? String(response.data._id) : '';
       const shortId = orderId ? orderId.slice(-6).toUpperCase() : '';
-      setToastData({
-        title: 'Booking confirmed',
-        subtitle: 'We’ll assign a professional.',
+      navigation.replace('BookingConfirmation', {
         orderId: shortId ? `Order #${shortId}` : '',
+        subtitle: 'We’ll assign a professional.',
       });
-      setShowToast(true);
-      
-      // Hide toast after 2 seconds and navigate to home
-      setTimeout(() => {
-        Animated.timing(toastAnim, {
-          toValue: 0,
-          duration: 180,
-          useNativeDriver: true,
-        }).start(() => {
-          setShowToast(false);
-          navigation.reset({
-            index: 0,
-            routes: [{ name: 'MainTabs' }],
-          });
-        });
-      }, 2000);
     } catch (error) {
       console.error('Order creation failed:', error);
       Alert.alert('Order failed', 'Unable to place order right now.');
@@ -316,37 +281,6 @@ export default function CheckoutScreen({ navigation, route }) {
     <View style={styles.container}>
       <StatusBar style={isLightMode ? 'dark' : 'light'} />
       <BackHeader navigation={navigation} title="Checkout" />
-      
-      {/* Toast Notification */}
-      {showToast && (
-        <Animated.View
-          pointerEvents="none"
-          style={[
-            styles.toastContainer,
-            { top: insets.top + 12 },
-            {
-              opacity: toastAnim,
-              transform: [
-                {
-                  translateY: toastAnim.interpolate({
-                    inputRange: [0, 1],
-                    outputRange: [-16, 0],
-                  }),
-                },
-              ],
-            },
-          ]}
-        >
-          <View style={styles.toastIconWrap}>
-            <MaterialCommunityIcons name="check" size={22} color="#FFFFFF" />
-          </View>
-          <View style={styles.toastTextWrap}>
-            <Text style={styles.toastTitle}>{toastData.title}</Text>
-            {!!toastData.orderId && <Text style={styles.toastOrderId}>{toastData.orderId}</Text>}
-            <Text style={styles.toastSubtitle}>{toastData.subtitle}</Text>
-          </View>
-        </Animated.View>
-      )}
       <ScrollView 
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
