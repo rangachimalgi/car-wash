@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Dimensions, TouchableOpacity, Image } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Dimensions, TouchableOpacity, Image, Share } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import CustomHeader from '../components/CustomHeader';
@@ -8,6 +8,8 @@ import SeeTheDifference from '../components/SeeTheDifference';
 import SeeTheTransformations from '../components/SeeTheTransformations';
 import { useTheme } from '../theme/ThemeContext';
 import { getMedia } from '../config/api';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { getReferralInfo } from '../services/walletApi';
 // import { getPopularServices } from '../services/serviceApi';
 
 const sliderCardWidth = Dimensions.get('window').width;
@@ -24,6 +26,12 @@ export default function HomeScreen({ navigation }) {
   const sliderRef = useRef(null);
   const [activeSlide, setActiveSlide] = useState(0);
   const [media, setMedia] = useState({ testimonials: [], transformations: [], seeTheDifference: [] });
+  const [referralInfo, setReferralInfo] = useState({
+    code: '',
+    totalReferrals: 0,
+    totalEarnings: 0,
+    perReferralRewardReferred: 100,
+  });
   const { theme, isLightMode } = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
 
@@ -82,6 +90,28 @@ export default function HomeScreen({ navigation }) {
     getMedia()
       .then((data) => { if (!cancelled) setMedia(data); })
       .catch(() => {});
+    return () => { cancelled = true; };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    const loadReferral = async () => {
+      try {
+        const storedPhone = await AsyncStorage.getItem('authPhone');
+        if (!storedPhone) return;
+        const referral = await getReferralInfo(storedPhone);
+        if (cancelled || !referral) return;
+        setReferralInfo((prev) => ({
+          ...prev,
+          code: referral.referralCode || '',
+          totalReferrals: referral.totalReferrals || 0,
+          totalEarnings: referral.totalReferralEarnings || 0,
+          perReferralRewardReferred: referral.perReferralRewardReferred ?? prev.perReferralRewardReferred,
+        }));
+      } catch (_) {}
+    };
+
+    loadReferral();
     return () => { cancelled = true; };
   }, []);
 
@@ -245,6 +275,46 @@ export default function HomeScreen({ navigation }) {
           </View>
         </View>
 
+        {/* Refer & Earn Section */}
+        <View style={styles.homeReferralSection}>
+          <View style={styles.homeReferralBanner}>
+            <View style={styles.homeReferralLeft}>
+              <View style={styles.homeReferralTitleWrap}>
+                <MaterialCommunityIcons name="gift-outline" size={18} color={theme.accent} />
+                <Text style={styles.homeReferralTitle}>Refer &amp; Earn</Text>
+              </View>
+              <Text style={styles.homeReferralSubtitle}>
+                Invite friends and both of you get ₹{referralInfo.perReferralRewardReferred || 100} in wallet.
+              </Text>
+              <View style={styles.homeReferralCodeChip}>
+                <Text style={styles.homeReferralCodeChipLabel}>Code</Text>
+                <Text style={styles.homeReferralCodeChipValue}>{referralInfo.code || 'COMINGSOON'}</Text>
+              </View>
+              <Text style={styles.homeReferralStats}>
+                {referralInfo.totalReferrals} joined  |  ₹{referralInfo.totalEarnings} earned
+              </Text>
+            </View>
+            <View style={styles.homeReferralRight}>
+              <View style={styles.homeReferralIconWrap}>
+                <MaterialCommunityIcons name="gift" size={24} color={theme.accent} />
+              </View>
+              <TouchableOpacity
+                style={styles.homeReferralShareBtn}
+                activeOpacity={0.85}
+                onPress={() => {
+                  const codeText = referralInfo.code || 'your Woosh referral code';
+                  Share.share({
+                    message: `Use my Woosh referral code ${codeText} and we both get ₹${referralInfo.perReferralRewardReferred || 100} in wallet on your first order!`,
+                  }).catch(() => {});
+                }}
+              >
+                <MaterialCommunityIcons name="share-variant" size={16} color="#000000" />
+                <Text style={styles.homeReferralShareText}>Invite</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+
         {/* Why Choose Woosh Section */}
         <View style={styles.whyChooseSection}>
           <Text style={styles.whyChooseTitle}>Why Choose Woosh</Text>
@@ -302,6 +372,117 @@ const createStyles = theme => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: theme.background,
+  },
+  homeReferralSection: {
+    paddingHorizontal: 16,
+    paddingTop: 2,
+    paddingBottom: 18,
+  },
+  homeReferralBanner: {
+    backgroundColor: theme.cardBackground,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: theme.cardBorder,
+    padding: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  homeReferralLeft: {
+    flex: 1,
+  },
+  homeReferralRight: {
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    minHeight: 118,
+    paddingVertical: 2,
+  },
+  homeReferralIconWrap: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: theme.accentSoft,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  homeReferralTitleWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 4,
+  },
+  homeReferralTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: theme.textPrimary,
+  },
+  homeReferralSubtitle: {
+    fontSize: 12,
+    color: theme.textSecondary,
+    lineHeight: 17,
+    marginBottom: 8,
+  },
+  homeReferralCodeChip: {
+    backgroundColor: theme.accentSoft,
+    borderRadius: 999,
+    alignSelf: 'flex-start',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    marginBottom: 7,
+  },
+  homeReferralCodeChipLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: theme.accent,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  homeReferralCodeChipValue: {
+    fontSize: 12,
+    fontWeight: '900',
+    color: theme.textPrimary,
+    letterSpacing: 0.5,
+  },
+  homeReferralStats: {
+    fontSize: 11,
+    color: theme.textSecondary,
+  },
+  homeReferralShareBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: theme.accent,
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  homeReferralShareText: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: '#000000',
+  },
+  homeReferralCodeRow: {
+    backgroundColor: theme.background,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: theme.cardBorder,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginBottom: 10,
+  },
+  homeReferralCodeLabel: {
+    fontSize: 11,
+    color: theme.textSecondary,
+    marginBottom: 2,
+  },
+  homeReferralCodeValue: {
+    fontSize: 20,
+    fontWeight: '900',
+    color: theme.textPrimary,
+    letterSpacing: 0.6,
   },
   scrollView: {
     flex: 1,
