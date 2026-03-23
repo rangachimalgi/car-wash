@@ -114,8 +114,11 @@ export default function AddressesScreen({ navigation, route }) {
   const [isDetailStep, setIsDetailStep] = useState(false);
   const [pendingLocation, setPendingLocation] = useState(null);
   const [detailForm, setDetailForm] = useState({
-    houseAndFloor: '',
+    residenceType: 'Apartment',
+    residenceTypeCustom: '',
     buildingName: '',
+    flatNumber: '',
+    towerBlock: '',
     landmark: '',
     label: 'Home',
     labelCustom: '',
@@ -477,8 +480,11 @@ export default function AddressesScreen({ navigation, route }) {
       baseAddress: pickedAddress || `${pickedCoords.latitude}, ${pickedCoords.longitude}`,
     });
     setDetailForm({
-      houseAndFloor: '',
+      residenceType: 'Apartment',
+      residenceTypeCustom: '',
       buildingName: '',
+      flatNumber: '',
+      towerBlock: '',
       landmark: '',
       label: 'Home',
       labelCustom: '',
@@ -494,8 +500,9 @@ export default function AddressesScreen({ navigation, route }) {
       return;
     }
     const fullAddressParts = [
-      detailForm.houseAndFloor,
       detailForm.buildingName,
+      detailForm.flatNumber ? `Flat ${detailForm.flatNumber}` : '',
+      detailForm.towerBlock,
       detailForm.landmark,
       pendingLocation.baseAddress,
     ].filter(Boolean);
@@ -509,6 +516,10 @@ export default function AddressesScreen({ navigation, route }) {
     const newAddress = {
       id: String(Date.now()),
       type: detailForm.label || 'Home',
+      residenceType:
+        detailForm.residenceType === 'Other'
+          ? (detailForm.residenceTypeCustom.trim() || 'Other')
+          : (detailForm.residenceType || 'Apartment'),
       address: fullAddress,
       area: '',
       city: '',
@@ -524,8 +535,11 @@ export default function AddressesScreen({ navigation, route }) {
     setIsDetailStep(false);
     setPendingLocation(null);
     setDetailForm({
-      houseAndFloor: '',
+      residenceType: 'Apartment',
+      residenceTypeCustom: '',
       buildingName: '',
+      flatNumber: '',
+      towerBlock: '',
       landmark: '',
       label: 'Home',
       labelCustom: '',
@@ -552,70 +566,103 @@ export default function AddressesScreen({ navigation, route }) {
         {isDetailStep ? (
           <View style={styles.addForm}>
             <Text style={styles.addFormTitle}>Add Address Details</Text>
-
-            <Text style={styles.detailSectionTitle}>Add Address</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="House No. & Floor *"
-              placeholderTextColor={theme.textSecondary}
-              value={detailForm.houseAndFloor}
-              onChangeText={(text) => setDetailForm(prev => ({ ...prev, houseAndFloor: text }))}
-            />
-            <TextInput
-              style={styles.input}
-              placeholder="Building & Block No. (Optional)"
-              placeholderTextColor={theme.textSecondary}
-              value={detailForm.buildingName}
-              onChangeText={(text) => setDetailForm(prev => ({ ...prev, buildingName: text }))}
-            />
-            <TextInput
-              style={styles.input}
-              placeholder="Landmark & Area Name (Optional)"
-              placeholderTextColor={theme.textSecondary}
-              value={detailForm.landmark}
-              onChangeText={(text) => setDetailForm(prev => ({ ...prev, landmark: text }))}
-            />
-
-            <Text style={styles.detailSectionTitle}>Add Address Label</Text>
-            <View style={styles.typeRow}>
-              {['Home', 'Work', 'Other'].map(type => (
+            <Text style={styles.fieldLabel}>Residence Type*</Text>
+            <View style={styles.residenceTypeRow}>
+              {[
+                { value: 'Individual House', icon: 'home-city-outline', label: 'Individual House' },
+                { value: 'Apartment', icon: 'office-building-outline', label: 'Apartment' },
+                { value: 'Villa', icon: 'home-outline', label: 'Villas' },
+                { value: 'Other', icon: 'briefcase-outline', label: 'Other' },
+              ].map((item) => (
                 <TouchableOpacity
-                  key={type}
-                  style={[styles.typeChip, detailForm.label === type && styles.typeChipActive]}
-                  onPress={() => setDetailForm(prev => ({ ...prev, label: type }))}
+                  key={item.value}
+                  style={[
+                    styles.residenceChip,
+                    detailForm.residenceType === item.value && styles.residenceChipActive,
+                  ]}
+                  onPress={() => setDetailForm(prev => ({ ...prev, residenceType: item.value }))}
+                  activeOpacity={0.85}
                 >
-                  <Text style={[styles.typeChipText, detailForm.label === type && styles.typeChipTextActive]}>
-                    {type}
+                  <MaterialCommunityIcons
+                    name={item.icon}
+                    size={14}
+                    color={detailForm.residenceType === item.value ? '#FFFFFF' : theme.textPrimary}
+                  />
+                  <Text
+                    style={[
+                      styles.residenceChipText,
+                      detailForm.residenceType === item.value && styles.residenceChipTextActive,
+                    ]}
+                  >
+                    {item.label}
                   </Text>
                 </TouchableOpacity>
               ))}
             </View>
-            <TextInput
-              style={styles.input}
-              placeholder="Enter your own label"
-              placeholderTextColor={theme.textSecondary}
-              value={detailForm.labelCustom}
-              onChangeText={(text) =>
-                setDetailForm(prev => ({
-                  ...prev,
-                  label: text.trim() || prev.label,
-                  labelCustom: text,
-                }))
-              }
-            />
 
-            <Text style={styles.detailSectionTitle}>Receiver Details</Text>
+            <Text style={styles.fieldLabel}>Building Name*</Text>
             <TextInput
               style={styles.input}
-              placeholder="Receiver's Name"
-              placeholderTextColor={theme.textSecondary}
-              value={detailForm.receiverName}
-              onChangeText={(text) => setDetailForm(prev => ({ ...prev, receiverName: text }))}
+              value={detailForm.buildingName}
+              onChangeText={(text) => setDetailForm(prev => ({ ...prev, buildingName: text }))}
             />
+            <Text style={styles.fieldLabel}>Flat Number*</Text>
             <TextInput
               style={styles.input}
-              placeholder="Receiver's Phone Number"
-              placeholderTextColor={theme.textSecondary}
+              value={detailForm.flatNumber}
+              onChangeText={(text) => setDetailForm(prev => ({ ...prev, flatNumber: text }))}
+            />
+            <Text style={styles.fieldLabel}>Tower/Block</Text>
+            <TextInput
+              style={styles.input}
+              value={detailForm.towerBlock}
+              onChangeText={(text) => setDetailForm(prev => ({ ...prev, towerBlock: text }))}
+            />
+            <Text style={styles.fieldLabel}>Landmark</Text>
+            <TextInput
+              style={styles.input}
+              value={detailForm.landmark}
+              onChangeText={(text) => setDetailForm(prev => ({ ...prev, landmark: text }))}
+            />
+            {detailForm.residenceType === 'Other' && (
+              <>
+                <Text style={styles.fieldLabel}>Custom Residence Type*</Text>
+                <TextInput
+                  style={styles.input}
+                  value={detailForm.residenceTypeCustom}
+                  onChangeText={(text) => setDetailForm(prev => ({ ...prev, residenceTypeCustom: text }))}
+                />
+              </>
+            )}
+
+            <Text style={styles.fieldLabel}>Save as*</Text>
+            <View style={styles.typeRow}>
+              {[
+                { value: 'Home', icon: 'home-outline' },
+                { value: 'Work', icon: 'briefcase-outline' },
+                { value: 'Other', icon: 'map-marker-outline' },
+              ].map(item => (
+                <TouchableOpacity
+                  key={item.value}
+                  style={[styles.typeChip, detailForm.label === item.value && styles.typeChipActive]}
+                  onPress={() => setDetailForm(prev => ({ ...prev, label: item.value }))}
+                  activeOpacity={0.85}
+                >
+                  <MaterialCommunityIcons
+                    name={item.icon}
+                    size={14}
+                    color={detailForm.label === item.value ? '#FFFFFF' : theme.textPrimary}
+                  />
+                  <Text style={[styles.typeChipText, detailForm.label === item.value && styles.typeChipTextActive]}>
+                    {item.value}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            <Text style={styles.fieldLabel}>Phone Number*</Text>
+            <TextInput
+              style={styles.input}
               value={detailForm.receiverPhone}
               onChangeText={(text) => setDetailForm(prev => ({ ...prev, receiverPhone: text }))}
               keyboardType="phone-pad"
@@ -1132,6 +1179,42 @@ const createStyles = theme => StyleSheet.create({
     color: theme.textPrimary,
     marginBottom: 20,
   },
+  fieldLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: theme.textPrimary,
+    marginBottom: 8,
+    marginTop: 6,
+  },
+  residenceTypeRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 12,
+  },
+  residenceChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: theme.cardBorder,
+    backgroundColor: theme.cardBackground,
+  },
+  residenceChipActive: {
+    backgroundColor: '#111111',
+    borderColor: '#111111',
+  },
+  residenceChipText: {
+    fontSize: 12,
+    color: theme.textPrimary,
+    fontWeight: '600',
+  },
+  residenceChipTextActive: {
+    color: '#FFFFFF',
+  },
   detailSectionTitle: {
     fontSize: 14,
     fontWeight: '600',
@@ -1145,23 +1228,27 @@ const createStyles = theme => StyleSheet.create({
     marginBottom: 12,
   },
   typeChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
     paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 12,
+    paddingVertical: 8,
+    borderRadius: 10,
     borderWidth: 1,
     borderColor: theme.cardBorder,
+    backgroundColor: theme.cardBackground,
   },
   typeChipActive: {
-    backgroundColor: theme.accent,
-    borderColor: theme.accent,
+    backgroundColor: '#111111',
+    borderColor: '#111111',
   },
   typeChipText: {
     fontSize: 12,
-    color: theme.textSecondary,
+    color: theme.textPrimary,
     fontWeight: '600',
   },
   typeChipTextActive: {
-    color: '#000000',
+    color: '#FFFFFF',
   },
   input: {
     backgroundColor: theme.background,
