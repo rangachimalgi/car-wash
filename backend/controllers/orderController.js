@@ -3,6 +3,8 @@ import Service from '../models/Service.js';
 import Employee from '../models/Employee.js';
 import User from '../models/User.js';
 import Referral from '../models/Referral.js';
+import Coupon from '../models/Coupon.js';
+import { computeCouponDiscount } from './couponController.js';
 
 const TAX_RATE = 0.18;
 
@@ -93,7 +95,7 @@ const generatePackageSlots = (startDate, packageTimes, defaultTimeSlot) => {
 // @access  Protected
 export const createOrder = async (req, res) => {
   try {
-    const { items, customer, employeeIds } = req.body;
+    const { items, customer, employeeIds, couponCode } = req.body;
     const userId = req.user._id; // From auth middleware
 
     if (!items || !Array.isArray(items) || items.length === 0) {
@@ -235,7 +237,29 @@ export const createOrder = async (req, res) => {
 
     const subtotal = hydratedItems.reduce((sum, item) => sum + item.lineTotal, 0);
     const tax = Number((subtotal * TAX_RATE).toFixed(2));
-    const totalAmount = Number((subtotal + tax).toFixed(2));
+    const preDiscountTotal = Number((subtotal + tax).toFixed(2));
+
+    let couponDiscount = 0;
+    let normalizedCouponCode = '';
+    if (couponCode && String(couponCode).trim()) {
+      normalizedCouponCode = String(couponCode).trim().toUpperCase();
+      const coupon = await Coupon.findOne({ code: normalizedCouponCode });
+      if (coupon) {
+        const couponResult = computeCouponDiscount({
+          coupon,
+          orderAmount: preDiscountTotal,
+          phone: customer?.phone || req.user?.phone || '',
+        });
+        if (couponResult.valid) {
+          couponDiscount = Number(couponResult.discountAmount || 0);
+        } else {
+          normalizedCouponCode = '';
+          couponDiscount = 0;
+        }
+      }
+    }
+
+    const totalAmount = Number((preDiscountTotal - couponDiscount).toFixed(2));
 
     // Handle wallet usage (optional)
     const requestedWallet = Number(req.body?.walletUsedAmount || 0);
@@ -293,6 +317,8 @@ export const createOrder = async (req, res) => {
       items: hydratedItems,
       subtotal,
       tax,
+      couponCode: normalizedCouponCode,
+      couponDiscount,
       totalAmount,
       walletUsed,
       netAmount,
@@ -323,6 +349,25 @@ export const createOrder = async (req, res) => {
         },
         { new: true, upsert: true }
       );
+    }
+
+    if (normalizedCouponCode && customer?.phone) {
+      try {
+        const coupon = await Coupon.findOne({ code: normalizedCouponCode });
+        if (coupon) {
+          coupon.usedCount = Number(coupon.usedCount || 0) + 1;
+          const phone = String(customer.phone).trim();
+          const existingUsage = (coupon.usageByPhone || []).find((u) => u.phone === phone);
+          if (existingUsage) {
+            existingUsage.count = Number(existingUsage.count || 0) + 1;
+          } else {
+            coupon.usageByPhone.push({ phone, count: 1 });
+          }
+          await coupon.save();
+        }
+      } catch (couponErr) {
+        console.error('Failed to update coupon usage:', couponErr);
+      }
     }
 
     // Notify assigned employees of new job (push notifications)

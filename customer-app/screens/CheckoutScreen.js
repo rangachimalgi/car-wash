@@ -4,6 +4,7 @@ import { StatusBar } from 'expo-status-bar';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import BackHeader from '../components/BackHeader';
 import { createOrder } from '../services/orderApi';
+import { getCoupons as getCouponsApi, validateCoupon as validateCouponApi } from '../services/couponApi';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getAddressKeys, getVehicleKeys } from '../services/addressStorage';
 import { getWallet } from '../services/walletApi';
@@ -32,6 +33,8 @@ export default function CheckoutScreen({ navigation, route }) {
   const [couponCode, setCouponCode] = useState('');
   const [appliedCoupon, setAppliedCoupon] = useState(null);
   const [discount, setDiscount] = useState(0);
+  const [couponLoading, setCouponLoading] = useState(false);
+  const [couponSuggestions, setCouponSuggestions] = useState([]);
   const [address, setAddress] = useState(null);
   const [vehicle, setVehicle] = useState(null);
   const [walletBalance, setWalletBalance] = useState(0);
@@ -106,6 +109,27 @@ export default function CheckoutScreen({ navigation, route }) {
     }, [loadAddressAndVehicle])
   );
 
+  useEffect(() => {
+    let cancelled = false;
+    const loadCouponSuggestions = async () => {
+      try {
+        const response = await getCouponsApi();
+        const now = Date.now();
+        const suggestions = (response?.data || [])
+          .filter((c) => c?.isActive)
+          .filter((c) => !c?.expiryDate || new Date(c.expiryDate).getTime() >= now)
+          .slice(0, 3);
+        if (!cancelled) setCouponSuggestions(suggestions);
+      } catch (_) {
+        if (!cancelled) setCouponSuggestions([]);
+      }
+    };
+    loadCouponSuggestions();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const formatDate = (date) => {
     if (!date) return '';
     const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
@@ -113,25 +137,28 @@ export default function CheckoutScreen({ navigation, route }) {
     return `${days[date.getDay()]}, ${months[date.getMonth()]} ${date.getDate()}`;
   };
 
-  const applyCoupon = () => {
-    if (couponCode.trim() === '') return;
-    
-    // Simulate coupon validation
-    const validCoupons = {
-      'WELCOME10': 10,
-      'SAVE20': 20,
-      'FIRST50': 50,
-    };
+  const applyCoupon = async (overrideCode) => {
+    const trimmedCode = (overrideCode || couponCode).trim().toUpperCase();
+    if (!trimmedCode) return;
 
-    if (validCoupons[couponCode.toUpperCase()]) {
-      const discountPercent = validCoupons[couponCode.toUpperCase()];
-      const discountAmount = (subtotal * discountPercent) / 100;
+    try {
+      setCouponLoading(true);
+      const storedPhone = await AsyncStorage.getItem('authPhone');
+      const couponRes = await validateCouponApi({
+        code: trimmedCode,
+        orderAmount: total,
+        phone: storedPhone || '',
+      });
+      const discountAmount = Number(couponRes?.data?.discountAmount || 0);
       setDiscount(discountAmount);
-      setAppliedCoupon(couponCode.toUpperCase());
+      setAppliedCoupon(trimmedCode);
       setCouponCode('');
-    } else {
-      // Show error - invalid coupon
+    } catch (error) {
+      const msg = error?.response?.data?.message || 'Invalid coupon code';
+      Alert.alert('Coupon', msg);
       setCouponCode('');
+    } finally {
+      setCouponLoading(false);
     }
   };
 
@@ -260,6 +287,7 @@ export default function CheckoutScreen({ navigation, route }) {
           longitude: address.longitude || undefined,
         },
         walletUsedAmount: walletUsable,
+        couponCode: appliedCoupon || undefined,
       });
       console.log('Order created:', response);
 
@@ -404,22 +432,43 @@ export default function CheckoutScreen({ navigation, route }) {
               </TouchableOpacity>
             </View>
           ) : (
-            <View style={styles.couponInputContainer}>
-              <TextInput
-                style={styles.couponInput}
-                placeholder="Enter coupon code"
-                placeholderTextColor={theme.textSecondary}
-                value={couponCode}
-                onChangeText={setCouponCode}
-                autoCapitalize="characters"
-              />
-              <TouchableOpacity 
-                style={styles.applyButton}
-                onPress={applyCoupon}
-              >
-                <Text style={styles.applyButtonText}>Apply</Text>
-              </TouchableOpacity>
-            </View>
+            <>
+              <View style={styles.couponInputContainer}>
+                <TextInput
+                  style={styles.couponInput}
+                  placeholder="Enter coupon code"
+                  placeholderTextColor={theme.textSecondary}
+                  value={couponCode}
+                  onChangeText={setCouponCode}
+                  autoCapitalize="characters"
+                />
+                <TouchableOpacity 
+                  style={styles.applyButton}
+                  onPress={applyCoupon}
+                  disabled={couponLoading}
+                >
+                  <Text style={styles.applyButtonText}>{couponLoading ? 'Applying...' : 'Apply'}</Text>
+                </TouchableOpacity>
+              </View>
+              {couponSuggestions.length > 0 && (
+                <View style={styles.couponSuggestionsWrap}>
+                  <Text style={styles.couponSuggestionsTitle}>Suggested coupons</Text>
+                  <View style={styles.couponSuggestionsRow}>
+                    {couponSuggestions.map((coupon) => (
+                      <TouchableOpacity
+                        key={coupon._id || coupon.code}
+                        style={styles.couponSuggestionChip}
+                        activeOpacity={0.85}
+                        onPress={() => applyCoupon(coupon.code)}
+                      >
+                        <MaterialCommunityIcons name="ticket-percent" size={14} color={LIGHT_BLUE} />
+                        <Text style={styles.couponSuggestionCode}>{coupon.code}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </View>
+              )}
+            </>
           )}
         </View>
 
@@ -605,6 +654,37 @@ const createStyles = theme => StyleSheet.create({
     borderWidth: 1,
     borderColor: theme.cardBorder,
     overflow: 'hidden',
+  },
+  couponSuggestionsWrap: {
+    marginTop: 10,
+  },
+  couponSuggestionsTitle: {
+    fontSize: 12,
+    color: theme.textSecondary,
+    fontWeight: '600',
+    marginBottom: 8,
+  },
+  couponSuggestionsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  couponSuggestionChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: theme.cardBorder,
+    backgroundColor: theme.background,
+  },
+  couponSuggestionCode: {
+    fontSize: 12,
+    color: theme.textPrimary,
+    fontWeight: '700',
+    letterSpacing: 0.3,
   },
   couponInput: {
     flex: 1,

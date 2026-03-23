@@ -136,6 +136,16 @@ function App() {
   const [seeDiffFiles, setSeeDiffFiles] = useState({ image1: null, image2: null, image3: null })
   const [uploadingSeeDiff, setUploadingSeeDiff] = useState(false)
 
+  // Coupons
+  const [coupons, setCoupons] = useState([])
+  const [loadingCoupons, setLoadingCoupons] = useState(false)
+  const [couponMessage, setCouponMessage] = useState({ type: '', text: '' })
+  const [couponForm, setCouponForm] = useState({
+    code: '',
+    discountValue: '',
+    perUserLimit: '1',
+  })
+
   // Helper function to create fetch options with auth headers
   const getFetchOptions = (options = {}) => {
     return {
@@ -270,6 +280,9 @@ function App() {
     }
     if (activeTab === 'services') {
       fetchAllServices()
+    }
+    if (activeTab === 'coupons') {
+      fetchCoupons()
     }
     if (activeTab === 'media') {
       fetchMedia()
@@ -1771,6 +1784,60 @@ function App() {
     }
   }
 
+  const fetchCoupons = async () => {
+    setLoadingCoupons(true)
+    try {
+      const res = await fetch(`${API_BASE_URL}/coupons`, getFetchOptions())
+      const data = await res.json()
+      if (data.success) {
+        setCoupons(data.data || [])
+      } else {
+        setCouponMessage({ type: 'error', text: data.message || 'Failed to load coupons' })
+      }
+    } catch (e) {
+      setCouponMessage({ type: 'error', text: e.message || 'Failed to load coupons' })
+    } finally {
+      setLoadingCoupons(false)
+    }
+  }
+
+  const handleCreateCoupon = async (e) => {
+    e.preventDefault()
+    setCouponMessage({ type: '', text: '' })
+    try {
+      const payload = {
+        code: couponForm.code.trim().toUpperCase(),
+        discountType: 'FLAT',
+        discountValue: Number(couponForm.discountValue || 0),
+        perUserLimit: Number(couponForm.perUserLimit || 1),
+      }
+
+      if (!payload.code || payload.discountValue <= 0) {
+        setCouponMessage({ type: 'error', text: 'Code and discount value are required' })
+        return
+      }
+
+      const res = await fetch(`${API_BASE_URL}/coupons`, getFetchOptions({
+        method: 'POST',
+        body: JSON.stringify(payload),
+      }))
+      const data = await res.json()
+      if (data.success) {
+        setCouponMessage({ type: 'success', text: 'Coupon created successfully' })
+        setCouponForm({
+          code: '',
+          discountValue: '',
+          perUserLimit: '1',
+        })
+        fetchCoupons()
+      } else {
+        setCouponMessage({ type: 'error', text: data.message || 'Failed to create coupon' })
+      }
+    } catch (e) {
+      setCouponMessage({ type: 'error', text: e.message || 'Failed to create coupon' })
+    }
+  }
+
   const inventoryLowStockCount = inventory.filter(item => item.isLowStock).length
 
   const iconStroke = 'currentColor'
@@ -1891,6 +1958,7 @@ function App() {
         { id: 'addons', label: 'Add ons', icon: 'addons' },
         { id: 'coverage', label: 'Coverage', icon: 'coverage' },
         { id: 'slots', label: 'Time slots', icon: 'slots' },
+        { id: 'coupons', label: 'Coupons', icon: 'coverage' },
       ],
     },
     { type: 'item', id: 'orders', label: 'Orders', icon: 'orders' },
@@ -1914,6 +1982,7 @@ function App() {
     addons: 'Add-Ons',
     coverage: 'Coverage',
     slots: 'Time Slots',
+    coupons: 'Coupons',
     orders: 'Orders',
     reviews: 'Reviews',
     media: 'Media (Testimonials & Transformations)',
@@ -2422,6 +2491,116 @@ function App() {
                   )}
                 </div>
               </form>
+            </div>
+          </>
+        )}
+
+        {activeTab === 'coupons' && (
+          <>
+            <div className="form-section">
+              <div className="section-header">
+                <h2 className="section-title">Create Coupon</h2>
+              </div>
+              <form onSubmit={handleCreateCoupon} className="form">
+                <div className="form-row">
+                  <div className="form-group">
+                    <label htmlFor="couponCode">Code *</label>
+                    <input
+                      id="couponCode"
+                      type="text"
+                      value={couponForm.code}
+                      onChange={(e) => setCouponForm((p) => ({ ...p, code: e.target.value.toUpperCase() }))}
+                      placeholder="SAVE50"
+                      required
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label htmlFor="couponValue">Discount Value *</label>
+                    <input
+                      id="couponValue"
+                      type="number"
+                      min="1"
+                      value={couponForm.discountValue}
+                      onChange={(e) => setCouponForm((p) => ({ ...p, discountValue: e.target.value }))}
+                      placeholder="50"
+                      required
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label htmlFor="couponPerUserLimit">Per User Limit</label>
+                    <input
+                      id="couponPerUserLimit"
+                      type="number"
+                      min="0"
+                      value={couponForm.perUserLimit}
+                      onChange={(e) => setCouponForm((p) => ({ ...p, perUserLimit: e.target.value }))}
+                      placeholder="1"
+                    />
+                  </div>
+                </div>
+
+                {couponMessage.text && (
+                  <div className={`message ${couponMessage.type}`}>
+                    {couponMessage.text}
+                  </div>
+                )}
+
+                <div className="form-actions">
+                  <button type="submit" className="submit-button">Create Coupon</button>
+                </div>
+              </form>
+            </div>
+
+            <div className="services-section" style={{ marginTop: '1.5rem' }}>
+              <div className="section-header">
+                <h2 className="section-title">All Coupons</h2>
+                <button type="button" className="refresh-button" onClick={fetchCoupons} disabled={loadingCoupons}>
+                  {loadingCoupons ? 'Loading...' : 'Refresh'}
+                </button>
+              </div>
+
+              {loadingCoupons ? (
+                <div className="loading-text">Loading coupons...</div>
+              ) : coupons.length === 0 ? (
+                <div className="info-text">No coupons created yet.</div>
+              ) : (
+                <div className="addons-grid">
+                  {coupons.map((coupon) => (
+                    <div key={coupon._id} className="addon-card">
+                      <div className="addon-card-header">
+                        <h3 className="addon-card-title">{coupon.code}</h3>
+                        <span className={`addon-status ${coupon.isActive ? 'active' : 'inactive'}`}>
+                          {coupon.isActive ? 'ACTIVE' : 'INACTIVE'}
+                        </span>
+                      </div>
+                      <div className="addon-card-details">
+                        <div className="detail-item">
+                          <span className="detail-label">Discount</span>
+                          <span className="detail-value">
+                            {coupon.discountType === 'FLAT' ? `₹${coupon.discountValue}` : `${coupon.discountValue}%`}
+                          </span>
+                        </div>
+                        <div className="detail-item">
+                          <span className="detail-label">Min order</span>
+                          <span className="detail-value">₹{coupon.minOrderAmount || 0}</span>
+                        </div>
+                        <div className="detail-item">
+                          <span className="detail-label">Used</span>
+                          <span className="detail-value">
+                            {coupon.usedCount || 0}{coupon.usageLimit > 0 ? ` / ${coupon.usageLimit}` : ''}
+                          </span>
+                        </div>
+                        <div className="detail-item">
+                          <span className="detail-label">Expiry</span>
+                          <span className="detail-value">
+                            {coupon.expiryDate ? new Date(coupon.expiryDate).toLocaleDateString() : 'No expiry'}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </>
         )}
