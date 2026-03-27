@@ -95,7 +95,7 @@ export default function LoginScreen({ navigation }) {
         }
         registerPushTokenWithBackend().catch(() => {});
       }
-      navigation.navigate('Welcome');
+      navigation.navigate('MainTabs');
     } catch (error) {
       Alert.alert('Invalid OTP', 'Please check the OTP and try again.');
     }
@@ -155,7 +155,7 @@ export default function LoginScreen({ navigation }) {
         }
         registerPushTokenWithBackend().catch(() => {});
       }
-      navigation.navigate('Welcome');
+      navigation.navigate('MainTabs');
     } catch (error) {
       Alert.alert('Invalid OTP', 'Please check the OTP and try again.');
     }

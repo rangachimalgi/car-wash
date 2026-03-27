@@ -149,12 +149,17 @@ export const createOrder = async (req, res) => {
         ? await Service.find({ _id: { $in: addOnIds }, category: 'AddOn', isActive: true })
             .select('basePrice')
         : [];
-
       const packageType = item.packageType || 'OneTime';
       const packageTimes = Number(item.packageTimes || 1);
-      const unitPrice = getPackagePrice(service, packageType, packageTimes);
+      const customPackage = item.customPackage || null;
+      const customPackagePrice = Number(customPackage?.packagePrice);
+      const hasCustomPackagePrice = Number.isFinite(customPackagePrice) && customPackagePrice >= 0;
+      const unitPrice = hasCustomPackagePrice
+        ? customPackagePrice
+        : getPackagePrice(service, packageType, packageTimes);
       const addOnsTotal = addOns.reduce((sum, addOn) => sum + (addOn.basePrice || 0), 0);
       const lineTotal = unitPrice + addOnsTotal;
+      const resolvedServiceName = String(item.serviceName || item.title || '').trim() || '';
 
       // Handle OneTime vs Package orders
       if (packageType === 'OneTime') {
@@ -170,6 +175,7 @@ export const createOrder = async (req, res) => {
 
         return {
           service: service._id,
+          serviceName: resolvedServiceName,
           addOns: addOns.map(addOn => addOn._id),
           packageType: 'OneTime',
           packageTimes: 1,
@@ -222,12 +228,32 @@ export const createOrder = async (req, res) => {
           throw new Error('Cannot schedule multiple washes on the same day');
         }
 
+        const normalizedCustomPackage = customPackage
+          ? {
+              packageStartDate: customPackage.packageStartDate ? new Date(customPackage.packageStartDate) : undefined,
+              packageDurationDays: Number(customPackage.packageDurationDays || 30),
+              packageTimeSlot: customPackage.packageTimeSlot || '',
+              interiorDates: Array.isArray(customPackage.interiorDates)
+                ? customPackage.interiorDates.map((d) => new Date(d)).filter((d) => !Number.isNaN(d.getTime()))
+                : [],
+              exteriorDates: Array.isArray(customPackage.exteriorDates)
+                ? customPackage.exteriorDates.map((d) => new Date(d)).filter((d) => !Number.isNaN(d.getTime()))
+                : [],
+              dailyMode: customPackage.dailyMode || '',
+              pricingKey: customPackage.pricingKey || '',
+              packagePrice: hasCustomPackagePrice ? customPackagePrice : unitPrice,
+              pricingVersion: customPackage.pricingVersion ? new Date(customPackage.pricingVersion) : undefined,
+            }
+          : undefined;
+
         return {
           service: service._id,
+          serviceName: resolvedServiceName,
           addOns: addOns.map(addOn => addOn._id),
           packageType,
           packageTimes,
           scheduledSlots,
+          customPackage: normalizedCustomPackage,
           unitPrice,
           addOnsTotal,
           lineTotal,

@@ -39,7 +39,11 @@ export default function BookingsScreen({ navigation }) {
     return date.toLocaleDateString();
   };
 
-  const getServiceTypeLabel = (category) => {
+  const getServiceTypeLabel = (category, item) => {
+    const packageType = item?.packageType;
+    if (packageType && packageType !== 'OneTime') {
+      return `${packageType} Package`;
+    }
     if (category === 'CarWash') return 'Car Wash';
     if (category === 'BikeWash') return 'Bike Wash';
     return 'Service';
@@ -57,8 +61,8 @@ export default function BookingsScreen({ navigation }) {
     const category = item?.service?.category;
     return {
       id: order._id,
-      serviceType: getServiceTypeLabel(category),
-      serviceName: item?.service?.name || 'Service',
+      serviceType: getServiceTypeLabel(category, item),
+      serviceName: item?.serviceName || item?.service?.name || 'Service',
       date: formatShortDate(item?.scheduledDate),
       time: item?.scheduledTimeSlot || '',
       address: order.customer?.address || 'Address not set',
@@ -75,8 +79,8 @@ export default function BookingsScreen({ navigation }) {
     const category = item?.service?.category;
     return {
       id: order._id,
-      serviceType: getServiceTypeLabel(category),
-      serviceName: item?.service?.name || 'Service',
+      serviceType: getServiceTypeLabel(category, item),
+      serviceName: item?.serviceName || item?.service?.name || 'Service',
       date: formatRecentDate(item?.scheduledDate || order.createdAt),
       time: item?.scheduledTimeSlot || '',
       status: order.status || 'Completed',

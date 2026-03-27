@@ -6,6 +6,11 @@ const orderItemSchema = new mongoose.Schema({
     ref: 'Service',
     required: true,
   },
+  serviceName: {
+    type: String,
+    default: '',
+    trim: true,
+  },
   addOns: [{
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Service',
@@ -36,6 +41,18 @@ const orderItemSchema = new mongoose.Schema({
     scheduledDate: { type: Date, required: true },
     scheduledTimeSlot: { type: String, required: true },
   }],
+  // For custom monthly package flow (customer app)
+  customPackage: {
+    packageStartDate: { type: Date },
+    packageDurationDays: { type: Number, min: 1 },
+    packageTimeSlot: { type: String, default: '' },
+    interiorDates: { type: [Date], default: [] },
+    exteriorDates: { type: [Date], default: [] },
+    dailyMode: { type: String, default: '' },
+    pricingKey: { type: String, default: '' },
+    packagePrice: { type: Number, min: 0 },
+    pricingVersion: { type: Date },
+  },
   unitPrice: {
     type: Number,
     required: true,

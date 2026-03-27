@@ -221,7 +221,7 @@ export default function HomeScreen({ navigation }) {
 
             <TouchableOpacity
               style={styles.halfCard}
-              onPress={() => navigation.navigate('CarWash')}
+              onPress={() => navigation.navigate('Packages')}
               activeOpacity={0.9}
             >
               <Text style={styles.halfCardTitle}>Monthly Packages</Text>
@@ -273,6 +273,27 @@ export default function HomeScreen({ navigation }) {
               </View>
             </TouchableOpacity>
           </View>
+
+          <TouchableOpacity
+            style={styles.dailyCleaningTile}
+            onPress={() => navigation.navigate('PackageDetails')}
+            activeOpacity={0.9}
+          >
+            <View style={styles.dailyCleaningTextWrap}>
+              <Text style={styles.dailyCleaningTitle}>Daily Cleaning Services</Text>
+              <Text style={styles.dailyCleaningSubtitle}>
+                Custom monthly plans for interior, exterior and daily care.
+              </Text>
+            </View>
+            <View style={styles.dailyCleaningRight}>
+              <Image
+                source={require('../assets/carpicseven.png')}
+                style={styles.dailyCleaningImage}
+                resizeMode="contain"
+              />
+              <MaterialCommunityIcons name="chevron-right" size={22} color={theme.textPrimary} />
+            </View>
+          </TouchableOpacity>
         </View>
 
         {/* Refer & Earn Section */}
@@ -550,6 +571,43 @@ const createStyles = theme => StyleSheet.create({
     flexDirection: 'row',
     gap: 14,
     marginTop: 14,
+  },
+  dailyCleaningTile: {
+    marginTop: 14,
+    backgroundColor: theme.cardBackground,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: theme.cardBorder,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  dailyCleaningTextWrap: {
+    flex: 1,
+    paddingRight: 10,
+  },
+  dailyCleaningTitle: {
+    fontSize: 18,
+    fontWeight: '900',
+    color: theme.textPrimary,
+  },
+  dailyCleaningSubtitle: {
+    marginTop: 4,
+    fontSize: 12,
+    color: theme.textSecondary,
+    fontWeight: '600',
+    lineHeight: 17,
+  },
+  dailyCleaningRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  dailyCleaningImage: {
+    width: 56,
+    height: 40,
   },
   sectionHeader: {
     flexDirection: 'row',

@@ -51,6 +51,7 @@ import inventoryRoutes from './routes/inventoryRoutes.js';
 import slotRoutes from './routes/slotRoutes.js';
 import mediaRoutes from './routes/mediaRoutes.js';
 import couponRoutes from './routes/couponRoutes.js';
+import packagePricingRoutes from './routes/packagePricingRoutes.js';
 import { errorHandler } from './middleware/errorHandler.js';
 
 app.use('/api/services', serviceRoutes);
@@ -64,6 +65,7 @@ app.use('/api/attendance', attendanceRoutes);
 app.use('/api/inventory', inventoryRoutes);
 app.use('/api/slots', slotRoutes);
 app.use('/api/coupons', couponRoutes);
+app.use('/api/package-pricing', packagePricingRoutes);
 // app.use('/api/auth', authRoutes);
 // app.use('/api/bookings', bookingRoutes);
 

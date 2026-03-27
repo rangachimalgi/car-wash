@@ -45,7 +45,12 @@ export default function ServiceAccordionCard({
   navigation,
   fallbackImageSource,
   fallbackAddOns = [],
+  monthlyMode = 'custom',
+  hideOneTimeWash = false,
+  hideAddServices = false,
+  bookingServiceId,
 }) {
+  const resolvedServiceId = bookingServiceId || service?._id || serviceSummary?._id;
   const [imageError, setImageError] = useState(false);
   const { theme } = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
@@ -77,6 +82,13 @@ export default function ServiceAccordionCard({
   const oneTimePrice = Number(service?.basePrice || serviceSummary?.basePrice || 0);
   const monthlyPackages = computeMonthlyPackages(oneTimePrice, service?.packages);
   const maxOff = Math.max(0, ...monthlyPackages.map((p) => Number(p.discount || 0)));
+  const categoryLabel = service?.category || serviceSummary?.category;
+  const expandedHeadingText =
+    categoryLabel === 'BikeWash'
+      ? 'Bike Wash & Care'
+      : categoryLabel === 'CarWash'
+        ? 'Car Wash & Care'
+        : 'Package Details';
 
   const resolveSelectedAddOnsDetails = () => {
     return selectedAddOns
@@ -95,10 +107,11 @@ export default function ServiceAccordionCard({
   const addOnsTotal = calculateAddOnsTotal();
 
   const handleBookOneTime = () => {
+    if (!resolvedServiceId) return;
     const addOns = resolveSelectedAddOnsDetails();
     const item = {
       id: `oneTime_${Date.now()}`,
-      serviceId: service?._id || serviceSummary?._id,
+      serviceId: resolvedServiceId,
       serviceName: service?.name || serviceSummary?.name,
       title: `${service?.name || serviceSummary?.name} - 1 Time Wash`,
       image: imageUri,
@@ -111,12 +124,22 @@ export default function ServiceAccordionCard({
     navigation?.navigate('Cart', { addItem: item });
   };
 
-  const handleBookMonthly = (pkg) => {
+  const handleBookMonthlyCustom = () => {
+    if (!resolvedServiceId) return;
+    navigation?.navigate('PackageDetails', {
+      serviceId: resolvedServiceId,
+      serviceName: service?.name || serviceSummary?.name,
+      selectedAddOns: resolveSelectedAddOnsDetails(),
+    });
+  };
+
+  const handleBookMonthlyStandard = (pkg) => {
+    if (!resolvedServiceId) return;
     const addOns = resolveSelectedAddOnsDetails();
     const addOnsTotalForPackage = addOns.reduce((t, a) => t + (Number(a.price) || 0), 0) * pkg.times;
     const item = {
       id: `pkg_${pkg.id}_${Date.now()}`,
-      serviceId: service?._id || serviceSummary?._id,
+      serviceId: resolvedServiceId,
       serviceName: service?.name || serviceSummary?.name,
       title: `${service?.name || serviceSummary?.name} - Monthly (${pkg.times}x/month)`,
       image: imageUri,
@@ -209,7 +232,9 @@ export default function ServiceAccordionCard({
       {expanded ? (
         <View style={styles.expandedArea}>
           <View style={styles.expandedTopRow}>
-            <Text style={styles.expandedHeading}>Car Wash & Care</Text>
+            <Text style={styles.expandedHeading}>
+              {expandedHeadingText}
+            </Text>
             <TouchableOpacity style={styles.viewDetailsButton} onPress={onViewDetails} activeOpacity={0.85}>
               <Text style={styles.viewDetailsText}>View Details</Text>
               <MaterialCommunityIcons name="arrow-right" size={14} color="#0B0B0B" />
@@ -225,17 +250,21 @@ export default function ServiceAccordionCard({
             </View>
           ) : null}
 
-          <AddOnServicesList
-            services={resolvedAddOns}
-            maxVisible={5}
-            selectedAddOns={selectedAddOns}
-            onToggleAddOn={onToggleAddOn}
-            buttonVariant="plus"
-            containerStyle={styles.addOnsInline}
-            fallbackImageSource={fallbackImageSource}
-          />
+          {!hideAddServices ? (
+            <>
+              <AddOnServicesList
+                services={resolvedAddOns}
+                maxVisible={5}
+                selectedAddOns={selectedAddOns}
+                onToggleAddOn={onToggleAddOn}
+                buttonVariant="plus"
+                containerStyle={styles.addOnsInline}
+                fallbackImageSource={fallbackImageSource}
+              />
 
-          <View style={styles.sectionRule} />
+              <View style={styles.sectionRule} />
+            </>
+          ) : null}
 
           <View style={styles.sectionDivider}>
             <View style={styles.dividerLine} />
@@ -243,15 +272,17 @@ export default function ServiceAccordionCard({
             <View style={styles.dividerLine} />
           </View>
 
-          <View style={styles.oneTimeCard}>
-            <View style={styles.oneTimeContent}>
-              <Text style={styles.oneTimeLabel}>1-Time Wash</Text>
-              <Text style={styles.oneTimePrice}>₹{Math.round(oneTimePrice + addOnsTotal)}</Text>
+          {!hideOneTimeWash ? (
+            <View style={styles.oneTimeCard}>
+              <View style={styles.oneTimeContent}>
+                <Text style={styles.oneTimeLabel}>1-Time Wash</Text>
+                <Text style={styles.oneTimePrice}>₹{Math.round(oneTimePrice + addOnsTotal)}</Text>
+              </View>
+              <TouchableOpacity style={styles.bookButtonPrimary} onPress={handleBookOneTime} activeOpacity={0.85}>
+                <Text style={styles.bookTextPrimary}>Book</Text>
+              </TouchableOpacity>
             </View>
-            <TouchableOpacity style={styles.bookButtonPrimary} onPress={handleBookOneTime} activeOpacity={0.85}>
-              <Text style={styles.bookTextPrimary}>Book</Text>
-            </TouchableOpacity>
-          </View>
+          ) : null}
 
           <View style={styles.monthlySection}>
             <View style={styles.monthlyHeader}>
@@ -263,22 +294,35 @@ export default function ServiceAccordionCard({
               ) : null}
             </View>
 
-            {monthlyPackages.map((pkg) => {
-              const addOnsForPackage = addOnsTotal * pkg.times;
-              const totalWithAddOns = pkg.price + addOnsForPackage;
-              const perWashWithAddOns = (pkg.price + addOnsForPackage) / pkg.times;
-              return (
-                <View key={pkg.id} style={styles.monthlyCard}>
-                  <View style={styles.monthlyContent}>
-                    <Text style={styles.monthlyTimes}>{pkg.times}x Wash/Month</Text>
-                    <Text style={styles.monthlyTotalPrice}>₹{Math.round(totalWithAddOns)} • ₹{Math.round(perWashWithAddOns)}/wash</Text>
-                  </View>
-                  <TouchableOpacity style={styles.bookButtonSecondary} onPress={() => handleBookMonthly(pkg)} activeOpacity={0.85}>
-                    <Text style={styles.bookTextSecondary}>Book</Text>
-                  </TouchableOpacity>
+            {monthlyMode === 'custom' ? (
+              <View style={styles.monthlyCard}>
+                <View style={styles.monthlyContent}>
+                  <Text style={styles.monthlyCustomSubtitle}>
+                    Customizable monthly plan for interior, exterior, and daily cleaning.
+                  </Text>
                 </View>
-              );
-            })}
+                <TouchableOpacity style={styles.bookButtonSecondary} onPress={handleBookMonthlyCustom} activeOpacity={0.85}>
+                  <Text style={styles.bookTextSecondary}>Book</Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              monthlyPackages.map((pkg) => {
+                const addOnsForPackage = addOnsTotal * pkg.times;
+                const totalWithAddOns = pkg.price + addOnsForPackage;
+                const perWashWithAddOns = (pkg.price + addOnsForPackage) / pkg.times;
+                return (
+                  <View key={pkg.id} style={styles.monthlyCard}>
+                    <View style={styles.monthlyContent}>
+                      <Text style={styles.monthlyTimes}>{pkg.times}x Wash/Month</Text>
+                      <Text style={styles.monthlyTotalPrice}>₹{Math.round(totalWithAddOns)} • ₹{Math.round(perWashWithAddOns)}/wash</Text>
+                    </View>
+                    <TouchableOpacity style={styles.bookButtonSecondary} onPress={() => handleBookMonthlyStandard(pkg)} activeOpacity={0.85}>
+                      <Text style={styles.bookTextSecondary}>Book</Text>
+                    </TouchableOpacity>
+                  </View>
+                );
+              })
+            )}
           </View>
         </View>
       ) : null}
@@ -634,6 +678,13 @@ const createStyles = (theme) =>
       fontWeight: '800',
       color: theme.textPrimary,
       letterSpacing: -0.2,
+    },
+    monthlyCustomSubtitle: {
+      fontSize: 13,
+      lineHeight: 19,
+      fontWeight: '600',
+      color: theme.textSecondary,
+      paddingRight: 12,
     },
     bookButtonSecondary: {
       backgroundColor: '#000000',

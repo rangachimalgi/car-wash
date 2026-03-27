@@ -137,6 +137,17 @@ export default function CheckoutScreen({ navigation, route }) {
     return `${days[date.getDay()]}, ${months[date.getMonth()]} ${date.getDate()}`;
   };
 
+  const getCheckoutItemTitle = (item) => {
+    const packageType = item?.packageType || 'OneTime';
+    if (packageType !== 'OneTime') {
+      if (item?.serviceName) return item.serviceName;
+      if (typeof item?.title === 'string' && item.title.includes(' - ')) {
+        return item.title.split(' - ')[0];
+      }
+    }
+    return item?.title || 'Service';
+  };
+
   const applyCoupon = async (overrideCode) => {
     const trimmedCode = (overrideCode || couponCode).trim().toUpperCase();
     if (!trimmedCode) return;
@@ -170,6 +181,7 @@ export default function CheckoutScreen({ navigation, route }) {
   const baseTotalAfterDiscount = total - discount;
   const walletUsable = useWallet ? Math.min(walletBalance, baseTotalAfterDiscount) : 0;
   const finalTotal = baseTotalAfterDiscount - walletUsable;
+  const isPackageCheckout = cartItems.some((item) => (item?.packageType || 'OneTime') !== 'OneTime');
 
   const isScheduleComplete = (item) => {
     const packageType = item?.packageType || 'OneTime';
@@ -221,6 +233,26 @@ export default function CheckoutScreen({ navigation, route }) {
       return;
     }
 
+    if (isPackageCheckout) {
+      const primaryItem = cartItems[0];
+      const packageName =
+        primaryItem?.serviceName ||
+        (typeof primaryItem?.title === 'string' ? primaryItem.title.split(' - ')[0] : '') ||
+        'Package';
+      navigation.navigate('PaymentMethods', {
+        amount: `₹${finalTotal.toFixed(2)}`,
+        serviceName: packageName,
+        fromCheckout: true,
+        cartItems,
+        subtotal,
+        tax,
+        total,
+        discount,
+        walletUsed: walletUsable,
+      });
+      return;
+    }
+
     try {
       const itemsPayload = cartItems.map((item) => {
         const addOnIds = (item.addOns || []).map(addOn => addOn?._id || addOn).filter(Boolean);
@@ -252,6 +284,7 @@ export default function CheckoutScreen({ navigation, route }) {
             packageType,
             packageTimes,
             scheduledSlots: item.scheduledSlots,
+            customPackage: item.customPackage || undefined,
           };
         }
         if (item.startDate && item.startTimeSlot) {
@@ -262,6 +295,7 @@ export default function CheckoutScreen({ navigation, route }) {
             packageTimes,
             startDate: item.startDate,
             startTimeSlot: item.startTimeSlot?.time || item.startTimeSlot,
+            customPackage: item.customPackage || undefined,
           };
         }
         throw new Error('Scheduled slots missing from package cart item');
@@ -402,7 +436,7 @@ export default function CheckoutScreen({ navigation, route }) {
                   resizeMode="cover"
                 />
                 <View style={styles.itemDetails}>
-                  <Text style={styles.itemTitle}>{item.title}</Text>
+                  <Text style={styles.itemTitle}>{getCheckoutItemTitle(item)}</Text>
                   <Text style={styles.itemQuantity}>Quantity: {item.quantity}</Text>
                 </View>
                 <Text style={styles.itemPrice}>₹{item.price * item.quantity}</Text>

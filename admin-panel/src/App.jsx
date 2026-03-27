@@ -7,6 +7,16 @@ import './App.css'
 // - Production build (npm run build) without either uses the same backend as the customer app (Render)
 const API_BASE_URL = (typeof window !== 'undefined' && window.__API_BASE_URL__) || import.meta.env.VITE_API_URL || (import.meta.env.PROD ? 'https://car-wash-vbry.onrender.com/api' : 'http://localhost:8000/api')
 const UPLOADS_BASE = API_BASE_URL.replace(/\/api\/?$/, '')
+const DEFAULT_PACKAGE_CARD = {
+  name: '',
+  description: '',
+  image: '',
+  times: 2,
+  price: '',
+  addOnServiceIds: [],
+  coverageIncluded: [],
+  coverageNotIncluded: [],
+}
 
 function App() {
   const [activeTab, setActiveTab] = useState('services') // 'services', 'addons', 'coverage', 'orders', 'reviews', 'attendance', 'inventory', 'media'
@@ -146,6 +156,27 @@ function App() {
     perUserLimit: '1',
   })
 
+  // Monthly package pricing config (customer app)
+  const [packagePricingForm, setPackagePricingForm] = useState({
+    app: 'customer',
+    vehicleType: 'car',
+    durationDays: 30,
+    timeSlots: ['7:00 AM - 8:00 AM', '8:00 AM - 9:00 AM', '10:00 AM - 11:00 AM'],
+    pricingMatrix: {
+      i1_e1_daily: '',
+      i1_e1_alternate: '',
+      i1_e2_daily: '',
+      i1_e2_alternate: '',
+      i2_e1_daily: '',
+      i2_e1_alternate: '',
+      i2_e2_daily: '',
+      i2_e2_alternate: '',
+    },
+    packageCards: [],
+  })
+  const [loadingPackagePricing, setLoadingPackagePricing] = useState(false)
+  const [packagePricingMessage, setPackagePricingMessage] = useState({ type: '', text: '' })
+
   // Helper function to create fetch options with auth headers
   const getFetchOptions = (options = {}) => {
     return {
@@ -251,6 +282,14 @@ function App() {
     return true
   })
 
+  // For package creation: only CarWash applicable items
+  const packageCarWashAddOns = allAddOns.filter((addOn) =>
+    Array.isArray(addOn.applicableFor) && addOn.applicableFor.includes('CarWash')
+  )
+  const packageCarWashCoverage = allCoverage.filter((item) =>
+    Array.isArray(item.applicableFor) && item.applicableFor.includes('CarWash')
+  )
+
   useEffect(() => {
     // Refetch add-ons filtered by category
     fetchAddOns()
@@ -286,6 +325,9 @@ function App() {
     }
     if (activeTab === 'media') {
       fetchMedia()
+    }
+    if (activeTab === 'dailyCleaningServices' || activeTab === 'packages') {
+      fetchPackagePricing()
     }
   }, [activeTab])
 
@@ -342,6 +384,168 @@ function App() {
       console.error('Error fetching coverage items:', error)
     } finally {
       setLoadingCoverage(false)
+    }
+  }
+
+  const fetchPackagePricing = async () => {
+    setLoadingPackagePricing(true)
+    setPackagePricingMessage({ type: '', text: '' })
+    try {
+      const response = await fetch(`${API_BASE_URL}/package-pricing?app=customer&vehicleType=car`)
+      const data = await response.json()
+      if (data.success && data.data) {
+        const cfg = data.data
+        setPackagePricingForm({
+          app: cfg.app || 'customer',
+          vehicleType: cfg.vehicleType || 'car',
+          durationDays: Number(cfg.durationDays || 30),
+          timeSlots: Array.isArray(cfg.timeSlots) && cfg.timeSlots.length > 0
+            ? cfg.timeSlots
+            : ['7:00 AM - 8:00 AM', '8:00 AM - 9:00 AM', '10:00 AM - 11:00 AM'],
+          pricingMatrix: {
+            i1_e1_daily: cfg.pricingMatrix?.i1_e1_daily ?? '',
+            i1_e1_alternate: cfg.pricingMatrix?.i1_e1_alternate ?? '',
+            i1_e2_daily: cfg.pricingMatrix?.i1_e2_daily ?? '',
+            i1_e2_alternate: cfg.pricingMatrix?.i1_e2_alternate ?? '',
+            i2_e1_daily: cfg.pricingMatrix?.i2_e1_daily ?? '',
+            i2_e1_alternate: cfg.pricingMatrix?.i2_e1_alternate ?? '',
+            i2_e2_daily: cfg.pricingMatrix?.i2_e2_daily ?? '',
+            i2_e2_alternate: cfg.pricingMatrix?.i2_e2_alternate ?? '',
+          },
+          packageCards: Array.isArray(cfg.packageCards)
+            ? cfg.packageCards.map((card, index) => ({
+              name: card?.name ?? '',
+              description: card?.description ?? '',
+              image: card?.image ?? '',
+              times: Number(card?.times || 0) || index + 1,
+              price: card?.price ?? '',
+              addOnServiceIds: Array.isArray(card?.addOnServiceIds) ? card.addOnServiceIds : [],
+              coverageIncluded: Array.isArray(card?.coverageIncluded) ? card.coverageIncluded : [],
+              coverageNotIncluded: Array.isArray(card?.coverageNotIncluded) ? card.coverageNotIncluded : [],
+            }))
+            : [],
+        })
+      } else {
+        setPackagePricingMessage({ type: 'error', text: data.message || 'Failed to load package pricing.' })
+      }
+    } catch (error) {
+      console.error('Error fetching package pricing:', error)
+      setPackagePricingMessage({ type: 'error', text: `Network error: ${error.message}` })
+    } finally {
+      setLoadingPackagePricing(false)
+    }
+  }
+
+  const handlePackagePricingSubmit = async (e) => {
+    e.preventDefault()
+    setLoadingPackagePricing(true)
+    setPackagePricingMessage({ type: '', text: '' })
+
+    try {
+      const payload = {
+        app: packagePricingForm.app,
+        vehicleType: packagePricingForm.vehicleType,
+        durationDays: Number(packagePricingForm.durationDays || 30),
+        timeSlots: (packagePricingForm.timeSlots || []).map((slot) => String(slot || '').trim()).filter(Boolean),
+        pricingMatrix: Object.entries(packagePricingForm.pricingMatrix || {}).reduce((acc, [key, value]) => {
+          acc[key] = Number(value || 0)
+          return acc
+        }, {}),
+        packageCards: (packagePricingForm.packageCards || []).map((card, index) => ({
+          name: String(card.name || '').trim(),
+          description: String(card.description || '').trim(),
+          image: String(card.image || '').trim(),
+          times: Number(card.times || index + 1),
+          price: Number(card.price || 0),
+          addOnServiceIds: Array.isArray(card.addOnServiceIds) ? card.addOnServiceIds : [],
+          coverageIncluded: Array.isArray(card.coverageIncluded) ? card.coverageIncluded : [],
+          coverageNotIncluded: Array.isArray(card.coverageNotIncluded) ? card.coverageNotIncluded : [],
+        })),
+      }
+
+      const response = await fetch(`${API_BASE_URL}/package-pricing`, getFetchOptions({
+        method: 'PUT',
+        body: JSON.stringify(payload),
+      }))
+      const data = await response.json()
+      if (data.success) {
+        setPackagePricingMessage({ type: 'success', text: 'Package pricing saved successfully.' })
+        fetchPackagePricing()
+      } else {
+        setPackagePricingMessage({ type: 'error', text: data.message || 'Failed to save package pricing.' })
+      }
+    } catch (error) {
+      console.error('Error saving package pricing:', error)
+      setPackagePricingMessage({ type: 'error', text: `Network error: ${error.message}` })
+    } finally {
+      setLoadingPackagePricing(false)
+    }
+  }
+
+  const addPackageCardRow = () => {
+    setPackagePricingForm((prev) => ({
+      ...prev,
+      packageCards: [
+        ...(prev.packageCards || []),
+        { ...DEFAULT_PACKAGE_CARD, times: (prev.packageCards?.length || 1) + 1 },
+      ],
+    }))
+  }
+
+  const updatePackageCardRow = (index, field, value) => {
+    setPackagePricingForm((prev) => ({
+      ...prev,
+      packageCards: (prev.packageCards || []).map((card, idx) =>
+        idx === index ? { ...card, [field]: value } : card
+      ),
+    }))
+  }
+
+  const removePackageCardRow = (index) => {
+    setPackagePricingForm((prev) => ({
+      ...prev,
+      packageCards: (prev.packageCards || []).filter((_, idx) => idx !== index),
+    }))
+  }
+
+  const clearAllPackageCards = () => {
+    setPackagePricingForm((prev) => ({
+      ...prev,
+      packageCards: [],
+    }))
+  }
+
+  const clearAllPackageCardsAndSave = async () => {
+    setLoadingPackagePricing(true)
+    setPackagePricingMessage({ type: '', text: '' })
+    try {
+      const payload = {
+        app: packagePricingForm.app,
+        vehicleType: packagePricingForm.vehicleType,
+        durationDays: Number(packagePricingForm.durationDays || 30),
+        timeSlots: (packagePricingForm.timeSlots || []).map((slot) => String(slot || '').trim()).filter(Boolean),
+        pricingMatrix: Object.entries(packagePricingForm.pricingMatrix || {}).reduce((acc, [key, value]) => {
+          acc[key] = Number(value || 0)
+          return acc
+        }, {}),
+        packageCards: [],
+      }
+
+      const response = await fetch(`${API_BASE_URL}/package-pricing`, getFetchOptions({
+        method: 'PUT',
+        body: JSON.stringify(payload),
+      }))
+      const data = await response.json()
+      if (data.success) {
+        setPackagePricingForm((prev) => ({ ...prev, packageCards: [] }))
+        setPackagePricingMessage({ type: 'success', text: 'All packages cleared successfully.' })
+      } else {
+        setPackagePricingMessage({ type: 'error', text: data.message || 'Failed to clear packages.' })
+      }
+    } catch (error) {
+      setPackagePricingMessage({ type: 'error', text: `Network error: ${error.message}` })
+    } finally {
+      setLoadingPackagePricing(false)
     }
   }
 
@@ -1888,6 +2092,14 @@ function App() {
             <path d="M6 6h12a2 2 0 012 2v12a2 2 0 01-2 2H6a2 2 0 01-2-2V8a2 2 0 012-2z" stroke={iconStroke} strokeWidth="2" strokeLinejoin="round" />
           </svg>
         )
+      case 'packages':
+      case 'dailyCleaningServices':
+        return (
+          <svg {...common}>
+            <path d="M5 7h14v12H5z" stroke={iconStroke} strokeWidth="2" strokeLinejoin="round" />
+            <path d="M9 7V5h6v2M8 12h8M8 16h5" stroke={iconStroke} strokeWidth="2" strokeLinecap="round" />
+          </svg>
+        )
       case 'orders':
         return (
           <svg {...common}>
@@ -1958,6 +2170,8 @@ function App() {
         { id: 'addons', label: 'Add ons', icon: 'addons' },
         { id: 'coverage', label: 'Coverage', icon: 'coverage' },
         { id: 'slots', label: 'Time slots', icon: 'slots' },
+        { id: 'dailyCleaningServices', label: 'Daily Cleaning Services', icon: 'packages' },
+        { id: 'packages', label: 'Packages', icon: 'packages' },
         { id: 'coupons', label: 'Coupons', icon: 'coverage' },
       ],
     },
@@ -1982,6 +2196,8 @@ function App() {
     addons: 'Add-Ons',
     coverage: 'Coverage',
     slots: 'Time Slots',
+    dailyCleaningServices: 'Daily Cleaning Services',
+    packages: 'Packages',
     coupons: 'Coupons',
     orders: 'Orders',
     reviews: 'Reviews',
@@ -2489,6 +2705,303 @@ function App() {
                       Cancel
                     </button>
                   )}
+                </div>
+              </form>
+            </div>
+          </>
+        )}
+
+        {activeTab === 'dailyCleaningServices' && (
+          <>
+            <div className="form-section">
+              <div className="section-header">
+                <h2 className="section-title">Customer App Monthly Package Pricing</h2>
+                <button type="button" className="refresh-button" onClick={fetchPackagePricing} disabled={loadingPackagePricing}>
+                  {loadingPackagePricing ? 'Loading...' : 'Refresh'}
+                </button>
+              </div>
+              <form onSubmit={handlePackagePricingSubmit} className="form">
+                <div className="form-row">
+                  <div className="form-group">
+                    <label htmlFor="packageDurationDays">Package Duration (days)</label>
+                    <input
+                      id="packageDurationDays"
+                      type="number"
+                      min="1"
+                      value={packagePricingForm.durationDays}
+                      onChange={(e) =>
+                        setPackagePricingForm((prev) => ({ ...prev, durationDays: e.target.value }))
+                      }
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div className="form-group">
+                  <label>Time Slots</label>
+                  <div className="form-row">
+                    {packagePricingForm.timeSlots.map((slot, idx) => (
+                      <div key={`slot-${idx}`} className="form-group">
+                        <input
+                          type="text"
+                          value={slot}
+                          onChange={(e) => {
+                            const next = [...packagePricingForm.timeSlots]
+                            next[idx] = e.target.value
+                            setPackagePricingForm((prev) => ({ ...prev, timeSlots: next }))
+                          }}
+                          placeholder={`Slot ${idx + 1}`}
+                          required
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="form-group">
+                  <label>Pricing Matrix</label>
+                  <div className="form-row">
+                    {[
+                      { key: 'i1_e1_daily', label: 'I1 + E1 + Daily' },
+                      { key: 'i1_e1_alternate', label: 'I1 + E1 + Alternate' },
+                      { key: 'i1_e2_daily', label: 'I1 + E2 + Daily' },
+                      { key: 'i1_e2_alternate', label: 'I1 + E2 + Alternate' },
+                      { key: 'i2_e1_daily', label: 'I2 + E1 + Daily' },
+                      { key: 'i2_e1_alternate', label: 'I2 + E1 + Alternate' },
+                      { key: 'i2_e2_daily', label: 'I2 + E2 + Daily' },
+                      { key: 'i2_e2_alternate', label: 'I2 + E2 + Alternate' },
+                    ].map((item) => (
+                      <div key={item.key} className="form-group">
+                        <label htmlFor={item.key}>{item.label}</label>
+                        <input
+                          id={item.key}
+                          type="number"
+                          min="0"
+                          step="1"
+                          value={packagePricingForm.pricingMatrix[item.key]}
+                          onChange={(e) =>
+                            setPackagePricingForm((prev) => ({
+                              ...prev,
+                              pricingMatrix: { ...prev.pricingMatrix, [item.key]: e.target.value },
+                            }))
+                          }
+                          required
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {packagePricingMessage.text ? (
+                  <div className={`message ${packagePricingMessage.type}`}>{packagePricingMessage.text}</div>
+                ) : null}
+
+                <div className="form-actions">
+                  <button type="submit" className="submit-button" disabled={loadingPackagePricing}>
+                    {loadingPackagePricing ? 'Saving...' : 'Save Package Pricing'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </>
+        )}
+
+        {activeTab === 'packages' && (
+          <>
+            <div className="form-section">
+              <div className="section-header">
+                <h2 className="section-title">Customer App Packages</h2>
+                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                  <button type="button" className="secondary-button" onClick={addPackageCardRow}>
+                    + Add Package
+                  </button>
+                  <button type="button" className="danger-button" onClick={clearAllPackageCards}>
+                    Clear All
+                  </button>
+                  <button
+                    type="button"
+                    className="danger-button"
+                    onClick={clearAllPackageCardsAndSave}
+                    disabled={loadingPackagePricing}
+                  >
+                    {loadingPackagePricing ? 'Clearing...' : 'Clear All & Save'}
+                  </button>
+                  <button type="button" className="refresh-button" onClick={fetchPackagePricing} disabled={loadingPackagePricing}>
+                    {loadingPackagePricing ? 'Loading...' : 'Refresh'}
+                  </button>
+                </div>
+              </div>
+
+              <form onSubmit={handlePackagePricingSubmit} className="form">
+                {(packagePricingForm.packageCards || []).length === 0 ? (
+                  <div className="info-text">No package cards configured. Click "Add Package".</div>
+                ) : (
+                  (packagePricingForm.packageCards || []).map((card, index) => (
+                    <div key={`card-${index}`} style={{ border: '1px solid #E5E7EB', borderRadius: 10, padding: 12, marginBottom: 12 }}>
+                      <div className="form-row">
+                        <div className="form-group">
+                          <label>Package Name</label>
+                          <input
+                            type="text"
+                            value={card.name ?? ''}
+                            onChange={(e) => updatePackageCardRow(index, 'name', e.target.value)}
+                            placeholder="Premium Monthly"
+                            required
+                          />
+                        </div>
+                      </div>
+                      <div className="form-row">
+                        <div className="form-group">
+                          <label>Description</label>
+                          <input
+                            type="text"
+                            value={card.description ?? ''}
+                            onChange={(e) => updatePackageCardRow(index, 'description', e.target.value)}
+                            placeholder="Short package description"
+                          />
+                        </div>
+                        <div className="form-group">
+                          <label>Image URL</label>
+                          <input
+                            type="text"
+                            value={card.image ?? ''}
+                            onChange={(e) => updatePackageCardRow(index, 'image', e.target.value)}
+                            placeholder="https://..."
+                          />
+                        </div>
+                      </div>
+                      <div className="form-row">
+                        <div className="form-group">
+                          <label>Washes / Month</label>
+                          <input
+                            type="number"
+                            min="1"
+                            step="1"
+                            value={card.times ?? ''}
+                            onChange={(e) => updatePackageCardRow(index, 'times', e.target.value)}
+                            placeholder="2"
+                            required
+                          />
+                        </div>
+                        <div className="form-group">
+                          <label>Price</label>
+                          <input
+                            type="number"
+                            min="0"
+                            step="1"
+                            value={card.price ?? ''}
+                            onChange={(e) => updatePackageCardRow(index, 'price', e.target.value)}
+                            placeholder="1499"
+                            required
+                          />
+                        </div>
+                      </div>
+                      <div className="form-row">
+                        <div className="form-group">
+                          <label>Add-Ons</label>
+                          <div style={{ maxHeight: 140, overflowY: 'auto', border: '1px solid #E5E7EB', borderRadius: 8, padding: 8 }}>
+                            {(packageCarWashAddOns || []).length === 0 ? (
+                              <small className="help-text">No add-ons available.</small>
+                            ) : (
+                              (packageCarWashAddOns || []).map((addOn) => {
+                                const checked = (card.addOnServiceIds || []).includes(addOn._id)
+                                return (
+                                  <label key={addOn._id} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                                    <input
+                                      type="checkbox"
+                                      checked={checked}
+                                      onChange={(e) => {
+                                        const current = card.addOnServiceIds || []
+                                        const next = e.target.checked
+                                          ? [...current, addOn._id]
+                                          : current.filter((id) => id !== addOn._id)
+                                        updatePackageCardRow(index, 'addOnServiceIds', next)
+                                      }}
+                                    />
+                                    <span>{addOn.name} (₹{addOn.basePrice})</span>
+                                  </label>
+                                )
+                              })
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="form-row">
+                        <div className="form-group">
+                          <label>Coverage Included</label>
+                          <div style={{ maxHeight: 140, overflowY: 'auto', border: '1px solid #E5E7EB', borderRadius: 8, padding: 8 }}>
+                            {(packageCarWashCoverage || []).length === 0 ? (
+                              <small className="help-text">No coverage items available.</small>
+                            ) : (
+                              (packageCarWashCoverage || []).map((coverage) => {
+                                const checked = (card.coverageIncluded || []).includes(coverage.name)
+                                return (
+                                  <label key={`inc-${coverage._id}`} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                                    <input
+                                      type="checkbox"
+                                      checked={checked}
+                                      onChange={(e) => {
+                                        const current = card.coverageIncluded || []
+                                        const next = e.target.checked
+                                          ? [...current, coverage.name]
+                                          : current.filter((name) => name !== coverage.name)
+                                        updatePackageCardRow(index, 'coverageIncluded', next)
+                                      }}
+                                    />
+                                    <span>{coverage.name}</span>
+                                  </label>
+                                )
+                              })
+                            )}
+                          </div>
+                        </div>
+                        <div className="form-group">
+                          <label>Coverage Not Included</label>
+                          <div style={{ maxHeight: 140, overflowY: 'auto', border: '1px solid #E5E7EB', borderRadius: 8, padding: 8 }}>
+                            {(packageCarWashCoverage || []).length === 0 ? (
+                              <small className="help-text">No coverage items available.</small>
+                            ) : (
+                              (packageCarWashCoverage || []).map((coverage) => {
+                                const checked = (card.coverageNotIncluded || []).includes(coverage.name)
+                                return (
+                                  <label key={`not-inc-${coverage._id}`} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                                    <input
+                                      type="checkbox"
+                                      checked={checked}
+                                      onChange={(e) => {
+                                        const current = card.coverageNotIncluded || []
+                                        const next = e.target.checked
+                                          ? [...current, coverage.name]
+                                          : current.filter((name) => name !== coverage.name)
+                                        updatePackageCardRow(index, 'coverageNotIncluded', next)
+                                      }}
+                                    />
+                                    <span>{coverage.name}</span>
+                                  </label>
+                                )
+                              })
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                        <button type="button" className="danger-button" onClick={() => removePackageCardRow(index)}>
+                          Remove
+                        </button>
+                      </div>
+                    </div>
+                  ))
+                )}
+
+                {packagePricingMessage.text ? (
+                  <div className={`message ${packagePricingMessage.type}`}>{packagePricingMessage.text}</div>
+                ) : null}
+
+                <div className="form-actions">
+                  <button type="submit" className="submit-button" disabled={loadingPackagePricing}>
+                    {loadingPackagePricing ? 'Saving...' : 'Save Packages'}
+                  </button>
                 </div>
               </form>
             </div>
@@ -3334,7 +3847,7 @@ function App() {
                   </thead>
                   <tbody>
                     {reviews.map((order) => {
-                      const serviceName = order.items?.[0]?.service?.name || '—'
+                      const serviceName = order.items?.[0]?.serviceName || order.items?.[0]?.service?.name || '—'
                       const customerName = order.customer?.name || order.user?.name || '—'
                       const customerPhone = order.customer?.phone || order.user?.phone || '—'
                       return (
@@ -3533,12 +4046,41 @@ function App() {
                           ? new Date(item.scheduledDate).toLocaleDateString()
                           : '—';
                         const slotTime = item?.scheduledTimeSlot || '—';
-                        const serviceName = item?.service?.name || 'Service';
+                        const serviceName = item?.serviceName || item?.service?.name || 'Service';
+                        const custom = item?.customPackage || null;
+                        const formatDate = (value) => {
+                          if (!value) return '—'
+                          const d = new Date(value)
+                          if (Number.isNaN(d.getTime())) return '—'
+                          return d.toLocaleDateString()
+                        }
+                        const interiorDatesText = Array.isArray(custom?.interiorDates) && custom.interiorDates.length > 0
+                          ? custom.interiorDates.map(formatDate).join(', ')
+                          : '—'
+                        const exteriorDatesText = Array.isArray(custom?.exteriorDates) && custom.exteriorDates.length > 0
+                          ? custom.exteriorDates.map(formatDate).join(', ')
+                          : '—'
                         return (
                           <div key={`${order._id}-slot-${index}`} className="order-slot-item">
                             <span className="order-slot-service">{serviceName}</span>
                             <span className="order-slot-separator">•</span>
                             <span className="order-slot-datetime">{slotDate} • {slotTime}</span>
+                            {Array.isArray(item?.scheduledSlots) && item.scheduledSlots.length > 0 ? (
+                              <div style={{ width: '100%', marginTop: 6, fontSize: 12, color: '#4B5563' }}>
+                                Package slots: {item.scheduledSlots.length}
+                              </div>
+                            ) : null}
+                            {custom ? (
+                              <div style={{ width: '100%', marginTop: 8, fontSize: 12, color: '#374151', lineHeight: 1.5 }}>
+                                <div><strong>Custom package</strong></div>
+                                <div>Start: {formatDate(custom.packageStartDate)} | Duration: {custom.packageDurationDays || '—'} days</div>
+                                <div>Slot: {custom.packageTimeSlot || '—'} | Daily mode: {custom.dailyMode || '—'}</div>
+                                <div>Interior dates: {interiorDatesText}</div>
+                                <div>Exterior dates: {exteriorDatesText}</div>
+                                <div>Pricing: {custom.pricingKey || '—'} | ₹{Number(custom.packagePrice || 0).toFixed(2)}</div>
+                                <div>Pricing version: {custom.pricingVersion ? formatDate(custom.pricingVersion) : '—'}</div>
+                              </div>
+                            ) : null}
                           </div>
                         );
                       })}

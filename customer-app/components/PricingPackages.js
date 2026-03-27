@@ -108,6 +108,24 @@ export default function PricingPackages({
   };
 
   const renderPackageItem = (pkg, section) => {
+    if (section === 'monthly') {
+      return (
+        <View key="monthly-custom-card" style={styles.monthlyCustomCard}>
+          <Text style={styles.monthlyCustomTitle}>Monthly Package</Text>
+          <Text style={styles.monthlyCustomSubtitle}>
+            Customizable monthly plan for interior, exterior, and daily cleaning.
+          </Text>
+          <TouchableOpacity
+            style={styles.monthlyBookButton}
+            activeOpacity={0.85}
+            onPress={() => navigation?.navigate('PackageDetails')}
+          >
+            <Text style={styles.monthlyBookButtonText}>Book</Text>
+          </TouchableOpacity>
+        </View>
+      );
+    }
+
     const isSelected = selectedPackage?.section === section && (
       selectedPackage?.id === pkg.id ||
       (selectedPackage?.times && pkg.times && Number(selectedPackage.times) === Number(pkg.times))
@@ -174,7 +192,7 @@ export default function PricingPackages({
           </TouchableOpacity>
           {expandedSection === 'monthly' && (
             <View style={styles.packagesList}>
-              {monthlyPackages.map(pkg => renderPackageItem(pkg, 'monthly'))}
+              {renderPackageItem(monthlyPackages[0], 'monthly')}
             </View>
           )}
 
@@ -427,6 +445,38 @@ const createStyles = theme => StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
     color: '#0B0B0B',
+  },
+  monthlyCustomCard: {
+    backgroundColor: theme.cardBackground,
+    borderRadius: 12,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: theme.cardBorder,
+    gap: 8,
+  },
+  monthlyCustomTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: theme.textPrimary,
+  },
+  monthlyCustomSubtitle: {
+    fontSize: 13,
+    lineHeight: 19,
+    color: theme.textSecondary,
+    fontWeight: '600',
+  },
+  monthlyBookButton: {
+    alignSelf: 'flex-start',
+    borderRadius: 999,
+    backgroundColor: theme.accent,
+    paddingHorizontal: 16,
+    paddingVertical: 9,
+    marginTop: 2,
+  },
+  monthlyBookButtonText: {
+    color: '#000000',
+    fontSize: 13,
+    fontWeight: '800',
   },
   addToCartContainer: {
     flexDirection: 'row',

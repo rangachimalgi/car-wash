@@ -21,6 +21,8 @@ import VehicleDetailsScreen from '../screens/VehicleDetailsScreen';
 import BrandsScreen from '../screens/BrandsScreen';
 import ModelSelectionScreen from '../screens/ModelSelectionScreen';
 import PaymentMethodsScreen from '../screens/PaymentMethodsScreen';
+import PackageDetailsScreen from '../screens/PackageDetailsScreen';
+import PackagesScreen from '../screens/PackagesScreen';
 
 const Stack = createStackNavigator();
 
@@ -33,7 +35,7 @@ export default function HeaderNavigator() {
       try {
         const token = await AsyncStorage.getItem('authToken');
         if (token) {
-          setInitialRoute('Welcome');
+          setInitialRoute('MainTabs');
           registerPushTokenWithBackend().catch(() => {});
         }
       } catch (error) {
@@ -155,6 +157,16 @@ export default function HeaderNavigator() {
       <Stack.Screen
         name="PaymentMethods"
         component={PaymentMethodsScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="PackageDetails"
+        component={PackageDetailsScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="Packages"
+        component={PackagesScreen}
         options={{ headerShown: false }}
       />
     </Stack.Navigator>
