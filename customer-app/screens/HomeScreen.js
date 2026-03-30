@@ -266,7 +266,7 @@ export default function HomeScreen({ navigation }) {
               <Text style={styles.halfCardTitle}>& Care</Text>
               <View style={styles.halfCardImageWrap}>
                 <Image
-                  source={require('../assets/carpicseven.png')}
+                  source={require('../assets/auto.png')}
                   style={styles.halfCardImage}
                   resizeMode="contain"
                 />
@@ -279,18 +279,20 @@ export default function HomeScreen({ navigation }) {
             onPress={() => navigation.navigate('PackageDetails')}
             activeOpacity={0.9}
           >
+            <View style={styles.dailyCleaningImageWrap}>
+              <Image
+                source={require('../assets/dailyService.png')}
+                style={styles.dailyCleaningImage}
+                resizeMode="contain"
+              />
+            </View>
             <View style={styles.dailyCleaningTextWrap}>
               <Text style={styles.dailyCleaningTitle}>Daily Cleaning Services</Text>
               <Text style={styles.dailyCleaningSubtitle}>
                 Custom monthly plans for interior, exterior and daily care.
               </Text>
             </View>
-            <View style={styles.dailyCleaningRight}>
-              <Image
-                source={require('../assets/carpicseven.png')}
-                style={styles.dailyCleaningImage}
-                resizeMode="contain"
-              />
+            <View style={styles.dailyCleaningChevronWrap}>
               <MaterialCommunityIcons name="chevron-right" size={22} color={theme.textPrimary} />
             </View>
           </TouchableOpacity>
@@ -579,14 +581,21 @@ const createStyles = theme => StyleSheet.create({
     borderWidth: 1,
     borderColor: theme.cardBorder,
     paddingHorizontal: 16,
-    paddingVertical: 14,
+    paddingVertical: 16,
+    minHeight: 132,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    gap: 12,
+  },
+  dailyCleaningImageWrap: {
+    width: 132,
+    height: 104,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   dailyCleaningTextWrap: {
     flex: 1,
-    paddingRight: 10,
+    paddingRight: 6,
   },
   dailyCleaningTitle: {
     fontSize: 18,
@@ -600,14 +609,13 @@ const createStyles = theme => StyleSheet.create({
     fontWeight: '600',
     lineHeight: 17,
   },
-  dailyCleaningRight: {
-    flexDirection: 'row',
+  dailyCleaningChevronWrap: {
     alignItems: 'center',
-    gap: 4,
+    justifyContent: 'center',
   },
   dailyCleaningImage: {
-    width: 56,
-    height: 40,
+    width: 122,
+    height: 92,
   },
   sectionHeader: {
     flexDirection: 'row',
