@@ -57,10 +57,10 @@ function App() {
 
   const [availableAddOns, setAvailableAddOns] = useState([])
   const [allAddOns, setAllAddOns] = useState([]) // All add-ons for listing
-  const [addOnFilter, setAddOnFilter] = useState('all') // 'all', 'car', 'bike'
+  const [addOnFilter, setAddOnFilter] = useState('car') // 'car', 'bike'
   const [availableCoverage, setAvailableCoverage] = useState([])
   const [allCoverage, setAllCoverage] = useState([]) // All coverage items for listing
-  const [coverageFilter, setCoverageFilter] = useState('all') // 'all', 'car', 'bike'
+  const [coverageFilter, setCoverageFilter] = useState('car') // 'car', 'bike'
   const [selectedCoverage, setSelectedCoverage] = useState([])
   const [loading, setLoading] = useState(false)
   const [loadingAddOn, setLoadingAddOn] = useState(false)
@@ -74,6 +74,7 @@ function App() {
   const [addOnMessage, setAddOnMessage] = useState({ type: '', text: '' })
   const [coverageMessage, setCoverageMessage] = useState({ type: '', text: '' })
   const [orders, setOrders] = useState([])
+  const [selectedOrderId, setSelectedOrderId] = useState(null)
   const [reviews, setReviews] = useState([])
   const [loadingReviews, setLoadingReviews] = useState(false)
   const [allServices, setAllServices] = useState([])
@@ -174,6 +175,7 @@ function App() {
     },
     packageCards: [],
   })
+  const [newPackageCard, setNewPackageCard] = useState({ ...DEFAULT_PACKAGE_CARD, times: 2 })
   const [loadingPackagePricing, setLoadingPackagePricing] = useState(false)
   const [packagePricingMessage, setPackagePricingMessage] = useState({ type: '', text: '' })
 
@@ -256,7 +258,6 @@ function App() {
 
   // Filter add-ons based on selected filter
   const filteredAddOns = allAddOns.filter(addOn => {
-    if (addOnFilter === 'all') return true
     if (addOnFilter === 'car') {
       // Show add-ons that have CarWash in applicableFor, or if applicableFor is empty/missing (legacy)
       return (addOn.applicableFor && addOn.applicableFor.includes('CarWash')) ||
@@ -272,7 +273,6 @@ function App() {
 
   // Filter coverage based on selected filter
   const filteredCoverage = allCoverage.filter(item => {
-    if (coverageFilter === 'all') return true
     if (coverageFilter === 'car') {
       return Array.isArray(item.applicableFor) && item.applicableFor.includes('CarWash')
     }
@@ -482,23 +482,43 @@ function App() {
     }
   }
 
-  const addPackageCardRow = () => {
-    setPackagePricingForm((prev) => ({
-      ...prev,
-      packageCards: [
-        ...(prev.packageCards || []),
-        { ...DEFAULT_PACKAGE_CARD, times: (prev.packageCards?.length || 1) + 1 },
-      ],
-    }))
+  const toggleNewPackageArrayValue = (field, value, checked) => {
+    setNewPackageCard((prev) => {
+      const current = Array.isArray(prev[field]) ? prev[field] : []
+      const next = checked ? [...current, value] : current.filter((item) => item !== value)
+      return { ...prev, [field]: next }
+    })
   }
 
-  const updatePackageCardRow = (index, field, value) => {
+  const handleCreatePackageCard = () => {
+    if (!String(newPackageCard.name || '').trim()) {
+      setPackagePricingMessage({ type: 'error', text: 'Package name is required.' })
+      return
+    }
+    if (!newPackageCard.times || Number(newPackageCard.times) <= 0) {
+      setPackagePricingMessage({ type: 'error', text: 'Washes / Month must be greater than 0.' })
+      return
+    }
+    if (newPackageCard.price === '' || Number(newPackageCard.price) < 0) {
+      setPackagePricingMessage({ type: 'error', text: 'Price must be 0 or greater.' })
+      return
+    }
+
+    const packageToAdd = {
+      ...newPackageCard,
+      name: String(newPackageCard.name || '').trim(),
+      description: String(newPackageCard.description || '').trim(),
+      image: String(newPackageCard.image || '').trim(),
+      times: Number(newPackageCard.times || 0),
+      price: Number(newPackageCard.price || 0),
+    }
+
     setPackagePricingForm((prev) => ({
       ...prev,
-      packageCards: (prev.packageCards || []).map((card, idx) =>
-        idx === index ? { ...card, [field]: value } : card
-      ),
+      packageCards: [...(prev.packageCards || []), packageToAdd],
     }))
+    setNewPackageCard({ ...DEFAULT_PACKAGE_CARD, times: 2 })
+    setPackagePricingMessage({ type: 'success', text: 'Package added. Click "Save Packages" to persist.' })
   }
 
   const removePackageCardRow = (index) => {
@@ -508,47 +528,6 @@ function App() {
     }))
   }
 
-  const clearAllPackageCards = () => {
-    setPackagePricingForm((prev) => ({
-      ...prev,
-      packageCards: [],
-    }))
-  }
-
-  const clearAllPackageCardsAndSave = async () => {
-    setLoadingPackagePricing(true)
-    setPackagePricingMessage({ type: '', text: '' })
-    try {
-      const payload = {
-        app: packagePricingForm.app,
-        vehicleType: packagePricingForm.vehicleType,
-        durationDays: Number(packagePricingForm.durationDays || 30),
-        timeSlots: (packagePricingForm.timeSlots || []).map((slot) => String(slot || '').trim()).filter(Boolean),
-        pricingMatrix: Object.entries(packagePricingForm.pricingMatrix || {}).reduce((acc, [key, value]) => {
-          acc[key] = Number(value || 0)
-          return acc
-        }, {}),
-        packageCards: [],
-      }
-
-      const response = await fetch(`${API_BASE_URL}/package-pricing`, getFetchOptions({
-        method: 'PUT',
-        body: JSON.stringify(payload),
-      }))
-      const data = await response.json()
-      if (data.success) {
-        setPackagePricingForm((prev) => ({ ...prev, packageCards: [] }))
-        setPackagePricingMessage({ type: 'success', text: 'All packages cleared successfully.' })
-      } else {
-        setPackagePricingMessage({ type: 'error', text: data.message || 'Failed to clear packages.' })
-      }
-    } catch (error) {
-      setPackagePricingMessage({ type: 'error', text: `Network error: ${error.message}` })
-    } finally {
-      setLoadingPackagePricing(false)
-    }
-  }
-
   const fetchOrders = async () => {
     setLoadingOrders(true)
     try {
@@ -556,7 +535,13 @@ function App() {
       const response = await fetch(`${API_BASE_URL}/orders/admin/all`)
       const data = await response.json()
       if (data.success) {
-        setOrders(data.data || [])
+        const nextOrders = data.data || []
+        setOrders(nextOrders)
+        setSelectedOrderId((prev) => {
+          if (!nextOrders.length) return null
+          if (prev && nextOrders.some((order) => order._id === prev)) return prev
+          return nextOrders[0]._id
+        })
       } else {
         console.error('Error fetching orders:', data.message || 'Unknown error')
         setMessage({ type: 'error', text: data.message || 'Error fetching orders' })
@@ -2663,7 +2648,8 @@ function App() {
                 </div>
               )}
 
-              {/* Pricing Packages */}
+              {/*
+              Pricing Packages UI temporarily disabled:
               {(formData.category === 'CarWash' || formData.category === 'BikeWash') && (
                 <>
                   {renderPackageSection('Monthly Packages', 'monthly')}
@@ -2671,6 +2657,7 @@ function App() {
                   {renderPackageSection('Yearly Packages', 'yearly')}
                 </>
               )}
+              */}
 
               {message.text && (
                 <div className={`message ${message.type}`}>
@@ -2716,9 +2703,6 @@ function App() {
             <div className="form-section">
               <div className="section-header">
                 <h2 className="section-title">Customer App Monthly Package Pricing</h2>
-                <button type="button" className="refresh-button" onClick={fetchPackagePricing} disabled={loadingPackagePricing}>
-                  {loadingPackagePricing ? 'Loading...' : 'Refresh'}
-                </button>
               </div>
               <form onSubmit={handlePackagePricingSubmit} className="form">
                 <div className="form-row">
@@ -2811,187 +2795,150 @@ function App() {
             <div className="form-section">
               <div className="section-header">
                 <h2 className="section-title">Customer App Packages</h2>
-                <div style={{ display: 'flex', gap: '0.5rem' }}>
-                  <button type="button" className="secondary-button" onClick={addPackageCardRow}>
+              </div>
+
+              <div className="form">
+                <h3 className="section-title" style={{ fontSize: '1.05rem' }}>Create Package</h3>
+                <div className="form-row">
+                  <div className="form-group">
+                    <label>Package Name</label>
+                    <input
+                      type="text"
+                      value={newPackageCard.name}
+                      onChange={(e) => setNewPackageCard((prev) => ({ ...prev, name: e.target.value }))}
+                      placeholder="Premium Monthly"
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>Description</label>
+                    <input
+                      type="text"
+                      value={newPackageCard.description}
+                      onChange={(e) => setNewPackageCard((prev) => ({ ...prev, description: e.target.value }))}
+                      placeholder="Short package description"
+                    />
+                  </div>
+                </div>
+                <div className="form-row">
+                  <div className="form-group">
+                    <label>Washes / Month</label>
+                    <input
+                      type="number"
+                      min="1"
+                      step="1"
+                      value={newPackageCard.times}
+                      onChange={(e) => setNewPackageCard((prev) => ({ ...prev, times: e.target.value }))}
+                      placeholder="2"
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>Price</label>
+                    <input
+                      type="number"
+                      min="0"
+                      step="1"
+                      value={newPackageCard.price}
+                      onChange={(e) => setNewPackageCard((prev) => ({ ...prev, price: e.target.value }))}
+                      placeholder="1499"
+                    />
+                  </div>
+                </div>
+                <div className="form-row">
+                  <div className="form-group">
+                    <label>Add-Ons</label>
+                    <div style={{ maxHeight: 140, overflowY: 'auto', border: '1px solid #E5E7EB', borderRadius: 8, padding: 8 }}>
+                      {(packageCarWashAddOns || []).length === 0 ? (
+                        <small className="help-text">No add-ons available.</small>
+                      ) : (
+                        (packageCarWashAddOns || []).map((addOn) => (
+                          <label key={addOn._id} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                            <input
+                              type="checkbox"
+                              checked={(newPackageCard.addOnServiceIds || []).includes(addOn._id)}
+                              onChange={(e) => toggleNewPackageArrayValue('addOnServiceIds', addOn._id, e.target.checked)}
+                            />
+                            <span>{addOn.name} (₹{addOn.basePrice})</span>
+                          </label>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                </div>
+                <div className="form-row">
+                  <div className="form-group">
+                    <label>Coverage Included</label>
+                    <div style={{ maxHeight: 140, overflowY: 'auto', border: '1px solid #E5E7EB', borderRadius: 8, padding: 8 }}>
+                      {(packageCarWashCoverage || []).length === 0 ? (
+                        <small className="help-text">No coverage items available.</small>
+                      ) : (
+                        (packageCarWashCoverage || []).map((coverage) => (
+                          <label key={`new-inc-${coverage._id}`} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                            <input
+                              type="checkbox"
+                              checked={(newPackageCard.coverageIncluded || []).includes(coverage.name)}
+                              onChange={(e) => toggleNewPackageArrayValue('coverageIncluded', coverage.name, e.target.checked)}
+                            />
+                            <span>{coverage.name}</span>
+                          </label>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                  <div className="form-group">
+                    <label>Coverage Not Included</label>
+                    <div style={{ maxHeight: 140, overflowY: 'auto', border: '1px solid #E5E7EB', borderRadius: 8, padding: 8 }}>
+                      {(packageCarWashCoverage || []).length === 0 ? (
+                        <small className="help-text">No coverage items available.</small>
+                      ) : (
+                        (packageCarWashCoverage || []).map((coverage) => (
+                          <label key={`new-not-inc-${coverage._id}`} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                            <input
+                              type="checkbox"
+                              checked={(newPackageCard.coverageNotIncluded || []).includes(coverage.name)}
+                              onChange={(e) => toggleNewPackageArrayValue('coverageNotIncluded', coverage.name, e.target.checked)}
+                            />
+                            <span>{coverage.name}</span>
+                          </label>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                </div>
+                <div className="form-actions">
+                  <button type="button" className="secondary-button" onClick={handleCreatePackageCard}>
                     + Add Package
-                  </button>
-                  <button type="button" className="danger-button" onClick={clearAllPackageCards}>
-                    Clear All
-                  </button>
-                  <button
-                    type="button"
-                    className="danger-button"
-                    onClick={clearAllPackageCardsAndSave}
-                    disabled={loadingPackagePricing}
-                  >
-                    {loadingPackagePricing ? 'Clearing...' : 'Clear All & Save'}
-                  </button>
-                  <button type="button" className="refresh-button" onClick={fetchPackagePricing} disabled={loadingPackagePricing}>
-                    {loadingPackagePricing ? 'Loading...' : 'Refresh'}
                   </button>
                 </div>
               </div>
 
-              <form onSubmit={handlePackagePricingSubmit} className="form">
-                {(packagePricingForm.packageCards || []).length === 0 ? (
-                  <div className="info-text">No package cards configured. Click "Add Package".</div>
-                ) : (
-                  (packagePricingForm.packageCards || []).map((card, index) => (
-                    <div key={`card-${index}`} style={{ border: '1px solid #E5E7EB', borderRadius: 10, padding: 12, marginBottom: 12 }}>
-                      <div className="form-row">
-                        <div className="form-group">
-                          <label>Package Name</label>
-                          <input
-                            type="text"
-                            value={card.name ?? ''}
-                            onChange={(e) => updatePackageCardRow(index, 'name', e.target.value)}
-                            placeholder="Premium Monthly"
-                            required
-                          />
-                        </div>
-                      </div>
-                      <div className="form-row">
-                        <div className="form-group">
-                          <label>Description</label>
-                          <input
-                            type="text"
-                            value={card.description ?? ''}
-                            onChange={(e) => updatePackageCardRow(index, 'description', e.target.value)}
-                            placeholder="Short package description"
-                          />
-                        </div>
-                        <div className="form-group">
-                          <label>Image URL</label>
-                          <input
-                            type="text"
-                            value={card.image ?? ''}
-                            onChange={(e) => updatePackageCardRow(index, 'image', e.target.value)}
-                            placeholder="https://..."
-                          />
-                        </div>
-                      </div>
-                      <div className="form-row">
-                        <div className="form-group">
-                          <label>Washes / Month</label>
-                          <input
-                            type="number"
-                            min="1"
-                            step="1"
-                            value={card.times ?? ''}
-                            onChange={(e) => updatePackageCardRow(index, 'times', e.target.value)}
-                            placeholder="2"
-                            required
-                          />
-                        </div>
-                        <div className="form-group">
-                          <label>Price</label>
-                          <input
-                            type="number"
-                            min="0"
-                            step="1"
-                            value={card.price ?? ''}
-                            onChange={(e) => updatePackageCardRow(index, 'price', e.target.value)}
-                            placeholder="1499"
-                            required
-                          />
-                        </div>
-                      </div>
-                      <div className="form-row">
-                        <div className="form-group">
-                          <label>Add-Ons</label>
-                          <div style={{ maxHeight: 140, overflowY: 'auto', border: '1px solid #E5E7EB', borderRadius: 8, padding: 8 }}>
-                            {(packageCarWashAddOns || []).length === 0 ? (
-                              <small className="help-text">No add-ons available.</small>
-                            ) : (
-                              (packageCarWashAddOns || []).map((addOn) => {
-                                const checked = (card.addOnServiceIds || []).includes(addOn._id)
-                                return (
-                                  <label key={addOn._id} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-                                    <input
-                                      type="checkbox"
-                                      checked={checked}
-                                      onChange={(e) => {
-                                        const current = card.addOnServiceIds || []
-                                        const next = e.target.checked
-                                          ? [...current, addOn._id]
-                                          : current.filter((id) => id !== addOn._id)
-                                        updatePackageCardRow(index, 'addOnServiceIds', next)
-                                      }}
-                                    />
-                                    <span>{addOn.name} (₹{addOn.basePrice})</span>
-                                  </label>
-                                )
-                              })
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                      <div className="form-row">
-                        <div className="form-group">
-                          <label>Coverage Included</label>
-                          <div style={{ maxHeight: 140, overflowY: 'auto', border: '1px solid #E5E7EB', borderRadius: 8, padding: 8 }}>
-                            {(packageCarWashCoverage || []).length === 0 ? (
-                              <small className="help-text">No coverage items available.</small>
-                            ) : (
-                              (packageCarWashCoverage || []).map((coverage) => {
-                                const checked = (card.coverageIncluded || []).includes(coverage.name)
-                                return (
-                                  <label key={`inc-${coverage._id}`} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-                                    <input
-                                      type="checkbox"
-                                      checked={checked}
-                                      onChange={(e) => {
-                                        const current = card.coverageIncluded || []
-                                        const next = e.target.checked
-                                          ? [...current, coverage.name]
-                                          : current.filter((name) => name !== coverage.name)
-                                        updatePackageCardRow(index, 'coverageIncluded', next)
-                                      }}
-                                    />
-                                    <span>{coverage.name}</span>
-                                  </label>
-                                )
-                              })
-                            )}
-                          </div>
-                        </div>
-                        <div className="form-group">
-                          <label>Coverage Not Included</label>
-                          <div style={{ maxHeight: 140, overflowY: 'auto', border: '1px solid #E5E7EB', borderRadius: 8, padding: 8 }}>
-                            {(packageCarWashCoverage || []).length === 0 ? (
-                              <small className="help-text">No coverage items available.</small>
-                            ) : (
-                              (packageCarWashCoverage || []).map((coverage) => {
-                                const checked = (card.coverageNotIncluded || []).includes(coverage.name)
-                                return (
-                                  <label key={`not-inc-${coverage._id}`} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-                                    <input
-                                      type="checkbox"
-                                      checked={checked}
-                                      onChange={(e) => {
-                                        const current = card.coverageNotIncluded || []
-                                        const next = e.target.checked
-                                          ? [...current, coverage.name]
-                                          : current.filter((name) => name !== coverage.name)
-                                        updatePackageCardRow(index, 'coverageNotIncluded', next)
-                                      }}
-                                    />
-                                    <span>{coverage.name}</span>
-                                  </label>
-                                )
-                              })
-                            )}
-                          </div>
-                        </div>
-                      </div>
+              <div className="form-section-divider"></div>
 
-                      <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-                        <button type="button" className="danger-button" onClick={() => removePackageCardRow(index)}>
-                          Remove
-                        </button>
+              <form onSubmit={handlePackagePricingSubmit} className="form">
+                <h3 className="section-title" style={{ fontSize: '1.05rem' }}>Existing Packages</h3>
+                {(packagePricingForm.packageCards || []).length === 0 ? (
+                  <div className="info-text">No packages added yet.</div>
+                ) : (
+                  <div className="addons-clean-list">
+                    {(packagePricingForm.packageCards || []).map((card, index) => (
+                      <div key={`pkg-${index}`} className="addon-list-row">
+                        <div className="addon-list-main">
+                          <h4 className="addon-list-name">{card.name || `Package ${index + 1}`}</h4>
+                          <span className="addon-list-applicable">
+                            {card.description || 'No description'}
+                          </span>
+                          <span className="addon-list-applicable">
+                            {Number(card.times || 0)} washes/month | {Number(card.addOnServiceIds?.length || 0)} add-ons | {Number(card.coverageIncluded?.length || 0)} included | {Number(card.coverageNotIncluded?.length || 0)} not included
+                          </span>
+                        </div>
+                        <div className="addon-list-meta">
+                          <span className="addon-list-price">₹{card.price || 0}</span>
+                          <button type="button" className="danger-button" onClick={() => removePackageCardRow(index)}>
+                            Remove
+                          </button>
+                        </div>
                       </div>
-                    </div>
-                  ))
+                    ))}
+                  </div>
                 )}
 
                 {packagePricingMessage.text ? (
@@ -3121,70 +3068,7 @@ function App() {
         {/* Add-Ons Form */}
         {activeTab === 'addons' && (
           <>
-            {/* Add-Ons List Section */}
-            <div className="addons-list-section">
-              <div className="section-header">
-                <h2 className="section-title">Existing Add-Ons</h2>
-                <div className="filter-tabs">
-                  <button
-                    type="button"
-                    className={`filter-tab ${addOnFilter === 'all' ? 'active' : ''}`}
-                    onClick={() => setAddOnFilter('all')}
-                  >
-                    All
-                  </button>
-                  <button
-                    type="button"
-                    className={`filter-tab ${addOnFilter === 'car' ? 'active' : ''}`}
-                    onClick={() => setAddOnFilter('car')}
-                  >
-                    Car Wash
-                  </button>
-                  <button
-                    type="button"
-                    className={`filter-tab ${addOnFilter === 'bike' ? 'active' : ''}`}
-                    onClick={() => setAddOnFilter('bike')}
-                  >
-                    Bike Wash
-                  </button>
-                </div>
-              </div>
-
-              {loadingAllAddOns ? (
-                <div className="loading-text">Loading add-ons...</div>
-              ) : filteredAddOns.length === 0 ? (
-                <div className="info-text">No add-ons found for this filter.</div>
-              ) : (
-                <div className="addons-grid">
-                  {filteredAddOns.map(addOn => (
-                    <div key={addOn._id} className="addon-card">
-                      <div className="addon-card-header">
-                        <h3 className="addon-card-title">{addOn.name}</h3>
-                        <span className={`addon-status ${addOn.isActive ? 'active' : 'inactive'}`}>
-                          {addOn.isActive ? 'Active' : 'Inactive'}
-                        </span>
-                      </div>
-                      <div className="addon-card-details">
-                        <div className="detail-item">
-                          <span className="detail-label">Price:</span>
-                          <span className="detail-value">₹{addOn.basePrice}</span>
-                        </div>
-                      </div>
-                      <div className="addon-card-footer">
-                        <span className="applicable-for">
-                          For: {addOn.applicableFor && addOn.applicableFor.length > 0 
-                            ? addOn.applicableFor.map(cat => cat === 'CarWash' ? 'Car Wash' : 'Bike Wash').join(', ')
-                            : 'N/A'}
-                        </span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
             {/* Create Add-On Form */}
-            <div className="form-section-divider"></div>
             <h2 className="section-title">Create New Add-On</h2>
             <form onSubmit={handleAddOnSubmit} className="form">
             <div className="form-group">
@@ -3266,61 +3150,52 @@ function App() {
             <button type="submit" className="submit-button" disabled={loadingAddOn}>
               {loadingAddOn ? 'Creating...' : 'Create Add-On'}
             </button>
-          </form>
-          </>
-        )}
+            </form>
 
-        {/* Coverage Form */}
-        {activeTab === 'coverage' && (
-          <>
-            {/* Coverage List Section */}
+            <div className="form-section-divider"></div>
+
+            {/* Add-Ons List Section */}
             <div className="addons-list-section">
               <div className="section-header">
-                <h2 className="section-title">Coverage Items</h2>
+                <h2 className="section-title">Existing Add-Ons</h2>
                 <div className="filter-tabs">
                   <button
                     type="button"
-                    className={`filter-tab ${coverageFilter === 'all' ? 'active' : ''}`}
-                    onClick={() => setCoverageFilter('all')}
-                  >
-                    All
-                  </button>
-                  <button
-                    type="button"
-                    className={`filter-tab ${coverageFilter === 'car' ? 'active' : ''}`}
-                    onClick={() => setCoverageFilter('car')}
+                    className={`filter-tab ${addOnFilter === 'car' ? 'active' : ''}`}
+                    onClick={() => setAddOnFilter('car')}
                   >
                     Car Wash
                   </button>
                   <button
                     type="button"
-                    className={`filter-tab ${coverageFilter === 'bike' ? 'active' : ''}`}
-                    onClick={() => setCoverageFilter('bike')}
+                    className={`filter-tab ${addOnFilter === 'bike' ? 'active' : ''}`}
+                    onClick={() => setAddOnFilter('bike')}
                   >
                     Bike Wash
                   </button>
                 </div>
               </div>
 
-              {loadingAllCoverage ? (
-                <div className="loading-text">Loading coverage items...</div>
-              ) : filteredCoverage.length === 0 ? (
-                <div className="info-text">No coverage items found for this filter.</div>
+              {loadingAllAddOns ? (
+                <div className="loading-text">Loading add-ons...</div>
+              ) : filteredAddOns.length === 0 ? (
+                <div className="info-text">No add-ons found for this filter.</div>
               ) : (
-                <div className="addons-grid">
-                  {filteredCoverage.map(item => (
-                    <div key={item._id} className="addon-card">
-                      <div className="addon-card-header">
-                        <h3 className="addon-card-title">{item.name}</h3>
-                        <span className={`addon-status ${item.isActive ? 'active' : 'inactive'}`}>
-                          {item.isActive ? 'Active' : 'Inactive'}
+                <div className="addons-clean-list">
+                  {filteredAddOns.map(addOn => (
+                    <div key={addOn._id} className="addon-list-row">
+                      <div className="addon-list-main">
+                        <h3 className="addon-list-name">{addOn.name}</h3>
+                        <span className="addon-list-applicable">
+                          {addOn.applicableFor && addOn.applicableFor.length > 0
+                            ? addOn.applicableFor.map(cat => cat === 'CarWash' ? 'Car Wash' : 'Bike Wash').join(', ')
+                            : 'N/A'}
                         </span>
                       </div>
-                      <div className="addon-card-footer">
-                        <span className="applicable-for">
-                          For: {item.applicableFor && item.applicableFor.length > 0
-                            ? item.applicableFor.map(cat => cat === 'CarWash' ? 'Car Wash' : 'Bike Wash').join(', ')
-                            : 'N/A'}
+                      <div className="addon-list-meta">
+                        <span className="addon-list-price">₹{addOn.basePrice}</span>
+                        <span className={`addon-status ${addOn.isActive ? 'active' : 'inactive'}`}>
+                          {addOn.isActive ? 'Active' : 'Inactive'}
                         </span>
                       </div>
                     </div>
@@ -3328,9 +3203,13 @@ function App() {
                 </div>
               )}
             </div>
+          </>
+        )}
 
+        {/* Coverage Form */}
+        {activeTab === 'coverage' && (
+          <>
             {/* Create Coverage Form */}
-            <div className="form-section-divider"></div>
             <h2 className="section-title">Create Coverage Item</h2>
             <form onSubmit={handleCoverageSubmit} className="form">
               <div className="form-group">
@@ -3397,6 +3276,57 @@ function App() {
                 {loadingCoverage ? 'Creating...' : 'Create Coverage'}
               </button>
             </form>
+
+            <div className="form-section-divider"></div>
+
+            {/* Coverage List Section */}
+            <div className="addons-list-section">
+              <div className="section-header">
+                <h2 className="section-title">Existing Coverage Items</h2>
+                <div className="filter-tabs">
+                  <button
+                    type="button"
+                    className={`filter-tab ${coverageFilter === 'car' ? 'active' : ''}`}
+                    onClick={() => setCoverageFilter('car')}
+                  >
+                    Car Wash
+                  </button>
+                  <button
+                    type="button"
+                    className={`filter-tab ${coverageFilter === 'bike' ? 'active' : ''}`}
+                    onClick={() => setCoverageFilter('bike')}
+                  >
+                    Bike Wash
+                  </button>
+                </div>
+              </div>
+
+              {loadingAllCoverage ? (
+                <div className="loading-text">Loading coverage items...</div>
+              ) : filteredCoverage.length === 0 ? (
+                <div className="info-text">No coverage items found for this filter.</div>
+              ) : (
+                <div className="addons-clean-list">
+                  {filteredCoverage.map(item => (
+                    <div key={item._id} className="addon-list-row">
+                      <div className="addon-list-main">
+                        <h3 className="addon-list-name">{item.name}</h3>
+                        <span className="addon-list-applicable">
+                          {item.applicableFor && item.applicableFor.length > 0
+                            ? item.applicableFor.map(cat => cat === 'CarWash' ? 'Car Wash' : 'Bike Wash').join(', ')
+                            : 'N/A'}
+                        </span>
+                      </div>
+                      <div className="addon-list-meta">
+                        <span className={`addon-status ${item.isActive ? 'active' : 'inactive'}`}>
+                          {item.isActive ? 'Active' : 'Inactive'}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </>
         )}
 
@@ -3992,164 +3922,207 @@ function App() {
             ) : orders.length === 0 ? (
               <div className="info-text">No orders yet.</div>
             ) : (
-              <div className="orders-grid">
-                {orders.map(order => (
-                  <div key={order._id} className="order-card">
-                    <div className="order-card-header">
-                      <h3 className="order-card-title">Order #{order._id.slice(-6)}</h3>
-                      <span className={`order-status ${order.status?.toLowerCase()}`}>
-                        {order.status || 'Pending'}
-                      </span>
-                    </div>
-                    <div className="order-card-details">
-                      <div className="detail-item">
-                        <span className="detail-label">Total:</span>
-                        <span className="detail-value">₹{order.totalAmount?.toFixed(2)}</span>
+              <div className="orders-layout">
+                <div className="orders-table-wrap">
+                  <table className="orders-table">
+                    <thead>
+                      <tr>
+                        <th>Order</th>
+                        <th>Customer</th>
+                        <th>Total</th>
+                        <th>Items</th>
+                        <th>Status</th>
+                        <th>Created</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {orders.map((order) => (
+                        <tr
+                          key={order._id}
+                          className={selectedOrderId === order._id ? 'selected' : ''}
+                          onClick={() => setSelectedOrderId(order._id)}
+                        >
+                          <td>#{order._id.slice(-6)}</td>
+                          <td>{order.customer?.name || '—'}</td>
+                          <td>₹{Number(order.totalAmount || 0).toFixed(2)}</td>
+                          <td>{order.items?.length || 0}</td>
+                          <td>
+                            <span className={`order-status ${order.status?.toLowerCase()}`}>
+                              {order.status || 'Pending'}
+                            </span>
+                          </td>
+                          <td>{order.createdAt ? new Date(order.createdAt).toLocaleString() : '—'}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                {(() => {
+                  const selectedOrder = orders.find((order) => order._id === selectedOrderId) || orders[0]
+                  if (!selectedOrder) return null
+                  return (
+                    <div className="order-detail-panel">
+                      <div className="order-card-header">
+                        <h3 className="order-card-title">Order #{selectedOrder._id.slice(-6)}</h3>
+                        <span className={`order-status ${selectedOrder.status?.toLowerCase()}`}>
+                          {selectedOrder.status || 'Pending'}
+                        </span>
                       </div>
-                      <div className="detail-item">
-                        <span className="detail-label">Items:</span>
-                        <span className="detail-value">{order.items?.length || 0}</span>
+                      <div className="order-card-details">
+                        <div className="detail-item">
+                          <span className="detail-label">Total:</span>
+                          <span className="detail-value">₹{Number(selectedOrder.totalAmount || 0).toFixed(2)}</span>
+                        </div>
+                        <div className="detail-item">
+                          <span className="detail-label">Items:</span>
+                          <span className="detail-value">{selectedOrder.items?.length || 0}</span>
+                        </div>
+                        <div className="detail-item">
+                          <span className="detail-label">Created:</span>
+                          <span className="detail-value">{selectedOrder.createdAt ? new Date(selectedOrder.createdAt).toLocaleString() : '—'}</span>
+                        </div>
                       </div>
-                      <div className="detail-item">
-                        <span className="detail-label">Created:</span>
-                        <span className="detail-value">{new Date(order.createdAt).toLocaleString()}</span>
+                      <div className="order-card-details">
+                        <div className="detail-item">
+                          <span className="detail-label">Customer:</span>
+                          <span className="detail-value">{selectedOrder.customer?.name || '—'}</span>
+                        </div>
+                        <div className="detail-item">
+                          <span className="detail-label">Phone:</span>
+                          <span className="detail-value">{selectedOrder.customer?.phone || '—'}</span>
+                        </div>
+                        <div className="detail-item">
+                          <span className="detail-label">Address:</span>
+                          <span className="detail-value">{selectedOrder.customer?.address || '—'}</span>
+                        </div>
                       </div>
-                    </div>
-                    <div className="order-card-details">
-                      <div className="detail-item">
-                        <span className="detail-label">Customer:</span>
-                        <span className="detail-value">{order.customer?.name || '—'}</span>
+                      <div className="order-card-details">
+                        <div className="detail-item">
+                          <span className="detail-label">Assigned Emp:</span>
+                          <span className="detail-value">{selectedOrder.assignedEmployeeId || '—'}</span>
+                        </div>
+                        <div className="detail-item">
+                          <span className="detail-label">Assign Status:</span>
+                          <span className="detail-value">{selectedOrder.assignmentStatus || '—'}</span>
+                        </div>
                       </div>
-                      <div className="detail-item">
-                        <span className="detail-label">Phone:</span>
-                        <span className="detail-value">{order.customer?.phone || '—'}</span>
+
+                      <div className="order-slot-list">
+                        <span className="detail-label">Slots:</span>
+                        {(selectedOrder.items || []).map((item, index) => {
+                          const slotDate = item?.scheduledDate
+                            ? new Date(item.scheduledDate).toLocaleDateString()
+                            : '—'
+                          const slotTime = item?.scheduledTimeSlot || '—'
+                          const serviceName = item?.serviceName || item?.service?.name || 'Service'
+                          const custom = item?.customPackage || null
+                          const formatDate = (value) => {
+                            if (!value) return '—'
+                            const d = new Date(value)
+                            if (Number.isNaN(d.getTime())) return '—'
+                            return d.toLocaleDateString()
+                          }
+                          const interiorDatesText = Array.isArray(custom?.interiorDates) && custom.interiorDates.length > 0
+                            ? custom.interiorDates.map(formatDate).join(', ')
+                            : '—'
+                          const exteriorDatesText = Array.isArray(custom?.exteriorDates) && custom.exteriorDates.length > 0
+                            ? custom.exteriorDates.map(formatDate).join(', ')
+                            : '—'
+                          return (
+                            <div key={`${selectedOrder._id}-slot-${index}`} className="order-slot-item">
+                              <span className="order-slot-service">{serviceName}</span>
+                              <span className="order-slot-separator">•</span>
+                              <span className="order-slot-datetime">{slotDate} • {slotTime}</span>
+                              {Array.isArray(item?.scheduledSlots) && item.scheduledSlots.length > 0 ? (
+                                <div style={{ width: '100%', marginTop: 6, fontSize: 12, color: '#4B5563' }}>
+                                  Package slots: {item.scheduledSlots.length}
+                                </div>
+                              ) : null}
+                              {custom ? (
+                                <div style={{ width: '100%', marginTop: 8, fontSize: 12, color: '#374151', lineHeight: 1.5 }}>
+                                  <div><strong>Custom package</strong></div>
+                                  <div>Start: {formatDate(custom.packageStartDate)} | Duration: {custom.packageDurationDays || '—'} days</div>
+                                  <div>Slot: {custom.packageTimeSlot || '—'} | Daily mode: {custom.dailyMode || '—'}</div>
+                                  <div>Interior dates: {interiorDatesText}</div>
+                                  <div>Exterior dates: {exteriorDatesText}</div>
+                                  <div>Pricing: {custom.pricingKey || '—'} | ₹{Number(custom.packagePrice || 0).toFixed(2)}</div>
+                                  <div>Pricing version: {custom.pricingVersion ? formatDate(custom.pricingVersion) : '—'}</div>
+                                </div>
+                              ) : null}
+                            </div>
+                          )
+                        })}
                       </div>
-                      <div className="detail-item">
-                        <span className="detail-label">Address:</span>
-                        <span className="detail-value">{order.customer?.address || '—'}</span>
-                      </div>
-                    </div>
-                    <div className="order-card-details">
-                      <div className="detail-item">
-                        <span className="detail-label">Assigned Emp:</span>
-                        <span className="detail-value">{order.assignedEmployeeId || '—'}</span>
-                      </div>
-                      <div className="detail-item">
-                        <span className="detail-label">Assign Status:</span>
-                        <span className="detail-value">{order.assignmentStatus || '—'}</span>
-                      </div>
-                    </div>
-                    <div className="order-slot-list">
-                      <span className="detail-label">Slots:</span>
-                      {(order.items || []).map((item, index) => {
-                        const slotDate = item?.scheduledDate
-                          ? new Date(item.scheduledDate).toLocaleDateString()
-                          : '—';
-                        const slotTime = item?.scheduledTimeSlot || '—';
-                        const serviceName = item?.serviceName || item?.service?.name || 'Service';
-                        const custom = item?.customPackage || null;
-                        const formatDate = (value) => {
-                          if (!value) return '—'
-                          const d = new Date(value)
-                          if (Number.isNaN(d.getTime())) return '—'
-                          return d.toLocaleDateString()
-                        }
-                        const interiorDatesText = Array.isArray(custom?.interiorDates) && custom.interiorDates.length > 0
-                          ? custom.interiorDates.map(formatDate).join(', ')
-                          : '—'
-                        const exteriorDatesText = Array.isArray(custom?.exteriorDates) && custom.exteriorDates.length > 0
-                          ? custom.exteriorDates.map(formatDate).join(', ')
-                          : '—'
-                        return (
-                          <div key={`${order._id}-slot-${index}`} className="order-slot-item">
-                            <span className="order-slot-service">{serviceName}</span>
-                            <span className="order-slot-separator">•</span>
-                            <span className="order-slot-datetime">{slotDate} • {slotTime}</span>
-                            {Array.isArray(item?.scheduledSlots) && item.scheduledSlots.length > 0 ? (
-                              <div style={{ width: '100%', marginTop: 6, fontSize: 12, color: '#4B5563' }}>
-                                Package slots: {item.scheduledSlots.length}
+
+                      {selectedOrder.customer?.phone && (
+                        <div className="order-card-actions">
+                          <button
+                            type="button"
+                            className="primary-button"
+                            onClick={async () => {
+                              const phone = selectedOrder.customer?.phone
+                              const amountInput = window.prompt(`Add amount to wallet for ${phone}`, '500')
+                              if (!amountInput) return
+                              const noteInput = window.prompt('Add a note (optional)', 'Admin credit')
+                              const result = await creditCustomerWallet({
+                                phone,
+                                amount: amountInput,
+                                note: noteInput || '',
+                              })
+                              if (result && typeof result.walletBalance === 'number') {
+                                window.alert(`Wallet updated. New balance: ₹${result.walletBalance}`)
+                              }
+                            }}
+                          >
+                            Add to Wallet
+                          </button>
+                        </div>
+                      )}
+
+                      {((selectedOrder.servicePhotos?.beforePhotos?.length) || (selectedOrder.servicePhotos?.afterPhotos?.length)) > 0 && (
+                        <div className="order-photos-section">
+                          <span className="detail-label">Service photos</span>
+                          {selectedOrder.servicePhotos?.beforePhotos?.length > 0 && (
+                            <div className="order-photos-row">
+                              <span className="order-photos-label">Before:</span>
+                              <div className="order-photos-thumbs">
+                                {selectedOrder.servicePhotos.beforePhotos.map((url, i) => (
+                                  <a key={`before-${i}`} href={UPLOADS_BASE + url} target="_blank" rel="noopener noreferrer" className="order-photo-link">
+                                    <img src={UPLOADS_BASE + url} alt={`Before ${i + 1}`} className="order-photo-thumb" />
+                                  </a>
+                                ))}
                               </div>
-                            ) : null}
-                            {custom ? (
-                              <div style={{ width: '100%', marginTop: 8, fontSize: 12, color: '#374151', lineHeight: 1.5 }}>
-                                <div><strong>Custom package</strong></div>
-                                <div>Start: {formatDate(custom.packageStartDate)} | Duration: {custom.packageDurationDays || '—'} days</div>
-                                <div>Slot: {custom.packageTimeSlot || '—'} | Daily mode: {custom.dailyMode || '—'}</div>
-                                <div>Interior dates: {interiorDatesText}</div>
-                                <div>Exterior dates: {exteriorDatesText}</div>
-                                <div>Pricing: {custom.pricingKey || '—'} | ₹{Number(custom.packagePrice || 0).toFixed(2)}</div>
-                                <div>Pricing version: {custom.pricingVersion ? formatDate(custom.pricingVersion) : '—'}</div>
+                            </div>
+                          )}
+                          {selectedOrder.servicePhotos?.afterPhotos?.length > 0 && (
+                            <div className="order-photos-row">
+                              <span className="order-photos-label">After:</span>
+                              <div className="order-photos-thumbs">
+                                {selectedOrder.servicePhotos.afterPhotos.map((url, i) => (
+                                  <a key={`after-${i}`} href={UPLOADS_BASE + url} target="_blank" rel="noopener noreferrer" className="order-photo-link">
+                                    <img src={UPLOADS_BASE + url} alt={`After ${i + 1}`} className="order-photo-thumb" />
+                                  </a>
+                                ))}
                               </div>
-                            ) : null}
-                          </div>
-                        );
-                      })}
-                    </div>
-                    {order.customer?.phone && (
+                            </div>
+                          )}
+                        </div>
+                      )}
+
                       <div className="order-card-actions">
                         <button
                           type="button"
-                          className="primary-button"
-                          onClick={async () => {
-                            const phone = order.customer?.phone
-                            const amountInput = window.prompt(`Add amount to wallet for ${phone}`, '500')
-                            if (!amountInput) return
-                            const noteInput = window.prompt('Add a note (optional)', 'Admin credit')
-                            const result = await creditCustomerWallet({
-                              phone,
-                              amount: amountInput,
-                              note: noteInput || '',
-                            })
-                            if (result && typeof result.walletBalance === 'number') {
-                              window.alert(`Wallet updated. New balance: ₹${result.walletBalance}`)
-                            }
-                          }}
+                          className="secondary-button"
+                          disabled={selectedOrder.status === 'Completed'}
+                          onClick={() => markOrderDelivered(selectedOrder._id)}
                         >
-                          Add to Wallet
+                          Mark Delivered
                         </button>
                       </div>
-                    )}
-                    {((order.servicePhotos?.beforePhotos?.length) || (order.servicePhotos?.afterPhotos?.length)) > 0 && (
-                      <div className="order-photos-section">
-                        <span className="detail-label">Service photos</span>
-                        {order.servicePhotos?.beforePhotos?.length > 0 && (
-                          <div className="order-photos-row">
-                            <span className="order-photos-label">Before:</span>
-                            <div className="order-photos-thumbs">
-                              {order.servicePhotos.beforePhotos.map((url, i) => (
-                                <a key={`before-${i}`} href={UPLOADS_BASE + url} target="_blank" rel="noopener noreferrer" className="order-photo-link">
-                                  <img src={UPLOADS_BASE + url} alt={`Before ${i + 1}`} className="order-photo-thumb" />
-                                </a>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-                        {order.servicePhotos?.afterPhotos?.length > 0 && (
-                          <div className="order-photos-row">
-                            <span className="order-photos-label">After:</span>
-                            <div className="order-photos-thumbs">
-                              {order.servicePhotos.afterPhotos.map((url, i) => (
-                                <a key={`after-${i}`} href={UPLOADS_BASE + url} target="_blank" rel="noopener noreferrer" className="order-photo-link">
-                                  <img src={UPLOADS_BASE + url} alt={`After ${i + 1}`} className="order-photo-thumb" />
-                                </a>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    )}
-                    <div className="order-card-actions">
-                      <button
-                        type="button"
-                        className="secondary-button"
-                        disabled={order.status === 'Completed'}
-                        onClick={() => markOrderDelivered(order._id)}
-                      >
-                        Mark Delivered
-                      </button>
                     </div>
-                  </div>
-                ))}
+                  )
+                })()}
               </div>
             )}
           </div>
