@@ -10,6 +10,7 @@ import RecentServiceCard from '../components/RecentServiceCard';
 import RatingModal from '../components/RatingModal';
 import { getOrders, submitOrderRating } from '../services/orderApi';
 import { useTheme } from '../theme/ThemeContext';
+import { normalizeOrderStatus } from '../utils/orderStatus';
 
 export default function BookingsScreen({ navigation }) {
   const insets = useSafeAreaInsets();
@@ -68,7 +69,7 @@ export default function BookingsScreen({ navigation }) {
       address: order.customer?.address || 'Address not set',
       price: `₹${order.totalAmount?.toFixed(2)}`,
       image: getServiceImage(category),
-      status: order.status,
+      status: normalizeOrderStatus(order.status),
       employeeLocation: order.employeeLocation,
       startCode: order.startOtp || '',
     };
@@ -83,7 +84,7 @@ export default function BookingsScreen({ navigation }) {
       serviceName: item?.serviceName || item?.service?.name || 'Service',
       date: formatRecentDate(item?.scheduledDate || order.createdAt),
       time: item?.scheduledTimeSlot || '',
-      status: order.status || 'Completed',
+      status: normalizeOrderStatus(order.status) || 'Completed',
       price: `₹${order.totalAmount?.toFixed(2)}`,
       image: getServiceImage(category),
       rating: order.rating,
@@ -100,8 +101,16 @@ export default function BookingsScreen({ navigation }) {
         const upcomingStatuses = ['Pending', 'Paid', 'Scheduled', 'In Progress'];
         const recentStatuses = ['Completed', 'Cancelled'];
 
-        setUpcomingWashes(orders.filter(order => upcomingStatuses.includes(order.status)).map(mapOrderToUpcoming));
-        setRecentServices(orders.filter(order => recentStatuses.includes(order.status)).map(mapOrderToRecent));
+        setUpcomingWashes(
+          orders
+            .filter((order) => upcomingStatuses.includes(normalizeOrderStatus(order.status)))
+            .map(mapOrderToUpcoming)
+        );
+        setRecentServices(
+          orders
+            .filter((order) => recentStatuses.includes(normalizeOrderStatus(order.status)))
+            .map(mapOrderToRecent)
+        );
       }
     } catch (error) {
       console.error('Error fetching orders:', error);
@@ -138,6 +147,13 @@ export default function BookingsScreen({ navigation }) {
       orderId: wash.id,
       amount: wash.price,
       serviceName: wash.serviceName,
+    });
+  };
+
+  const handleBookAddOns = (wash) => {
+    navigation.navigate('OrderUpsell', {
+      orderId: wash.id,
+      fromUpcomingBookings: true,
     });
   };
 
@@ -179,7 +195,11 @@ export default function BookingsScreen({ navigation }) {
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Upcoming Wash</Text>
           </View>
-          
+          <Text style={styles.addOnHint}>
+            Extra services: only from this list — tap <Text style={styles.addOnHintBold}>Book</Text> on an upcoming wash
+            (after pay, before the wash is done). Add-ons are not added from Recent.
+          </Text>
+
           {upcomingWashes.length === 0 ? (
             <View style={styles.emptyState}>
               <MaterialCommunityIcons name="calendar-remove" size={64} color={theme.textSecondary} />
@@ -193,6 +213,7 @@ export default function BookingsScreen({ navigation }) {
                 wash={wash}
                 onViewLocation={handleViewLocation}
                 onPayNow={handlePayNow}
+                onBook={handleBookAddOns}
                 onPress={() => {
                   // Handle card press if needed
                   console.log('View wash:', wash);
@@ -220,7 +241,6 @@ export default function BookingsScreen({ navigation }) {
                 key={service.id} 
                 service={service}
                 onReBook={(s) => {
-                  // Handle re-book logic here
                   console.log('Re-book service:', s);
                 }}
                 onPress={() => {
@@ -264,6 +284,16 @@ const createStyles = theme => StyleSheet.create({
   sectionTitle: {
     fontSize: 20,
     fontWeight: 'bold',
+    color: theme.textPrimary,
+  },
+  addOnHint: {
+    fontSize: 13,
+    color: theme.textSecondary,
+    lineHeight: 19,
+    marginBottom: 16,
+  },
+  addOnHintBold: {
+    fontWeight: '800',
     color: theme.textPrimary,
   },
   emptyState: {

@@ -3,10 +3,14 @@ import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTheme } from '../theme/ThemeContext';
 
-export default function UpcomingWashCard({ wash, onPress, onViewLocation, onPayNow }) {
+const UPCOMING_BOOK_STATUSES = ['Pending', 'Paid', 'Scheduled', 'In Progress'];
+
+export default function UpcomingWashCard({ wash, onPress, onViewLocation, onPayNow, onBook }) {
   const { theme } = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
-  const statusLabel = wash.status === 'In Progress' ? 'Ongoing' : (wash.status || 'Upcoming');
+  const status = String(wash.status || '').trim();
+  const statusLabel = status === 'In Progress' ? 'Ongoing' : (status || 'Upcoming');
+  const showBook = onBook && UPCOMING_BOOK_STATUSES.includes(status);
 
   return (
     <TouchableOpacity 
@@ -37,9 +41,9 @@ export default function UpcomingWashCard({ wash, onPress, onViewLocation, onPayN
               <MaterialCommunityIcons 
                 name="clock-outline" 
                 size={14} 
-                color={wash.status === 'Pending' ? '#000000' : theme.accent} 
+                color={status === 'Pending' ? '#000000' : theme.accent} 
               />
-              <Text style={[styles.statusText, wash.status === 'Pending' && styles.statusTextPending]}>{statusLabel}</Text>
+              <Text style={[styles.statusText, status === 'Pending' && styles.statusTextPending]}>{statusLabel}</Text>
             </View>
           </View>
 
@@ -63,12 +67,14 @@ export default function UpcomingWashCard({ wash, onPress, onViewLocation, onPayN
           </View>
 
           <View style={styles.footer}>
-            <View style={styles.priceContainer}>
-              <Text style={styles.priceLabel}>Total</Text>
-              <Text style={styles.priceText}>{wash.price}</Text>
+            <View style={styles.footerTop}>
+              <View style={styles.priceContainer}>
+                <Text style={styles.priceLabel}>Total</Text>
+                <Text style={styles.priceText}>{wash.price}</Text>
+              </View>
             </View>
             <View style={styles.actionsRow}>
-              {wash.status === 'Pending' && (
+              {status === 'Pending' && (
                 <TouchableOpacity
                   style={styles.payNowButton}
                   onPress={(e) => {
@@ -80,7 +86,19 @@ export default function UpcomingWashCard({ wash, onPress, onViewLocation, onPayN
                   <Text style={styles.payNowText}>Pay Now</Text>
                 </TouchableOpacity>
               )}
-              {wash.status === 'In Progress' && (
+              {showBook && (
+                <TouchableOpacity
+                  style={styles.bookButton}
+                  onPress={(e) => {
+                    e.stopPropagation();
+                    onBook(wash);
+                  }}
+                >
+                  <MaterialCommunityIcons name="book-plus-outline" size={16} color="#2F5CF4" />
+                  <Text style={styles.bookButtonText}>Book</Text>
+                </TouchableOpacity>
+              )}
+              {status === 'In Progress' && (
                 <TouchableOpacity
                   style={styles.viewLocationButton}
                   onPress={(e) => {
@@ -228,12 +246,15 @@ const createStyles = theme => StyleSheet.create({
     letterSpacing: 4,
   },
   footer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
     paddingTop: 12,
     borderTopWidth: 1,
     borderTopColor: theme.cardBorder,
+    gap: 12,
+  },
+  footerTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
   priceContainer: {
     flexDirection: 'row',
@@ -265,8 +286,10 @@ const createStyles = theme => StyleSheet.create({
   },
   actionsRow: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     alignItems: 'center',
     gap: 8,
+    width: '100%',
   },
   payNowButton: {
     flexDirection: 'row',
@@ -281,5 +304,19 @@ const createStyles = theme => StyleSheet.create({
     fontSize: 13,
     fontWeight: '700',
     color: '#FFFFFF',
+  },
+  bookButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(47, 92, 244, 0.12)',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    gap: 6,
+  },
+  bookButtonText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#2F5CF4',
   },
 });

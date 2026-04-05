@@ -5,6 +5,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import HomeScreen from '../screens/HomeScreen';
 import ProfileScreen from '../screens/ProfileScreen';
+import EarningsHistoryScreen from '../screens/EarningsHistoryScreen';
 
 const Tab = createBottomTabNavigator();
 
@@ -40,6 +41,7 @@ function SimpleTabBar({ state, descriptors, navigation }) {
 
         const iconName = {
           Home: focused ? 'home' : 'home-outline',
+          Earnings: focused ? 'cash' : 'cash',
           Profile: focused ? 'account' : 'account-outline',
         }[route.name] || 'circle-outline';
 
@@ -107,6 +109,21 @@ export default function MainTabs({ onLogout, employeeId, navigation }) {
       >
         {(props) => <HomeScreen {...props} employeeId={employeeId} />}
       </Tab.Screen>
+      <Tab.Screen
+        name="Earnings"
+        options={{
+          title: 'Earnings',
+          tabBarLabel: 'Earnings',
+          tabBarIcon: ({ color, focused }) => (
+            <MaterialCommunityIcons
+              name={focused ? 'cash-multiple' : 'cash-multiple'}
+              color={color}
+              size={24}
+            />
+          ),
+        }}
+        component={EarningsHistoryScreen}
+      />
       <Tab.Screen 
         name="Profile" 
         options={{

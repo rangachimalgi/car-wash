@@ -5,6 +5,8 @@ import User from '../models/User.js';
 import Referral from '../models/Referral.js';
 import Coupon from '../models/Coupon.js';
 import { computeCouponDiscount } from './couponController.js';
+import { recordIncentiveForCompletedOrder } from '../services/employeeIncentiveService.js';
+import EmployeeUpsellEvent from '../models/EmployeeUpsellEvent.js';
 
 const TAX_RATE = 0.18;
 
@@ -540,6 +542,39 @@ export const updateOrderStatus = async (req, res) => {
       update.assignmentStatus = 'completed';
     }
 
+    if (employeeId && status === 'Completed') {
+      const existing = await Order.findOne({
+        _id: orderId,
+        assignments: { $elemMatch: { employeeId } },
+      });
+      if (!existing) {
+        return res.status(404).json({
+          success: false,
+          message: 'Order not found or you do not have access to this order',
+        });
+      }
+      if (existing.status === 'Completed') {
+        return res.status(400).json({
+          success: false,
+          message: 'Order is already completed',
+        });
+      }
+      const beforeCount = existing.servicePhotos?.beforePhotos?.length || 0;
+      const afterCount = existing.servicePhotos?.afterPhotos?.length || 0;
+      if (beforeCount < 1 || afterCount < 1) {
+        return res.status(400).json({
+          success: false,
+          message: 'Upload at least one before and one after photo before completing.',
+        });
+      }
+      if (!req.body.paymentReceived) {
+        return res.status(400).json({
+          success: false,
+          message: 'Confirm payment received before submitting.',
+        });
+      }
+    }
+
     let query;
     if (employeeId) {
       // Employee access: check if order is assigned to this employee
@@ -547,6 +582,9 @@ export const updateOrderStatus = async (req, res) => {
         _id: orderId,
         assignments: { $elemMatch: { employeeId } },
       };
+      if (status === 'Completed') {
+        query.status = { $ne: 'Completed' };
+      }
     } else if (userId) {
       // Customer access: check if order belongs to this user
       query = { _id: orderId, user: userId };
@@ -622,6 +660,23 @@ export const updateOrderStatus = async (req, res) => {
         }
       } catch (referralError) {
         console.error('Error processing referral bonus on order completion:', referralError);
+      }
+    }
+
+    if (employeeId && status === 'Completed' && order) {
+      try {
+        const assignment = order.assignments?.find(
+          (a) => a.employeeId === employeeId && a.status === 'completed'
+        );
+        if (assignment?.completedAt) {
+          await recordIncentiveForCompletedOrder({
+            employeeId,
+            orderId: order._id,
+            completedAt: assignment.completedAt,
+          });
+        }
+      } catch (incentiveError) {
+        console.error('Error recording employee incentive:', incentiveError);
       }
     }
 
@@ -1080,6 +1135,136 @@ export const getOrderById = async (req, res) => {
       success: false,
       message: 'Error fetching order',
       error: error.message,
+    });
+  }
+};
+
+// @desc    Add new add-ons to existing order (customer upsell; attributes sales to assigned employee)
+// @route   POST /api/orders/:id/upsell-addons
+// @access  Protected (customer)
+export const addUpsellAddOnsToOrder = async (req, res) => {
+  try {
+    const orderId = req.params.id;
+    const userId = req.user._id;
+    const { addOnIds, entrySource } = req.body;
+
+    if (entrySource !== 'upcoming_bookings') {
+      return res.status(400).json({
+        success: false,
+        message: 'Add extras only from Bookings: open Upcoming Wash and tap Book on that wash.',
+      });
+    }
+
+    if (!Array.isArray(addOnIds) || addOnIds.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'addOnIds must be a non-empty array',
+      });
+    }
+
+    const order = await Order.findOne({ _id: orderId, user: userId });
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message: 'Order not found',
+      });
+    }
+
+    const allowedStatuses = ['Paid', 'Scheduled', 'In Progress'];
+    if (!allowedStatuses.includes(order.status)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Add-ons can only be added while the booking is paid or in progress.',
+      });
+    }
+
+    const assigned = String(order.assignedEmployeeId || '').trim();
+    if (!assigned) {
+      return res.status(400).json({
+        success: false,
+        message: 'This booking does not have an assigned specialist yet. Please try again later.',
+      });
+    }
+
+    if (!order.items?.length) {
+      return res.status(400).json({ success: false, message: 'Invalid order' });
+    }
+
+    const item = order.items[0];
+    const existingSet = new Set((item.addOns || []).map((id) => String(id)));
+    const newIds = [...new Set(addOnIds.map((id) => String(id)))].filter((id) => !existingSet.has(id));
+
+    if (newIds.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'These add-ons are already on your booking.',
+      });
+    }
+
+    const newAddOnDocs = await Service.find({
+      _id: { $in: newIds },
+      category: 'AddOn',
+      isActive: true,
+    }).select('basePrice');
+
+    if (newAddOnDocs.length !== newIds.length) {
+      return res.status(400).json({
+        success: false,
+        message: 'One or more add-ons are invalid or inactive.',
+      });
+    }
+
+    const deltaSubtotal = newAddOnDocs.reduce((s, a) => s + (Number(a.basePrice) || 0), 0);
+
+    item.addOns = [...(item.addOns || []), ...newAddOnDocs.map((a) => a._id)];
+
+    const allAddOnIds = item.addOns;
+    const allAddOnDocs = await Service.find({
+      _id: { $in: allAddOnIds },
+      category: 'AddOn',
+      isActive: true,
+    }).select('basePrice');
+
+    item.addOnsTotal = allAddOnDocs.reduce((s, a) => s + (Number(a.basePrice) || 0), 0);
+    item.lineTotal = Number(item.unitPrice || 0) + item.addOnsTotal;
+
+    const subtotal = order.items.reduce((sum, it) => sum + Number(it.lineTotal || 0), 0);
+    const tax = Number((subtotal * TAX_RATE).toFixed(2));
+    const preDiscount = Number((subtotal + tax).toFixed(2));
+    const couponDiscount = Number(order.couponDiscount || 0);
+    const totalAmount = Math.max(0, Number((preDiscount - couponDiscount).toFixed(2)));
+    const walletUsed = Number(order.walletUsed || 0);
+    const netAmount = Math.max(0, Number((totalAmount - walletUsed).toFixed(2)));
+
+    order.subtotal = subtotal;
+    order.tax = tax;
+    order.totalAmount = totalAmount;
+    order.netAmount = netAmount;
+
+    await order.save();
+
+    await EmployeeUpsellEvent.create({
+      employeeId: assigned,
+      orderId: order._id,
+      amount: deltaSubtotal,
+      entrySource: 'upcoming_bookings',
+      createdAt: new Date(),
+    });
+
+    const populated = await Order.findById(order._id)
+      .populate('items.service', 'name category')
+      .populate('items.addOns', 'name basePrice');
+
+    res.status(200).json({
+      success: true,
+      data: populated,
+      upsell: { attributedToEmployeeId: assigned, addOnAmountRecorded: deltaSubtotal },
+    });
+  } catch (error) {
+    console.error('addUpsellAddOnsToOrder:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Error updating order',
     });
   }
 };

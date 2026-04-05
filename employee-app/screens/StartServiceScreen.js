@@ -251,7 +251,7 @@ export default function StartServiceScreen({ navigation, route }) {
       const res = await fetch(url, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: 'Completed' }),
+        body: JSON.stringify({ status: 'Completed', paymentReceived: true }),
       });
       const data = await res.json();
       if (!res.ok || !data.success) {
@@ -272,6 +272,11 @@ export default function StartServiceScreen({ navigation, route }) {
 
   const needsOtp = orderStatus && !['In Progress', 'Completed', 'Cancelled'].includes(orderStatus);
   const loading = orderId && orderStatus === null;
+  const canSubmit =
+    orderInProgress &&
+    beforePhotos.length >= 1 &&
+    afterPhotos.length >= 1 &&
+    paymentReceived;
 
   return (
     <ScrollView
@@ -396,14 +401,19 @@ export default function StartServiceScreen({ navigation, route }) {
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={styles.submitButton}
+            style={[styles.submitButton, (!canSubmit || submitting) && styles.submitButtonDisabled]}
             onPress={handleSubmit}
-            disabled={submitting}
+            disabled={!canSubmit || submitting}
           >
             <Text style={styles.submitButtonText}>
               {submitting ? 'Submitting...' : 'Submit'}
             </Text>
           </TouchableOpacity>
+          {!canSubmit && orderInProgress ? (
+            <Text style={styles.submitHint}>
+              Add at least one before and after photo, tap Get Payment, then submit.
+            </Text>
+          ) : null}
         </>
       )}
 
@@ -494,10 +504,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginTop: 12,
   },
+  submitButtonDisabled: {
+    opacity: 0.55,
+  },
   submitButtonText: {
     color: '#FFFFFF',
     fontWeight: '700',
     fontSize: 14,
+  },
+  submitHint: {
+    fontSize: 12,
+    color: '#6B7280',
+    marginTop: 10,
+    textAlign: 'center',
   },
   locationButton: {
     backgroundColor: '#1F2937',

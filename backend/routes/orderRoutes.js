@@ -1,5 +1,5 @@
 import express from 'express';
-import { createOrder, getOrderById, getOrders, getAllOrders, getRatedOrders, updateEmployeeLocation, updateOrderStatus, rateOrder, requestStartOtp, verifyStartOtp, uploadOrderPhotos } from '../controllers/orderController.js';
+import { createOrder, getOrderById, getOrders, getAllOrders, getRatedOrders, updateEmployeeLocation, updateOrderStatus, rateOrder, requestStartOtp, verifyStartOtp, uploadOrderPhotos, addUpsellAddOnsToOrder } from '../controllers/orderController.js';
 import { protect } from '../middleware/authMiddleware.js';
 import { uploadOrderPhotosMulter } from '../config/multerOrderPhotos.js';
 
@@ -26,5 +26,6 @@ router.patch('/:id/employee-location', conditionalProtect, updateEmployeeLocatio
 router.post('/:id/photos', conditionalProtect, uploadOrderPhotosMulter, uploadOrderPhotos);
 router.patch('/:id', conditionalProtect, updateOrderStatus);
 router.post('/:id/rate', protect, rateOrder);
+router.post('/:id/upsell-addons', protect, addUpsellAddOnsToOrder);
 
 export default router;

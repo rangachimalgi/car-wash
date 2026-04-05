@@ -117,6 +117,25 @@ function App() {
   const [documentViewUrls, setDocumentViewUrls] = useState(null)
   const [loadingDocumentView, setLoadingDocumentView] = useState(false)
 
+  // Employee incentive targets (extra earnings above target)
+  const [incentiveForm, setIncentiveForm] = useState({
+    periodType: 'weekly',
+    targetCount: 4,
+    amountPerExtraService: 100,
+    weekStartsOn: 1,
+    isActive: true,
+  })
+  const [loadingIncentiveConfig, setLoadingIncentiveConfig] = useState(false)
+  const [incentiveMessage, setIncentiveMessage] = useState({ type: '', text: '' })
+  const [upsellForm, setUpsellForm] = useState({
+    targetAmount: 3000,
+    commissionPercent: 10,
+    weekStartsOn: 1,
+    isActive: true,
+  })
+  const [loadingUpsellConfig, setLoadingUpsellConfig] = useState(false)
+  const [upsellMessage, setUpsellMessage] = useState({ type: '', text: '' })
+
   // Inventory state
   const [inventory, setInventory] = useState([])
   const [loadingInventory, setLoadingInventory] = useState(false)
@@ -223,6 +242,13 @@ function App() {
       fetchInventory()
     }
   }, [activeTab, inventoryCategoryFilter, inventoryFilter, inventorySearch])
+
+  useEffect(() => {
+    if (activeTab === 'employeeIncentives') {
+      fetchIncentiveConfig()
+      fetchUpsellConfig()
+    }
+  }, [activeTab])
 
   // Fetch all add-ons for listing
   const fetchAllAddOns = async () => {
@@ -648,6 +674,127 @@ function App() {
   const closeDocumentView = () => {
     setDocumentViewEmployee(null)
     setDocumentViewUrls(null)
+  }
+
+  const fetchIncentiveConfig = async () => {
+    setLoadingIncentiveConfig(true)
+    setIncentiveMessage({ type: '', text: '' })
+    try {
+      const res = await fetch(`${API_BASE_URL}/employee-incentives/config`)
+      const data = await res.json()
+      if (data.success && data.data) {
+        const c = data.data
+        setIncentiveForm({
+          periodType: c.periodType || 'weekly',
+          targetCount: c.targetCount ?? 4,
+          amountPerExtraService: c.amountPerExtraService ?? 100,
+          weekStartsOn: c.weekStartsOn ?? 1,
+          isActive: c.isActive !== false,
+        })
+      }
+    } catch (e) {
+      setIncentiveMessage({ type: 'error', text: e.message || 'Failed to load' })
+    } finally {
+      setLoadingIncentiveConfig(false)
+    }
+  }
+
+  const fetchUpsellConfig = async () => {
+    setLoadingUpsellConfig(true)
+    setUpsellMessage({ type: '', text: '' })
+    try {
+      const res = await fetch(`${API_BASE_URL}/employee-incentives/upsell-config`)
+      const data = await res.json()
+      if (data.success && data.data) {
+        const c = data.data
+        setUpsellForm({
+          targetAmount: c.targetAmount ?? 3000,
+          commissionPercent: c.commissionPercent ?? 10,
+          weekStartsOn: c.weekStartsOn ?? 1,
+          isActive: c.isActive !== false,
+        })
+      }
+    } catch (e) {
+      setUpsellMessage({ type: 'error', text: e.message || 'Failed to load' })
+    } finally {
+      setLoadingUpsellConfig(false)
+    }
+  }
+
+  const handleUpsellSubmit = async (e) => {
+    e.preventDefault()
+    setLoadingUpsellConfig(true)
+    setUpsellMessage({ type: '', text: '' })
+    try {
+      const res = await fetch(`${API_BASE_URL}/employee-incentives/upsell-config`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          targetAmount: Number(upsellForm.targetAmount),
+          commissionPercent: Number(upsellForm.commissionPercent),
+          weekStartsOn: Number(upsellForm.weekStartsOn),
+          isActive: upsellForm.isActive,
+        }),
+      })
+      const data = await res.json()
+      if (data.success) {
+        setUpsellMessage({ type: 'success', text: 'Upsell settings saved.' })
+        if (data.data) {
+          const c = data.data
+          setUpsellForm({
+            targetAmount: c.targetAmount ?? 3000,
+            commissionPercent: c.commissionPercent ?? 10,
+            weekStartsOn: c.weekStartsOn ?? 1,
+            isActive: c.isActive !== false,
+          })
+        }
+      } else {
+        setUpsellMessage({ type: 'error', text: data.message || 'Failed to save' })
+      }
+    } catch (err) {
+      setUpsellMessage({ type: 'error', text: err.message || 'Failed to save' })
+    } finally {
+      setLoadingUpsellConfig(false)
+    }
+  }
+
+  const handleIncentiveSubmit = async (e) => {
+    e.preventDefault()
+    setLoadingIncentiveConfig(true)
+    setIncentiveMessage({ type: '', text: '' })
+    try {
+      const res = await fetch(`${API_BASE_URL}/employee-incentives/config`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          periodType: incentiveForm.periodType,
+          targetCount: Number(incentiveForm.targetCount),
+          amountPerExtraService: Number(incentiveForm.amountPerExtraService),
+          weekStartsOn: Number(incentiveForm.weekStartsOn),
+          isActive: incentiveForm.isActive,
+        }),
+      })
+      const data = await res.json()
+      if (data.success) {
+        setIncentiveMessage({ type: 'success', text: 'Saved.' })
+        if (data.data) {
+          const c = data.data
+          setIncentiveForm({
+            periodType: c.periodType || 'weekly',
+            targetCount: c.targetCount ?? 4,
+            amountPerExtraService: c.amountPerExtraService ?? 100,
+            weekStartsOn: c.weekStartsOn ?? 1,
+            isActive: c.isActive !== false,
+          })
+        }
+      } else {
+        setIncentiveMessage({ type: 'error', text: data.message || 'Failed to save' })
+      }
+    } catch (err) {
+      setIncentiveMessage({ type: 'error', text: err.message || 'Failed to save' })
+    } finally {
+      setLoadingIncentiveConfig(false)
+    }
   }
 
   // Fetch attendance data
@@ -2135,6 +2282,12 @@ function App() {
             <path d="M12 11v10" stroke={iconStroke} strokeWidth="2" strokeLinecap="round" />
           </svg>
         )
+      case 'cash':
+        return (
+          <svg {...common}>
+            <path d="M12 3v18M7 7h10a4 4 0 010 8H9a3 3 0 000 6h8" stroke={iconStroke} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        )
       default:
         return (
           <svg {...common}>
@@ -2171,6 +2324,7 @@ function App() {
       items: [
         { id: 'employees', label: 'Employee', icon: 'employees' },
         { id: 'attendance', label: 'Attendance', icon: 'attendance' },
+        { id: 'employeeIncentives', label: 'Earnings targets', icon: 'cash' },
         { id: 'inventory', label: 'Inventory', icon: 'inventory', badge: inventoryLowStockCount },
       ],
     },
@@ -2189,6 +2343,7 @@ function App() {
     media: 'Media (Testimonials & Transformations)',
     employees: 'Employees',
     attendance: 'Employee Attendance',
+    employeeIncentives: 'Employee earnings (incentives)',
     inventory: 'Inventory',
   }
 
@@ -4445,6 +4600,168 @@ function App() {
                 </div>
               ) : null}
             </div>
+          </div>
+        )}
+
+        {/* Employee incentive targets */}
+        {activeTab === 'employeeIncentives' && (
+          <div className="services-section" style={{ maxWidth: 560 }}>
+            <div className="section-header">
+              <h2 className="section-title">Targets above baseline</h2>
+              <button
+                type="button"
+                className="secondary-button"
+                onClick={() => { fetchIncentiveConfig(); fetchUpsellConfig(); }}
+                disabled={loadingIncentiveConfig || loadingUpsellConfig}
+              >
+                {loadingIncentiveConfig || loadingUpsellConfig ? 'Loading…' : 'Refresh'}
+              </button>
+            </div>
+            <p style={{ color: '#6B7280', fontSize: 14, marginBottom: 20 }}>
+              Periods use India time (IST). Each completed job after the target in that period earns the flat amount below.
+              The employee app Earnings tab shows only these incentives.
+            </p>
+            {incentiveMessage.text ? (
+              <div
+                style={{
+                  marginBottom: 16,
+                  padding: '10px 14px',
+                  borderRadius: 8,
+                  backgroundColor: incentiveMessage.type === 'success' ? '#d4edda' : '#f8d7da',
+                  color: incentiveMessage.type === 'success' ? '#155724' : '#721c24',
+                }}
+              >
+                {incentiveMessage.text}
+              </div>
+            ) : null}
+            <form onSubmit={handleIncentiveSubmit}>
+              <div className="form-group">
+                <label>Period type</label>
+                <select
+                  value={incentiveForm.periodType}
+                  onChange={(e) => setIncentiveForm((f) => ({ ...f, periodType: e.target.value }))}
+                  style={{ width: '100%', padding: 10, borderRadius: 8, border: '1px solid #ddd' }}
+                >
+                  <option value="weekly">Weekly (week starts Monday, IST)</option>
+                  <option value="daily">Daily (calendar day, IST)</option>
+                </select>
+              </div>
+              <div className="form-group">
+                <label>Target (services per period)</label>
+                <input
+                  type="number"
+                  min={0}
+                  step={1}
+                  value={incentiveForm.targetCount}
+                  onChange={(e) => setIncentiveForm((f) => ({ ...f, targetCount: e.target.value }))}
+                  style={{ width: '100%', padding: 10, borderRadius: 8, border: '1px solid #ddd' }}
+                />
+              </div>
+              <div className="form-group">
+                <label>₹ per service above target</label>
+                <input
+                  type="number"
+                  min={0}
+                  step={1}
+                  value={incentiveForm.amountPerExtraService}
+                  onChange={(e) => setIncentiveForm((f) => ({ ...f, amountPerExtraService: e.target.value }))}
+                  style={{ width: '100%', padding: 10, borderRadius: 8, border: '1px solid #ddd' }}
+                />
+              </div>
+              {incentiveForm.periodType === 'weekly' && (
+                <div className="form-group">
+                  <label>Week starts on (date-fns: 0 = Sunday, 1 = Monday)</label>
+                  <select
+                    value={incentiveForm.weekStartsOn}
+                    onChange={(e) => setIncentiveForm((f) => ({ ...f, weekStartsOn: Number(e.target.value) }))}
+                    style={{ width: '100%', padding: 10, borderRadius: 8, border: '1px solid #ddd' }}
+                  >
+                    <option value={1}>Monday (recommended)</option>
+                    <option value={0}>Sunday</option>
+                  </select>
+                </div>
+              )}
+              <div className="form-group" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <input
+                  id="incentiveActive"
+                  type="checkbox"
+                  checked={incentiveForm.isActive}
+                  onChange={(e) => setIncentiveForm((f) => ({ ...f, isActive: e.target.checked }))}
+                />
+                <label htmlFor="incentiveActive" style={{ margin: 0 }}>Incentives active</label>
+              </div>
+              <button type="submit" className="primary-button" disabled={loadingIncentiveConfig}>
+                {loadingIncentiveConfig ? 'Saving…' : 'Save'}
+              </button>
+            </form>
+
+            <hr style={{ margin: '32px 0', border: 'none', borderTop: '1px solid #E2E8F0' }} />
+
+            <h3 className="section-title" style={{ marginBottom: 12 }}>Add-on upsell commission (weekly)</h3>
+            <p style={{ color: '#6B7280', fontSize: 14, marginBottom: 16 }}>
+              Employees earn the commission % on <strong>all</strong> add-on sales (pre-tax) in the IST week <strong>only if</strong> their weekly total reaches the sales target. Customer adds add-ons from Bookings → Add services.
+            </p>
+            {upsellMessage.text ? (
+              <div
+                style={{
+                  marginBottom: 16,
+                  padding: '10px 14px',
+                  borderRadius: 8,
+                  backgroundColor: upsellMessage.type === 'success' ? '#d4edda' : '#f8d7da',
+                  color: upsellMessage.type === 'success' ? '#155724' : '#721c24',
+                }}
+              >
+                {upsellMessage.text}
+              </div>
+            ) : null}
+            <form onSubmit={handleUpsellSubmit}>
+              <div className="form-group">
+                <label>Weekly sales target (₹, pre-tax add-ons)</label>
+                <input
+                  type="number"
+                  min={0}
+                  step={1}
+                  value={upsellForm.targetAmount}
+                  onChange={(e) => setUpsellForm((f) => ({ ...f, targetAmount: e.target.value }))}
+                  style={{ width: '100%', padding: 10, borderRadius: 8, border: '1px solid #ddd' }}
+                />
+              </div>
+              <div className="form-group">
+                <label>Commission when target is reached (% of weekly add-on sales)</label>
+                <input
+                  type="number"
+                  min={0}
+                  max={100}
+                  step={1}
+                  value={upsellForm.commissionPercent}
+                  onChange={(e) => setUpsellForm((f) => ({ ...f, commissionPercent: e.target.value }))}
+                  style={{ width: '100%', padding: 10, borderRadius: 8, border: '1px solid #ddd' }}
+                />
+              </div>
+              <div className="form-group">
+                <label>Week starts on</label>
+                <select
+                  value={upsellForm.weekStartsOn}
+                  onChange={(e) => setUpsellForm((f) => ({ ...f, weekStartsOn: Number(e.target.value) }))}
+                  style={{ width: '100%', padding: 10, borderRadius: 8, border: '1px solid #ddd' }}
+                >
+                  <option value={1}>Monday (IST)</option>
+                  <option value={0}>Sunday (IST)</option>
+                </select>
+              </div>
+              <div className="form-group" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <input
+                  id="upsellActive"
+                  type="checkbox"
+                  checked={upsellForm.isActive}
+                  onChange={(e) => setUpsellForm((f) => ({ ...f, isActive: e.target.checked }))}
+                />
+                <label htmlFor="upsellActive" style={{ margin: 0 }}>Upsell commission active</label>
+              </div>
+              <button type="submit" className="primary-button" disabled={loadingUpsellConfig}>
+                {loadingUpsellConfig ? 'Saving…' : 'Save upsell rules'}
+              </button>
+            </form>
           </div>
         )}
 

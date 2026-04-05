@@ -118,6 +118,12 @@ export default function JobQueueScreen({ employeeId, navigation }) {
                       <Text style={styles.viewButtonAltText}>View Job</Text>
                     </TouchableOpacity>
                     <TouchableOpacity
+                      style={styles.upsellHintButton}
+                      onPress={() => navigation?.navigate('UpsellPitch', { orderId: card.id, employeeId })}
+                    >
+                      <Text style={styles.upsellHintText}>Add-ons</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
                       style={styles.acceptButton}
                       onPress={() => handleAccept(card.id)}
                     >
@@ -164,6 +170,12 @@ export default function JobQueueScreen({ employeeId, navigation }) {
                       onPress={() => navigation?.navigate('StartService', { orderId: card.id, employeeId })}
                     >
                       <Text style={styles.startButtonText}>Start Service</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={styles.upsellHintButton}
+                      onPress={() => navigation?.navigate('UpsellPitch', { orderId: card.id, employeeId })}
+                    >
+                      <Text style={styles.upsellHintText}>Add-ons</Text>
                     </TouchableOpacity>
                   </View>
                 </View>
@@ -283,6 +295,7 @@ const createStyles = () =>
     },
     actionRow: {
       flexDirection: 'row',
+      flexWrap: 'wrap',
       gap: 12,
       marginTop: 12,
     },
@@ -390,5 +403,18 @@ const createStyles = () =>
       fontSize: 12,
       fontWeight: '700',
       color: '#16A34A',
+    },
+    upsellHintButton: {
+      backgroundColor: '#EEF2FF',
+      borderRadius: 8,
+      paddingHorizontal: 10,
+      paddingVertical: 6,
+      borderWidth: 1,
+      borderColor: '#C7D2FE',
+    },
+    upsellHintText: {
+      color: '#2F5CF4',
+      fontWeight: '800',
+      fontSize: 11,
     },
   });

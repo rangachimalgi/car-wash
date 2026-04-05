@@ -77,3 +77,21 @@ export const submitOrderRating = async (orderId, payload) => {
     throw error;
   }
 };
+
+/**
+ * Add add-ons to an existing booking (only from Bookings → Upcoming → Book).
+ * @param {String} orderId
+ * @param {String[]} addOnIds
+ */
+export const addUpsellAddOnsToOrder = async (orderId, addOnIds) => {
+  try {
+    const response = await api.post(`/orders/${orderId}/upsell-addons`, {
+      addOnIds,
+      entrySource: 'upcoming_bookings',
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error adding upsell add-ons:', error);
+    throw error;
+  }
+};
