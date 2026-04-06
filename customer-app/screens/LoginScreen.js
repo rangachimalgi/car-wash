@@ -9,6 +9,7 @@ import { registerPushTokenWithBackend } from '../services/pushNotifications';
 import { useTheme } from '../theme/ThemeContext';
 
 const { width } = Dimensions.get('window');
+const OTP_LENGTH = 6;
 
 export default function LoginScreen({ navigation }) {
   const insets = useSafeAreaInsets();
@@ -17,7 +18,7 @@ export default function LoginScreen({ navigation }) {
   const [phoneNumber, setPhoneNumber] = useState('');
   const [name, setName] = useState('');
   const [referralCode, setReferralCode] = useState('');
-  const [otp, setOtp] = useState(['', '', '', '']);
+  const [otp, setOtp] = useState(Array(OTP_LENGTH).fill(''));
   const [otpSent, setOtpSent] = useState(false);
   const [errors, setErrors] = useState({});
   const [resendTimer, setResendTimer] = useState(60);
@@ -58,8 +59,8 @@ export default function LoginScreen({ navigation }) {
     
     if (!otpString.trim()) {
       newErrors.otp = 'OTP is required';
-    } else if (!/^\d{4}$/.test(otpString)) {
-      newErrors.otp = 'OTP must be 4 digits';
+    } else if (!new RegExp(`^\\d{${OTP_LENGTH}}$`).test(otpString)) {
+      newErrors.otp = `OTP must be ${OTP_LENGTH} digits`;
     }
     
     setErrors(newErrors);
@@ -74,7 +75,7 @@ export default function LoginScreen({ navigation }) {
       setOtpSent(true);
       setResendTimer(60);
       setCanResend(false);
-      setOtp(['', '', '', '']);
+      setOtp(Array(OTP_LENGTH).fill(''));
     } catch (error) {
       Alert.alert('OTP Failed', 'Unable to send OTP right now.');
     }
@@ -105,7 +106,7 @@ export default function LoginScreen({ navigation }) {
     if (!canResend) return;
     try {
       await requestOtp(phoneNumber);
-      setOtp(['', '', '', '']);
+      setOtp(Array(OTP_LENGTH).fill(''));
       setResendTimer(60);
       setCanResend(false);
     } catch (error) {
@@ -126,15 +127,15 @@ export default function LoginScreen({ navigation }) {
     setOtp(newOtp);
     
     // Auto-focus next input
-    if (value && index < 3) {
+    if (value && index < OTP_LENGTH - 1) {
       otpInputRefs.current[index + 1]?.focus();
     }
     
-    // Auto-verify when all 4 digits are entered
-    if (newOtp.every(digit => digit !== '') && newOtp.join('').length === 4) {
+    // Auto-verify when all digits are entered
+    if (newOtp.every(digit => digit !== '') && newOtp.join('').length === OTP_LENGTH) {
       setTimeout(() => {
         const otpString = newOtp.join('');
-        if (/^\d{4}$/.test(otpString)) {
+        if (new RegExp(`^\\d{${OTP_LENGTH}}$`).test(otpString)) {
           // Use the new OTP value directly
           verifyOtpWithString(otpString);
         }
@@ -289,7 +290,7 @@ export default function LoginScreen({ navigation }) {
 
               {/* Instructions */}
               <Text style={styles.otpInstruction}>
-                We have sent you a 4 digit verification code on
+                We have sent you a {OTP_LENGTH} digit verification code on
               </Text>
 
               {/* Phone Number Display with Edit */}
@@ -304,7 +305,7 @@ export default function LoginScreen({ navigation }) {
               </View>
               <Text style={styles.smsText}>via SMS</Text>
 
-              {/* OTP Input Fields - 4 boxes */}
+              {/* OTP Input Fields */}
               <View style={styles.otpContainer}>
                 {otp.map((digit, index) => (
                   <TextInput
@@ -604,17 +605,17 @@ const createStyles = theme => StyleSheet.create({
   otpContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
-    gap: 12,
+    gap: 8,
     marginBottom: 8,
-    paddingHorizontal: 20,
+    paddingHorizontal: 12,
   },
   otpBox: {
-    width: 50,
+    width: 44,
     height: 50,
     borderWidth: 1.5,
     borderColor: '#D1D5DB',
     borderRadius: 8,
-    fontSize: 24,
+    fontSize: 22,
     fontWeight: '600',
     color: '#1A1A1A',
     backgroundColor: '#FFFFFF',
