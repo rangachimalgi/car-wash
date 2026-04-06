@@ -214,7 +214,7 @@ GET /api/services/category/BikeWash?sortBy=price-low
 ```json
 {
   "success": false,
-  "message": "Invalid category. Must be one of: CarWash, BikeWash, AddOn"
+  "message": "Invalid category. Must be one of: CarWash, BikeWash, AutoWash, AddOn, Coverage"
 }
 ```
 
@@ -226,7 +226,7 @@ GET /api/services/category/BikeWash?sortBy=price-low
 {
   name: String (required),
   description: String (required),
-  category: String (required) - enum: ['CarWash', 'BikeWash', 'AddOn'],
+  category: String (required) - enum: ['CarWash', 'BikeWash', 'AutoWash', 'AddOn', 'Coverage'],
   basePrice: Number (required, min: 0),
   duration: String (required, default: '30 mins'),
   image: String (optional),

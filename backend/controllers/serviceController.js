@@ -10,7 +10,7 @@ export const getServices = async (req, res) => {
     // Build query
     const query = {};
 
-    // Filter by category (CarWash, BikeWash, AddOn)
+    // Filter by category (CarWash, BikeWash, AutoWash, AddOn)
     if (category) {
       query.category = category;
     }
@@ -88,7 +88,11 @@ export const getServiceById = async (req, res) => {
 
     let addOnServices = [];
 
-    if (service.category === 'CarWash' || service.category === 'BikeWash') {
+    if (
+      service.category === 'CarWash' ||
+      service.category === 'BikeWash' ||
+      service.category === 'AutoWash'
+    ) {
       const applicableAddOns = await Service.find({
         category: 'AddOn',
         isActive: true,
@@ -181,11 +185,11 @@ export const getServicesByCategory = async (req, res) => {
     const { sortBy } = req.query;
 
     // Validate category
-    const validCategories = ['CarWash', 'BikeWash', 'AddOn', 'Coverage'];
+    const validCategories = ['CarWash', 'BikeWash', 'AutoWash', 'AddOn', 'Coverage'];
     if (!validCategories.includes(category)) {
       return res.status(400).json({
         success: false,
-        message: 'Invalid category. Must be one of: CarWash, BikeWash, AddOn',
+        message: 'Invalid category. Must be one of: CarWash, BikeWash, AutoWash, AddOn, Coverage',
       });
     }
 
@@ -253,11 +257,11 @@ export const createService = async (req, res) => {
     }
 
     // Validate category
-    const validCategories = ['CarWash', 'BikeWash', 'AddOn', 'Coverage'];
+    const validCategories = ['CarWash', 'BikeWash', 'AutoWash', 'AddOn', 'Coverage'];
     if (!validCategories.includes(category)) {
       return res.status(400).json({
         success: false,
-        message: 'Invalid category. Must be one of: CarWash, BikeWash, AddOn',
+        message: 'Invalid category. Must be one of: CarWash, BikeWash, AutoWash, AddOn, Coverage',
       });
     }
 
@@ -286,18 +290,18 @@ export const createService = async (req, res) => {
     ) {
       return res.status(400).json({
         success: false,
-        message: 'Add-On and Coverage items must specify applicableFor (CarWash and/or BikeWash)',
+        message: 'Add-On and Coverage items must specify applicableFor (CarWash, BikeWash and/or AutoWash)',
       });
     }
 
     // Validate applicableFor values
     if (applicableFor && Array.isArray(applicableFor)) {
-      const validTypes = ['CarWash', 'BikeWash'];
+      const validTypes = ['CarWash', 'BikeWash', 'AutoWash'];
       const invalidTypes = applicableFor.filter(type => !validTypes.includes(type));
       if (invalidTypes.length > 0) {
         return res.status(400).json({
           success: false,
-          message: `Invalid applicableFor values: ${invalidTypes.join(', ')}. Must be CarWash and/or BikeWash`,
+          message: `Invalid applicableFor values: ${invalidTypes.join(', ')}. Must be CarWash, BikeWash and/or AutoWash`,
         });
       }
     }
@@ -398,7 +402,7 @@ export const updateService = async (req, res) => {
 
     // Validate category if provided
     if (category) {
-      const validCategories = ['CarWash', 'BikeWash', 'AddOn', 'Coverage'];
+      const validCategories = ['CarWash', 'BikeWash', 'AutoWash', 'AddOn', 'Coverage'];
       if (!validCategories.includes(category)) {
         return res.status(400).json({
           success: false,
@@ -415,18 +419,18 @@ export const updateService = async (req, res) => {
     ) {
       return res.status(400).json({
         success: false,
-        message: 'Add-On and Coverage items must specify applicableFor (CarWash and/or BikeWash)',
+        message: 'Add-On and Coverage items must specify applicableFor (CarWash, BikeWash and/or AutoWash)',
       });
     }
 
     // Validate applicableFor values
     if (applicableFor && Array.isArray(applicableFor)) {
-      const validTypes = ['CarWash', 'BikeWash'];
+      const validTypes = ['CarWash', 'BikeWash', 'AutoWash'];
       const invalidTypes = applicableFor.filter(type => !validTypes.includes(type));
       if (invalidTypes.length > 0) {
         return res.status(400).json({
           success: false,
-          message: `Invalid applicableFor values: ${invalidTypes.join(', ')}. Must be CarWash and/or BikeWash`,
+          message: `Invalid applicableFor values: ${invalidTypes.join(', ')}. Must be CarWash, BikeWash and/or AutoWash`,
         });
       }
     }

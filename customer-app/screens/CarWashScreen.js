@@ -14,7 +14,6 @@ import { useTheme } from '../theme/ThemeContext';
 
 const { height } = Dimensions.get('window');
 
-const FALLBACK_CAR_IMAGE = require('../assets/cartestimonial.jpeg');
 const FALLBACK_ADDON_IMAGE = require('../assets/carwash.png');
 
 const FALLBACK_ADD_ONS = [
@@ -25,7 +24,22 @@ const FALLBACK_ADD_ONS = [
   { _id: 'mock_addon_windshield', title: 'Windshield Cleaning Tablet and Refill', price: 39, imageSource: FALLBACK_ADDON_IMAGE },
 ];
 
-export default function CarWashScreen({ navigation }) {
+export default function CarWashScreen({ navigation, route }) {
+  const screenCategory = String(route?.params?.category || 'CarWash');
+  const isBike = screenCategory === 'BikeWash';
+  const isAuto = screenCategory === 'AutoWash';
+  const screenTitle = isBike ? 'Bike Wash' : isAuto ? 'Auto Wash' : 'Car Wash';
+  const emptyIcon = isBike ? 'motorbike' : 'car-wash';
+  const emptySubtext = isBike
+    ? 'Check back later for bike wash services'
+    : isAuto
+      ? 'Check back later for auto wash services'
+      : 'Check back later for car wash services';
+  const fallbackServiceImage = isBike
+    ? require('../assets/carwash.png')
+    : isAuto
+      ? require('../assets/auto.png')
+      : require('../assets/cartestimonial.jpeg');
   const [services, setServices] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -42,13 +56,13 @@ export default function CarWashScreen({ navigation }) {
 
   useEffect(() => {
     fetchServices();
-  }, []);
+  }, [screenCategory]);
 
   const fetchServices = async () => {
     try {
       setLoading(true);
       setError(null);
-      const response = await getServicesByCategory('CarWash');
+      const response = await getServicesByCategory(screenCategory);
       
       if (response.success) {
         setServices(response.data || []);
@@ -56,7 +70,7 @@ export default function CarWashScreen({ navigation }) {
         throw new Error('Failed to fetch services');
       }
     } catch (err) {
-      console.error('Error fetching car wash services:', err);
+      console.error(`Error fetching ${screenCategory} services:`, err);
       setError(err.message || 'Failed to load services');
       Alert.alert(
         'Error',
@@ -198,7 +212,7 @@ export default function CarWashScreen({ navigation }) {
     return (
       <View style={styles.container}>
         <StatusBar style={isLightMode ? 'dark' : 'light'} />
-        <BackHeader navigation={navigation} title="Car Wash" />
+        <BackHeader navigation={navigation} title={screenTitle} />
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={theme.accent} />
           <Text style={styles.loadingText}>Loading services...</Text>
@@ -211,7 +225,7 @@ export default function CarWashScreen({ navigation }) {
     return (
       <View style={styles.container}>
         <StatusBar style={isLightMode ? 'dark' : 'light'} />
-        <BackHeader navigation={navigation} title="Car Wash" />
+        <BackHeader navigation={navigation} title={screenTitle} />
         <View style={styles.errorContainer}>
           <MaterialCommunityIcons name="alert-circle" size={64} color={theme.danger} />
           <Text style={styles.errorText}>Failed to load services</Text>
@@ -227,7 +241,7 @@ export default function CarWashScreen({ navigation }) {
   return (
     <View style={styles.container}>
       <StatusBar style={isLightMode ? 'dark' : 'light'} />
-      <BackHeader navigation={navigation} title="Car Wash" />
+      <BackHeader navigation={navigation} title={screenTitle} />
       <ScrollView 
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
@@ -245,9 +259,9 @@ export default function CarWashScreen({ navigation }) {
           
           {services.length === 0 ? (
             <View style={styles.emptyContainer}>
-              <MaterialCommunityIcons name="car-wash" size={64} color={theme.textSecondary} />
+              <MaterialCommunityIcons name={emptyIcon} size={64} color={theme.textSecondary} />
               <Text style={styles.emptyText}>No services available</Text>
-              <Text style={styles.emptySubtext}>Check back later for car wash services</Text>
+              <Text style={styles.emptySubtext}>{emptySubtext}</Text>
             </View>
           ) : (
             services.map((service) => (
@@ -262,7 +276,7 @@ export default function CarWashScreen({ navigation }) {
                   selectedAddOns={selectedAddOnsByServiceId[service._id] || []}
                   onToggleAddOn={(addOnId) => toggleAddOn(service._id, addOnId)}
                   navigation={navigation}
-                  fallbackImageSource={FALLBACK_CAR_IMAGE}
+                  fallbackImageSource={fallbackServiceImage}
                   fallbackAddOns={FALLBACK_ADD_ONS}
                 />
               </View>
@@ -315,7 +329,7 @@ export default function CarWashScreen({ navigation }) {
               showsVerticalScrollIndicator={false}
             >
               <Text style={styles.categoryText}>
-                {(sheetService.category || 'CarWash').toUpperCase()} SERVICE
+                {(sheetService.category || screenCategory).toUpperCase()} SERVICE
               </Text>
               <View style={styles.titleRow}>
                 <Text style={styles.serviceTitle}>{sheetService.name}</Text>

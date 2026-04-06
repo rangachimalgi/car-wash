@@ -88,6 +88,8 @@ export default function ServiceAccordionCard({
       ? 'Bike Wash & Care'
       : categoryLabel === 'CarWash'
         ? 'Car Wash & Care'
+        : categoryLabel === 'AutoWash'
+          ? 'Auto Wash & Care'
         : 'Package Details';
 
   const resolveSelectedAddOnsDetails = () => {

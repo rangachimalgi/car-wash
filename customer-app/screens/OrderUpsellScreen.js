@@ -55,7 +55,11 @@ export default function OrderUpsellScreen({ navigation, route }) {
       }
       setOrder(res.data);
       const vc =
-        res.data?.items?.[0]?.service?.category === 'BikeWash' ? 'BikeWash' : 'CarWash';
+        res.data?.items?.[0]?.service?.category === 'BikeWash'
+          ? 'BikeWash'
+          : res.data?.items?.[0]?.service?.category === 'AutoWash'
+            ? 'AutoWash'
+            : 'CarWash';
       const svcRes = await api.get('/services?category=AddOn&isActive=true');
       const raw = svcRes.data?.data ?? svcRes.data;
       const list = Array.isArray(raw) ? raw : [];

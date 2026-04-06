@@ -48,7 +48,7 @@ export default function CartScreen({ navigation, route }) {
     
     const vehicleTypeLower = vehicleType?.toLowerCase() || '';
     
-    if (serviceCategory === 'CarWash') {
+    if (serviceCategory === 'CarWash' || serviceCategory === 'AutoWash') {
       // Only allow 4-wheelers (cars)
       return vehicleTypeLower === '4wheeler' || 
              vehicleTypeLower === 'car' ||
@@ -412,7 +412,7 @@ export default function CartScreen({ navigation, route }) {
   const filteredVehicles = useMemo(() => {
     if (!serviceCategory) return allVehicles;
     
-    if (serviceCategory === 'CarWash') {
+    if (serviceCategory === 'CarWash' || serviceCategory === 'AutoWash') {
       // Only show 4-wheelers (cars)
       return allVehicles.filter(v => {
         const vehicleType = (v.vehicleType || '').toLowerCase();
@@ -581,7 +581,7 @@ export default function CartScreen({ navigation, route }) {
                     <View style={styles.vehicleInfo}>
                       <MaterialCommunityIcons name="car-alert" size={24} color={theme.textSecondary} />
                       <Text style={styles.vehicleName}>
-                        {serviceCategory === 'CarWash' ? 'Select a car' : serviceCategory === 'BikeWash' ? 'Select a bike' : 'Select a vehicle'}
+                        {(serviceCategory === 'CarWash' || serviceCategory === 'AutoWash') ? 'Select a car' : serviceCategory === 'BikeWash' ? 'Select a bike' : 'Select a vehicle'}
                       </Text>
                     </View>
                     <TouchableOpacity 
@@ -732,7 +732,7 @@ export default function CartScreen({ navigation, route }) {
           <View style={[styles.modalContent, { paddingBottom: insets.bottom }]}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>
-                {serviceCategory === 'CarWash' ? 'Select Car' : serviceCategory === 'BikeWash' ? 'Select Bike' : 'Select Vehicle'}
+                {(serviceCategory === 'CarWash' || serviceCategory === 'AutoWash') ? 'Select Car' : serviceCategory === 'BikeWash' ? 'Select Bike' : 'Select Vehicle'}
               </Text>
               <TouchableOpacity onPress={() => setShowVehicleModal(false)}>
                 <MaterialCommunityIcons name="close" size={24} color={theme.textPrimary} />
@@ -743,7 +743,7 @@ export default function CartScreen({ navigation, route }) {
               <View style={styles.emptyVehicleContainer}>
                 <MaterialCommunityIcons name="car-off" size={48} color={theme.textSecondary} />
                 <Text style={styles.emptyVehicleText}>
-                  {serviceCategory === 'CarWash' 
+                  {(serviceCategory === 'CarWash' || serviceCategory === 'AutoWash')
                     ? 'No cars saved. Add a car from the vehicle selection screen.'
                     : serviceCategory === 'BikeWash'
                     ? 'No bikes saved. Add a bike from the vehicle selection screen.'

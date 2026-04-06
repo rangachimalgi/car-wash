@@ -69,7 +69,7 @@ export const getPopularServices = async (filters = {}) => {
 
 /**
  * Get services by category
- * @param {String} category - CarWash, BikeWash, or AddOn
+ * @param {String} category - CarWash, BikeWash, AutoWash, or AddOn
  * @param {Object} options - { sortBy }
  * @returns {Promise} Services list
  */

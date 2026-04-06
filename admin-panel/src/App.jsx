@@ -45,22 +45,22 @@ function App() {
     name: '',
     basePrice: '',
     isActive: true,
-    applicableFor: [], // Array for CarWash, BikeWash, or both
+    applicableFor: [], // Array for CarWash, BikeWash, AutoWash, or any combination
   })
 
   // Coverage form data
   const [coverageFormData, setCoverageFormData] = useState({
     name: '',
     isActive: true,
-    applicableFor: [], // Array for CarWash, BikeWash, or both
+    applicableFor: [], // Array for CarWash, BikeWash, AutoWash, or any combination
   })
 
   const [availableAddOns, setAvailableAddOns] = useState([])
   const [allAddOns, setAllAddOns] = useState([]) // All add-ons for listing
-  const [addOnFilter, setAddOnFilter] = useState('car') // 'car', 'bike'
+  const [addOnFilter, setAddOnFilter] = useState('car') // 'car', 'bike', 'auto'
   const [availableCoverage, setAvailableCoverage] = useState([])
   const [allCoverage, setAllCoverage] = useState([]) // All coverage items for listing
-  const [coverageFilter, setCoverageFilter] = useState('car') // 'car', 'bike'
+  const [coverageFilter, setCoverageFilter] = useState('car') // 'car', 'bike', 'auto'
   const [selectedCoverage, setSelectedCoverage] = useState([])
   const [loading, setLoading] = useState(false)
   const [loadingAddOn, setLoadingAddOn] = useState(false)
@@ -78,7 +78,7 @@ function App() {
   const [reviews, setReviews] = useState([])
   const [loadingReviews, setLoadingReviews] = useState(false)
   const [allServices, setAllServices] = useState([])
-  const [serviceFilter, setServiceFilter] = useState('car') // 'all', 'car', 'bike'
+  const [serviceFilter, setServiceFilter] = useState('car') // 'all', 'car', 'bike', 'auto'
   const [serviceSearch, setServiceSearch] = useState('') // Search query
   const [editingServiceId, setEditingServiceId] = useState(null) // Track which service is being edited
   const [servicesError, setServicesError] = useState('')
@@ -294,6 +294,11 @@ function App() {
       return (addOn.applicableFor && addOn.applicableFor.includes('BikeWash')) ||
              (!addOn.applicableFor || addOn.applicableFor.length === 0)
     }
+    if (addOnFilter === 'auto') {
+      // Show add-ons that have AutoWash in applicableFor, or if applicableFor is empty/missing (legacy)
+      return (addOn.applicableFor && addOn.applicableFor.includes('AutoWash')) ||
+             (!addOn.applicableFor || addOn.applicableFor.length === 0)
+    }
     return true
   })
 
@@ -304,6 +309,9 @@ function App() {
     }
     if (coverageFilter === 'bike') {
       return Array.isArray(item.applicableFor) && item.applicableFor.includes('BikeWash')
+    }
+    if (coverageFilter === 'auto') {
+      return Array.isArray(item.applicableFor) && item.applicableFor.includes('AutoWash')
     }
     return true
   })
@@ -1477,8 +1485,10 @@ function App() {
       const response = await fetch(`${API_BASE_URL}/services?isActive=true`)
       const data = await response.json()
       if (data.success) {
-        // Filter to only CarWash and BikeWash services
-        const services = (data.data || []).filter(s => s.category === 'CarWash' || s.category === 'BikeWash')
+        // Filter to only customer-facing wash categories
+        const services = (data.data || []).filter(
+          s => s.category === 'CarWash' || s.category === 'BikeWash' || s.category === 'AutoWash'
+        )
         setAllServices(services)
       } else {
         setServicesError(data.message || 'Failed to load services')
@@ -1498,6 +1508,7 @@ function App() {
     // Category filter
     if (serviceFilter === 'car' && service.category !== 'CarWash') return false
     if (serviceFilter === 'bike' && service.category !== 'BikeWash') return false
+    if (serviceFilter === 'auto' && service.category !== 'AutoWash') return false
     
     // Search filter
     if (serviceSearch) {
@@ -1802,17 +1813,29 @@ function App() {
         ? formData.images.split(',').map(img => img.trim()).filter(img => img)
         : []
 
-      const coverage = (formData.category === 'CarWash' || formData.category === 'BikeWash')
+      const coverage = (
+        formData.category === 'CarWash' ||
+        formData.category === 'BikeWash' ||
+        formData.category === 'AutoWash'
+      )
         ? selectedCoverage
         : []
 
-      const notIncluded = (formData.category === 'CarWash' || formData.category === 'BikeWash')
+      const notIncluded = (
+        formData.category === 'CarWash' ||
+        formData.category === 'BikeWash' ||
+        formData.category === 'AutoWash'
+      )
         ? availableCoverage
             .map(item => item.name)
             .filter(name => !selectedCoverage.includes(name))
         : []
 
-      const applicableAddOnIds = (formData.category === 'CarWash' || formData.category === 'BikeWash')
+      const applicableAddOnIds = (
+        formData.category === 'CarWash' ||
+        formData.category === 'BikeWash' ||
+        formData.category === 'AutoWash'
+      )
         ? availableAddOns.map(addOn => addOn._id)
         : []
 
@@ -2519,6 +2542,13 @@ function App() {
                   >
                     Bike wash ({allServices.filter(s => s.category === 'BikeWash').length})
                   </button>
+                  <button
+                    type="button"
+                    className={`filter-tab ${serviceFilter === 'auto' ? 'active' : ''}`}
+                    onClick={() => setServiceFilter('auto')}
+                  >
+                    Auto wash ({allServices.filter(s => s.category === 'AutoWash').length})
+                  </button>
                 </div>
               </div>
 
@@ -2639,6 +2669,7 @@ function App() {
               >
                 <option value="CarWash">Car Wash</option>
                 <option value="BikeWash">Bike Wash</option>
+                <option value="AutoWash">Auto Wash</option>
                 <option value="AddOn">Add-On</option>
               </select>
             </div>
@@ -2738,7 +2769,7 @@ function App() {
             </div>
           </div>
 
-              {(formData.category === 'CarWash' || formData.category === 'BikeWash') && (
+              {(formData.category === 'CarWash' || formData.category === 'BikeWash' || formData.category === 'AutoWash') && (
                 <div className="form-group">
                   <label>Coverage (Included)</label>
               {loadingCoverage ? (
@@ -2763,7 +2794,7 @@ function App() {
                 </div>
               )}
 
-              {(formData.category === 'CarWash' || formData.category === 'BikeWash') && (
+              {(formData.category === 'CarWash' || formData.category === 'BikeWash' || formData.category === 'AutoWash') && (
                 <div className="form-group">
                   <label>Not Included (auto)</label>
               {availableCoverage.length === 0 ? (
@@ -2782,7 +2813,7 @@ function App() {
               )}
 
               {/* Add-Ons are auto-attached based on service category */}
-              {(formData.category === 'CarWash' || formData.category === 'BikeWash') && (
+              {(formData.category === 'CarWash' || formData.category === 'BikeWash' || formData.category === 'AutoWash') && (
                 <div className="form-group auto-addons-section">
                   <label>Auto Add-Ons</label>
               {loadingAddOns ? (
@@ -3292,6 +3323,16 @@ function App() {
                   />
                   Bike Wash
                 </label>
+                <label className="checkbox-label">
+                  <input
+                    type="checkbox"
+                    name="applicableFor"
+                    value="AutoWash"
+                    checked={addOnFormData.applicableFor.includes('AutoWash')}
+                    onChange={handleAddOnChange}
+                  />
+                  Auto Wash
+                </label>
               </div>
               <small className="help-text">Select which service types can use this add-on</small>
             </div>
@@ -3328,6 +3369,13 @@ function App() {
                   >
                     Bike Wash
                   </button>
+                  <button
+                    type="button"
+                    className={`filter-tab ${addOnFilter === 'auto' ? 'active' : ''}`}
+                    onClick={() => setAddOnFilter('auto')}
+                  >
+                    Auto Wash
+                  </button>
                 </div>
               </div>
 
@@ -3343,7 +3391,17 @@ function App() {
                         <h3 className="addon-list-name">{addOn.name}</h3>
                         <span className="addon-list-applicable">
                           {addOn.applicableFor && addOn.applicableFor.length > 0
-                            ? addOn.applicableFor.map(cat => cat === 'CarWash' ? 'Car Wash' : 'Bike Wash').join(', ')
+                            ? addOn.applicableFor
+                                .map(cat => (
+                                  cat === 'CarWash'
+                                    ? 'Car Wash'
+                                    : cat === 'BikeWash'
+                                      ? 'Bike Wash'
+                                      : cat === 'AutoWash'
+                                        ? 'Auto Wash'
+                                        : cat
+                                ))
+                                .join(', ')
                             : 'N/A'}
                         </span>
                       </div>
@@ -3417,6 +3475,16 @@ function App() {
                     />
                     Bike Wash
                   </label>
+                  <label className="checkbox-label">
+                    <input
+                      type="checkbox"
+                      name="applicableFor"
+                      value="AutoWash"
+                      checked={coverageFormData.applicableFor.includes('AutoWash')}
+                      onChange={handleCoverageChange}
+                    />
+                    Auto Wash
+                  </label>
                 </div>
                 <small className="help-text">Select which service types use this coverage</small>
               </div>
@@ -3453,6 +3521,13 @@ function App() {
                   >
                     Bike Wash
                   </button>
+                  <button
+                    type="button"
+                    className={`filter-tab ${coverageFilter === 'auto' ? 'active' : ''}`}
+                    onClick={() => setCoverageFilter('auto')}
+                  >
+                    Auto Wash
+                  </button>
                 </div>
               </div>
 
@@ -3468,7 +3543,17 @@ function App() {
                         <h3 className="addon-list-name">{item.name}</h3>
                         <span className="addon-list-applicable">
                           {item.applicableFor && item.applicableFor.length > 0
-                            ? item.applicableFor.map(cat => cat === 'CarWash' ? 'Car Wash' : 'Bike Wash').join(', ')
+                            ? item.applicableFor
+                                .map(cat => (
+                                  cat === 'CarWash'
+                                    ? 'Car Wash'
+                                    : cat === 'BikeWash'
+                                      ? 'Bike Wash'
+                                      : cat === 'AutoWash'
+                                        ? 'Auto Wash'
+                                        : cat
+                                ))
+                                .join(', ')
                             : 'N/A'}
                         </span>
                       </div>

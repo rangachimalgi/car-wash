@@ -90,6 +90,12 @@ export default function HeaderNavigator() {
         component={CarWashScreen}
         options={{ headerShown: false }}
       />
+      <Stack.Screen
+        name="AutoWash"
+        component={CarWashScreen}
+        initialParams={{ category: 'AutoWash' }}
+        options={{ headerShown: false }}
+      />
       <Stack.Screen 
         name="CarWashDetails" 
         component={CarWashDetailsScreen}

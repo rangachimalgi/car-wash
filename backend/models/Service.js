@@ -20,7 +20,7 @@ const serviceSchema = new mongoose.Schema({
   category: {
     type: String,
     required: [true, 'Service category is required'],
-    enum: ['CarWash', 'BikeWash', 'AddOn', 'Coverage'],
+    enum: ['CarWash', 'BikeWash', 'AutoWash', 'AddOn', 'Coverage'],
     index: true,
   },
   basePrice: {
@@ -80,7 +80,7 @@ const serviceSchema = new mongoose.Schema({
   // For AddOn category: which service types can use this add-on
   applicableFor: [{
     type: String,
-    enum: ['CarWash', 'BikeWash'],
+    enum: ['CarWash', 'BikeWash', 'AutoWash'],
   }],
   // Pricing packages (monthly, quarterly, yearly)
   packages: {

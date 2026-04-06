@@ -47,12 +47,16 @@ export default function BookingsScreen({ navigation }) {
     }
     if (category === 'CarWash') return 'Car Wash';
     if (category === 'BikeWash') return 'Bike Wash';
+    if (category === 'AutoWash') return 'Auto Wash';
     return 'Service';
   };
 
   const getServiceImage = (category) => {
     if (category === 'BikeWash') {
       return 'https://images.unsplash.com/photo-1558981806-ec527fa84c39?w=300&h=200&fit=crop&auto=format';
+    }
+    if (category === 'AutoWash') {
+      return 'https://images.unsplash.com/photo-1619642751034-765dfdf7c58e?w=300&h=200&fit=crop&auto=format';
     }
     return 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=300&h=200&fit=crop&auto=format';
   };
