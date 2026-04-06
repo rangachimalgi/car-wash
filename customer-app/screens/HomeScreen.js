@@ -205,7 +205,7 @@ export default function HomeScreen({ navigation }) {
           <View style={styles.topServicesRow}>
             <TouchableOpacity
               style={styles.halfCard}
-              onPress={() => navigation.navigate('AutoWash')}
+              onPress={() => navigation.navigate('CarWash')}
               activeOpacity={0.9}
             >
               <Text style={styles.halfCardTitle}>Car Wash</Text>
