@@ -1,5 +1,31 @@
 import Service from '../models/Service.js';
 
+export const uploadServiceImage = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        message: 'No image uploaded',
+      });
+    }
+
+    return res.status(201).json({
+      success: true,
+      data: {
+        url: `/uploads/services/${req.file.filename}`,
+        filename: req.file.filename,
+      },
+    });
+  } catch (error) {
+    console.error('Error uploading service image:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Error uploading service image',
+      error: error.message,
+    });
+  }
+};
+
 // @desc    Get all services (with optional filters)
 // @route   GET /api/services
 // @access  Public

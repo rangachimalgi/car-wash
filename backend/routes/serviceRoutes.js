@@ -6,7 +6,9 @@ import {
   getServicesByCategory,
   createService,
   updateService,
+  uploadServiceImage,
 } from '../controllers/serviceController.js';
+import { uploadServiceImageSingle } from '../config/multerServiceImages.js';
 
 const router = express.Router();
 
@@ -14,6 +16,7 @@ const router = express.Router();
 // @desc    Create new service
 // @access  Admin (will add auth middleware later)
 router.post('/', createService);
+router.post('/upload-image', uploadServiceImageSingle, uploadServiceImage);
 
 // @route   GET /api/services
 // @desc    Get all services (with filters: category, search, sortBy)

@@ -29,10 +29,6 @@ function App() {
     basePrice: '',
     duration: '30 mins',
     image: '',
-    images: '',
-    rating: '0',
-    totalReviews: '0',
-    isActive: true,
     packages: {
       monthly: [],
       quarterly: [],
@@ -82,6 +78,7 @@ function App() {
   const [serviceSearch, setServiceSearch] = useState('') // Search query
   const [editingServiceId, setEditingServiceId] = useState(null) // Track which service is being edited
   const [servicesError, setServicesError] = useState('')
+  const [uploadingMainImage, setUploadingMainImage] = useState(false)
   const [authToken, setAuthToken] = useState(() => localStorage.getItem('adminAuthToken') || '')
   
   // Time Slots state
@@ -1520,6 +1517,11 @@ function App() {
     
     return true
   })
+  const categoryCounts = {
+    car: allServices.filter((s) => s.category === 'CarWash').length,
+    bike: allServices.filter((s) => s.category === 'BikeWash').length,
+    auto: allServices.filter((s) => s.category === 'AutoWash').length,
+  }
 
   const markOrderDelivered = async (orderId) => {
     try {
@@ -1594,6 +1596,45 @@ function App() {
       ...prev,
       [name]: type === 'checkbox' ? checked : value
     }))
+  }
+
+  const uploadServiceImageFiles = async (files) => {
+    const uploadedUrls = []
+    for (const file of files) {
+      const body = new FormData()
+      body.append('file', file)
+      const opts = getFetchOptions()
+      const headers = { ...(opts.headers || {}) }
+      delete headers['Content-Type']
+      const res = await fetch(`${API_BASE_URL}/services/upload-image`, {
+        ...opts,
+        method: 'POST',
+        headers,
+        body,
+      })
+      const data = await res.json()
+      if (!res.ok || !data.success) {
+        throw new Error(data.message || 'Image upload failed')
+      }
+      uploadedUrls.push(data.data.url)
+    }
+    return uploadedUrls
+  }
+
+  const handleMainImageUpload = async (e) => {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file) return
+    setUploadingMainImage(true)
+    try {
+      const [uploadedUrl] = await uploadServiceImageFiles([file])
+      setFormData((prev) => ({ ...prev, image: uploadedUrl || '' }))
+      setMessage({ type: 'success', text: 'Main image uploaded' })
+    } catch (error) {
+      setMessage({ type: 'error', text: error.message || 'Failed to upload main image' })
+    } finally {
+      setUploadingMainImage(false)
+    }
   }
 
   const addPackageRow = (packageType) => {
@@ -1758,10 +1799,6 @@ function App() {
           basePrice: String(service.basePrice || ''),
           duration: service.duration || '30 mins',
           image: service.image || '',
-          images: (service.images || []).join(', '),
-          rating: String(service.rating || 0),
-          totalReviews: String(service.totalReviews || 0),
-          isActive: service.isActive !== undefined ? service.isActive : true,
           packages: formatPackagesForForm(service.packages),
         })
         
@@ -1789,10 +1826,6 @@ function App() {
       basePrice: '',
       duration: '30 mins',
       image: '',
-      images: '',
-      rating: '0',
-      totalReviews: '0',
-      isActive: true,
       packages: {
         monthly: [],
         quarterly: [],
@@ -1808,11 +1841,6 @@ function App() {
     setMessage({ type: '', text: '' })
 
     try {
-      // Parse arrays from comma-separated strings
-      const images = formData.images 
-        ? formData.images.split(',').map(img => img.trim()).filter(img => img)
-        : []
-
       const coverage = (
         formData.category === 'CarWash' ||
         formData.category === 'BikeWash' ||
@@ -1867,10 +1895,7 @@ function App() {
         basePrice: parseFloat(formData.basePrice),
         duration: formData.duration,
         image: formData.image,
-        images: images,
-        rating: parseFloat(formData.rating) || 0,
-        totalReviews: parseInt(formData.totalReviews) || 0,
-        isActive: formData.isActive,
+        images: [],
         specifications: {
           coverage: coverage,
           notIncluded: notIncluded,
@@ -2485,11 +2510,16 @@ function App() {
           <>
             {/* Services List Section */}
             <div className="services-section">
-              <div className="section-header">
+              <div className="services-header">
+                <div>
+                  <h2 className="services-title">Services</h2>
+                  <p className="services-subtitle">Manage customer app wash services</p>
+                </div>
+                <div className="services-total-count">{allServices.length} total</div>
               </div>
 
               {/* Search and Filters */}
-              <div className="services-controls">
+              <div className="services-toolbar">
                 <div className="search-box">
                   <span className="search-icon" aria-hidden="true">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -2527,27 +2557,27 @@ function App() {
                     </button>
                   )}
                 </div>
-                <div className="filter-tabs">
+                <div className="services-filter-tabs">
                   <button
                     type="button"
-                    className={`filter-tab ${serviceFilter === 'car' ? 'active' : ''}`}
+                    className={`services-filter-tab ${serviceFilter === 'car' ? 'active' : ''}`}
                     onClick={() => setServiceFilter('car')}
                   >
-                    Car wash ({allServices.filter(s => s.category === 'CarWash').length})
+                    Car Wash ({categoryCounts.car})
                   </button>
                   <button
                     type="button"
-                    className={`filter-tab ${serviceFilter === 'bike' ? 'active' : ''}`}
+                    className={`services-filter-tab ${serviceFilter === 'bike' ? 'active' : ''}`}
                     onClick={() => setServiceFilter('bike')}
                   >
-                    Bike wash ({allServices.filter(s => s.category === 'BikeWash').length})
+                    Bike Wash ({categoryCounts.bike})
                   </button>
                   <button
                     type="button"
-                    className={`filter-tab ${serviceFilter === 'auto' ? 'active' : ''}`}
+                    className={`services-filter-tab ${serviceFilter === 'auto' ? 'active' : ''}`}
                     onClick={() => setServiceFilter('auto')}
                   >
-                    Auto wash ({allServices.filter(s => s.category === 'AutoWash').length})
+                    Auto Wash ({categoryCounts.auto})
                   </button>
                 </div>
               </div>
@@ -2593,6 +2623,9 @@ function App() {
                             {service.description}
                           </p>
                         ) : null}
+                        <div className="service-mini-meta">
+                          <span className="service-mini-category">{service.category}</span>
+                        </div>
                         <button
                           type="button"
                           className="bw-button"
@@ -2608,14 +2641,14 @@ function App() {
             </div>
 
             {/* Create/Edit Service Form */}
-            <div className="form-section form-section-flat">
-              <div className="section-header">
+            <div className="form-section form-section-flat service-form-section">
+              <div className="section-header service-form-header">
                 <div>
-                  <h2 className="section-title">
+                  <h2 className="section-title service-form-title">
                     {editingServiceId ? '✏️ Edit Service' : 'Create New Service'}
                   </h2>
                   {editingServiceId && (
-                    <p style={{ margin: '0.25rem 0 0 0', fontSize: '0.85rem', color: '#64748b' }}>
+                    <p className="service-form-editing-note">
                       Editing: {formData.name || 'Service'}
                     </p>
                   )}
@@ -2704,73 +2737,19 @@ function App() {
           </div>
 
               <div className="form-group">
-                <label htmlFor="image">Main Image URL</label>
-                <input
-                  type="url"
-                  id="image"
-                  name="image"
-                  value={formData.image}
-                  onChange={handleChange}
-                  placeholder="https://example.com/image.jpg"
-                />
+                <label>Main Image</label>
+                <div className="service-upload-row">
+                  <label className="service-upload-button">
+                    <input type="file" accept="image/*" onChange={handleMainImageUpload} disabled={uploadingMainImage} />
+                    {uploadingMainImage ? 'Uploading...' : 'Upload Main Image'}
+                  </label>
+                  {formData.image ? <span className="service-upload-status">Uploaded</span> : <span className="service-upload-status muted">No image</span>}
+                </div>
+                {formData.image ? <small className="help-text">{formData.image}</small> : null}
               </div>
-
-              <div className="form-group">
-                <label htmlFor="images">Additional Images (comma-separated URLs)</label>
-                <input
-                  type="text"
-                  id="images"
-                  name="images"
-                  value={formData.images}
-                  onChange={handleChange}
-                  placeholder="https://img1.com, https://img2.com"
-                />
-              </div>
-
-              <div className="form-row">
-            <div className="form-group">
-              <label htmlFor="rating">Rating (0-5)</label>
-              <input
-                type="number"
-                id="rating"
-                name="rating"
-                value={formData.rating}
-                onChange={handleChange}
-                min="0"
-                max="5"
-                step="0.1"
-                placeholder="4.5"
-              />
-            </div>
-
-            <div className="form-group">
-              <label htmlFor="totalReviews">Total Reviews</label>
-              <input
-                type="number"
-                id="totalReviews"
-                name="totalReviews"
-                value={formData.totalReviews}
-                onChange={handleChange}
-                min="0"
-                placeholder="0"
-              />
-            </div>
-
-            <div className="form-group checkbox-group">
-              <label className="checkbox-label">
-                <input
-                  type="checkbox"
-                  name="isActive"
-                  checked={formData.isActive}
-                  onChange={handleChange}
-                />
-                Active Service
-              </label>
-            </div>
-          </div>
 
               {(formData.category === 'CarWash' || formData.category === 'BikeWash' || formData.category === 'AutoWash') && (
-                <div className="form-group">
+                <div className="form-group service-coverage-group">
                   <label>Coverage (Included)</label>
               {loadingCoverage ? (
                 <div className="loading-text">Loading coverage...</div>
@@ -2795,7 +2774,7 @@ function App() {
               )}
 
               {(formData.category === 'CarWash' || formData.category === 'BikeWash' || formData.category === 'AutoWash') && (
-                <div className="form-group">
+                <div className="form-group service-not-included-group">
                   <label>Not Included (auto)</label>
               {availableCoverage.length === 0 ? (
                 <div className="info-text">No coverage items available.</div>
@@ -2885,12 +2864,15 @@ function App() {
         )}
 
         {activeTab === 'dailyCleaningServices' && (
-          <>
-            <div className="form-section">
-              <div className="section-header">
-                <h2 className="section-title">Customer App Monthly Package Pricing</h2>
+          <div className="daily-cleaning-page">
+            <div className="form-section daily-cleaning-section">
+              <div className="section-header daily-cleaning-header">
+                <div>
+                  <h2 className="section-title daily-cleaning-title">Customer App Monthly Package Pricing</h2>
+                  <p className="daily-cleaning-subtitle">Configure slots and pricing matrix for daily cleaning plans</p>
+                </div>
               </div>
-              <form onSubmit={handlePackagePricingSubmit} className="form">
+              <form onSubmit={handlePackagePricingSubmit} className="form daily-cleaning-form">
                 <div className="form-row">
                   <div className="form-group">
                     <label htmlFor="packageDurationDays">Package Duration (days)</label>
@@ -2909,7 +2891,7 @@ function App() {
 
                 <div className="form-group">
                   <label>Time Slots</label>
-                  <div className="form-row">
+                  <div className="form-row daily-time-slots-grid">
                     {packagePricingForm.timeSlots.map((slot, idx) => (
                       <div key={`slot-${idx}`} className="form-group">
                         <input
@@ -2930,7 +2912,7 @@ function App() {
 
                 <div className="form-group">
                   <label>Pricing Matrix</label>
-                  <div className="form-row">
+                  <div className="form-row daily-pricing-grid">
                     {[
                       { key: 'i1_e1_daily', label: 'I1 + E1 + Daily' },
                       { key: 'i1_e1_alternate', label: 'I1 + E1 + Alternate' },
@@ -2973,18 +2955,21 @@ function App() {
                 </div>
               </form>
             </div>
-          </>
+          </div>
         )}
 
         {activeTab === 'packages' && (
-          <>
-            <div className="form-section">
-              <div className="section-header">
-                <h2 className="section-title">Customer App Packages</h2>
+          <div className="packages-page">
+            <div className="form-section packages-section">
+              <div className="section-header packages-header">
+                <div>
+                  <h2 className="section-title packages-title">Customer App Packages</h2>
+                  <p className="packages-subtitle">Create and manage package cards for the customer app</p>
+                </div>
               </div>
 
-              <div className="form">
-                <h3 className="section-title" style={{ fontSize: '1.05rem' }}>Create Package</h3>
+              <div className="form packages-form">
+                <h3 className="packages-block-title">Create Package</h3>
                 <div className="form-row">
                   <div className="form-group">
                     <label>Package Name</label>
@@ -3032,12 +3017,12 @@ function App() {
                 <div className="form-row">
                   <div className="form-group">
                     <label>Add-Ons</label>
-                    <div style={{ maxHeight: 140, overflowY: 'auto', border: '1px solid #E5E7EB', borderRadius: 8, padding: 8 }}>
+                    <div className="packages-checkbox-panel">
                       {(packageCarWashAddOns || []).length === 0 ? (
                         <small className="help-text">No add-ons available.</small>
                       ) : (
                         (packageCarWashAddOns || []).map((addOn) => (
-                          <label key={addOn._id} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                          <label key={addOn._id} className="packages-checkbox-row">
                             <input
                               type="checkbox"
                               checked={(newPackageCard.addOnServiceIds || []).includes(addOn._id)}
@@ -3053,12 +3038,12 @@ function App() {
                 <div className="form-row">
                   <div className="form-group">
                     <label>Coverage Included</label>
-                    <div style={{ maxHeight: 140, overflowY: 'auto', border: '1px solid #E5E7EB', borderRadius: 8, padding: 8 }}>
+                    <div className="packages-checkbox-panel">
                       {(packageCarWashCoverage || []).length === 0 ? (
                         <small className="help-text">No coverage items available.</small>
                       ) : (
                         (packageCarWashCoverage || []).map((coverage) => (
-                          <label key={`new-inc-${coverage._id}`} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                          <label key={`new-inc-${coverage._id}`} className="packages-checkbox-row">
                             <input
                               type="checkbox"
                               checked={(newPackageCard.coverageIncluded || []).includes(coverage.name)}
@@ -3072,12 +3057,12 @@ function App() {
                   </div>
                   <div className="form-group">
                     <label>Coverage Not Included</label>
-                    <div style={{ maxHeight: 140, overflowY: 'auto', border: '1px solid #E5E7EB', borderRadius: 8, padding: 8 }}>
+                    <div className="packages-checkbox-panel">
                       {(packageCarWashCoverage || []).length === 0 ? (
                         <small className="help-text">No coverage items available.</small>
                       ) : (
                         (packageCarWashCoverage || []).map((coverage) => (
-                          <label key={`new-not-inc-${coverage._id}`} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                          <label key={`new-not-inc-${coverage._id}`} className="packages-checkbox-row">
                             <input
                               type="checkbox"
                               checked={(newPackageCard.coverageNotIncluded || []).includes(coverage.name)}
@@ -3099,8 +3084,8 @@ function App() {
 
               <div className="form-section-divider"></div>
 
-              <form onSubmit={handlePackagePricingSubmit} className="form">
-                <h3 className="section-title" style={{ fontSize: '1.05rem' }}>Existing Packages</h3>
+              <form onSubmit={handlePackagePricingSubmit} className="form packages-form">
+                <h3 className="packages-block-title">Existing Packages</h3>
                 {(packagePricingForm.packageCards || []).length === 0 ? (
                   <div className="info-text">No packages added yet.</div>
                 ) : (
@@ -3138,16 +3123,19 @@ function App() {
                 </div>
               </form>
             </div>
-          </>
+          </div>
         )}
 
         {activeTab === 'coupons' && (
-          <>
-            <div className="form-section">
-              <div className="section-header">
-                <h2 className="section-title">Create Coupon</h2>
+          <div className="coupons-page">
+            <div className="form-section coupons-form-section">
+              <div className="section-header coupons-header">
+                <div>
+                  <h2 className="section-title coupons-title">Create Coupon</h2>
+                  <p className="coupons-subtitle">Add discount codes for customer orders</p>
+                </div>
               </div>
-              <form onSubmit={handleCreateCoupon} className="form">
+              <form onSubmit={handleCreateCoupon} className="form coupons-form">
                 <div className="form-row">
                   <div className="form-group">
                     <label htmlFor="couponCode">Code *</label>
@@ -3197,10 +3185,13 @@ function App() {
               </form>
             </div>
 
-            <div className="services-section" style={{ marginTop: '1.5rem' }}>
-              <div className="section-header">
-                <h2 className="section-title">All Coupons</h2>
-                <button type="button" className="refresh-button" onClick={fetchCoupons} disabled={loadingCoupons}>
+            <div className="services-section coupons-list-section">
+              <div className="section-header coupons-list-header">
+                <div>
+                  <h2 className="section-title">All Coupons</h2>
+                  <p className="coupons-list-subtitle">{coupons.length} total</p>
+                </div>
+                <button type="button" className="refresh-button coupons-refresh-button" onClick={fetchCoupons} disabled={loadingCoupons}>
                   {loadingCoupons ? 'Loading...' : 'Refresh'}
                 </button>
               </div>
@@ -3212,7 +3203,7 @@ function App() {
               ) : (
                 <div className="addons-grid">
                   {coupons.map((coupon) => (
-                    <div key={coupon._id} className="addon-card">
+                    <div key={coupon._id} className="addon-card coupon-card">
                       <div className="addon-card-header">
                         <h3 className="addon-card-title">{coupon.code}</h3>
                         <span className={`addon-status ${coupon.isActive ? 'active' : 'inactive'}`}>
@@ -3248,15 +3239,21 @@ function App() {
                 </div>
               )}
             </div>
-          </>
+          </div>
         )}
 
         {/* Add-Ons Form */}
         {activeTab === 'addons' && (
-          <>
+          <div className="addons-page">
             {/* Create Add-On Form */}
-            <h2 className="section-title">Create New Add-On</h2>
-            <form onSubmit={handleAddOnSubmit} className="form">
+            <div className="form-section form-section-flat addons-form-section">
+              <div className="section-header addons-form-header">
+                <div>
+                  <h2 className="section-title addons-form-title">Create New Add-On</h2>
+                  <p className="addons-form-subtitle">Create extras for customer wash services</p>
+                </div>
+              </div>
+              <form onSubmit={handleAddOnSubmit} className="form">
             <div className="form-group">
               <label htmlFor="addon-name">Add-On Name *</label>
               <input
@@ -3346,32 +3343,36 @@ function App() {
             <button type="submit" className="submit-button" disabled={loadingAddOn}>
               {loadingAddOn ? 'Creating...' : 'Create Add-On'}
             </button>
-            </form>
+              </form>
+            </div>
 
             <div className="form-section-divider"></div>
 
             {/* Add-Ons List Section */}
-            <div className="addons-list-section">
-              <div className="section-header">
-                <h2 className="section-title">Existing Add-Ons</h2>
-                <div className="filter-tabs">
+            <div className="addons-list-section addons-list-section-modern">
+              <div className="section-header addons-list-header">
+                <div>
+                  <h2 className="section-title">Existing Add-Ons</h2>
+                  <p className="addons-list-subtitle">{filteredAddOns.length} shown</p>
+                </div>
+                <div className="addons-filter-tabs">
                   <button
                     type="button"
-                    className={`filter-tab ${addOnFilter === 'car' ? 'active' : ''}`}
+                    className={`addons-filter-tab ${addOnFilter === 'car' ? 'active' : ''}`}
                     onClick={() => setAddOnFilter('car')}
                   >
                     Car Wash
                   </button>
                   <button
                     type="button"
-                    className={`filter-tab ${addOnFilter === 'bike' ? 'active' : ''}`}
+                    className={`addons-filter-tab ${addOnFilter === 'bike' ? 'active' : ''}`}
                     onClick={() => setAddOnFilter('bike')}
                   >
                     Bike Wash
                   </button>
                   <button
                     type="button"
-                    className={`filter-tab ${addOnFilter === 'auto' ? 'active' : ''}`}
+                    className={`addons-filter-tab ${addOnFilter === 'auto' ? 'active' : ''}`}
                     onClick={() => setAddOnFilter('auto')}
                   >
                     Auto Wash
@@ -3416,15 +3417,21 @@ function App() {
                 </div>
               )}
             </div>
-          </>
+          </div>
         )}
 
         {/* Coverage Form */}
         {activeTab === 'coverage' && (
-          <>
+          <div className="coverage-page">
             {/* Create Coverage Form */}
-            <h2 className="section-title">Create Coverage Item</h2>
-            <form onSubmit={handleCoverageSubmit} className="form">
+            <div className="form-section form-section-flat coverage-form-section">
+              <div className="section-header coverage-form-header">
+                <div>
+                  <h2 className="section-title coverage-form-title">Create Coverage Item</h2>
+                  <p className="coverage-form-subtitle">Define what each wash service includes</p>
+                </div>
+              </div>
+              <form onSubmit={handleCoverageSubmit} className="form">
               <div className="form-group">
                 <label htmlFor="coverage-name">Coverage Name *</label>
                 <input
@@ -3498,32 +3505,36 @@ function App() {
               <button type="submit" className="submit-button" disabled={loadingCoverage}>
                 {loadingCoverage ? 'Creating...' : 'Create Coverage'}
               </button>
-            </form>
+              </form>
+            </div>
 
             <div className="form-section-divider"></div>
 
             {/* Coverage List Section */}
-            <div className="addons-list-section">
-              <div className="section-header">
-                <h2 className="section-title">Existing Coverage Items</h2>
-                <div className="filter-tabs">
+            <div className="addons-list-section addons-list-section-modern">
+              <div className="section-header coverage-list-header">
+                <div>
+                  <h2 className="section-title">Existing Coverage Items</h2>
+                  <p className="coverage-list-subtitle">{filteredCoverage.length} shown</p>
+                </div>
+                <div className="coverage-filter-tabs">
                   <button
                     type="button"
-                    className={`filter-tab ${coverageFilter === 'car' ? 'active' : ''}`}
+                    className={`coverage-filter-tab ${coverageFilter === 'car' ? 'active' : ''}`}
                     onClick={() => setCoverageFilter('car')}
                   >
                     Car Wash
                   </button>
                   <button
                     type="button"
-                    className={`filter-tab ${coverageFilter === 'bike' ? 'active' : ''}`}
+                    className={`coverage-filter-tab ${coverageFilter === 'bike' ? 'active' : ''}`}
                     onClick={() => setCoverageFilter('bike')}
                   >
                     Bike Wash
                   </button>
                   <button
                     type="button"
-                    className={`filter-tab ${coverageFilter === 'auto' ? 'active' : ''}`}
+                    className={`coverage-filter-tab ${coverageFilter === 'auto' ? 'active' : ''}`}
                     onClick={() => setCoverageFilter('auto')}
                   >
                     Auto Wash
@@ -3567,7 +3578,7 @@ function App() {
                 </div>
               )}
             </div>
-          </>
+          </div>
         )}
 
         {/* Time Slots Tab */}
