@@ -158,7 +158,8 @@ function App() {
   const [mediaList, setMediaList] = useState([])
   const [loadingMedia, setLoadingMedia] = useState(false)
   const [mediaMessage, setMediaMessage] = useState({ type: '', text: '' })
-  const [mediaForm, setMediaForm] = useState({ type: 'testimonials', name: '', file: null })
+  const [testimonialMediaForm, setTestimonialMediaForm] = useState({ name: '', file: null })
+  const [transformationMediaForm, setTransformationMediaForm] = useState({ name: '', file: null })
   const [uploadingMedia, setUploadingMedia] = useState(false)
   const [seeDiffFiles, setSeeDiffFiles] = useState({ image1: null, image2: null, image3: null })
   const [uploadingSeeDiff, setUploadingSeeDiff] = useState(false)
@@ -2092,8 +2093,8 @@ function App() {
     }
   }
 
-  const uploadMediaFile = async () => {
-    if (!mediaForm.file) {
+  const uploadMediaFile = async (type, formState, setFormState) => {
+    if (!formState.file) {
       setMediaMessage({ type: 'error', text: 'Please select a video file' })
       return
     }
@@ -2101,9 +2102,9 @@ function App() {
     setMediaMessage({ type: '', text: '' })
     try {
       const formData = new FormData()
-      formData.append('type', mediaForm.type)
-      formData.append('name', mediaForm.name)
-      formData.append('file', mediaForm.file)
+      formData.append('type', type)
+      formData.append('name', formState.name)
+      formData.append('file', formState.file)
       const opts = getFetchOptions()
       const headers = { ...opts.headers }
       delete headers['Content-Type']
@@ -2111,7 +2112,7 @@ function App() {
       const data = await res.json()
       if (data.success) {
         setMediaMessage({ type: 'success', text: 'Uploaded successfully' })
-        setMediaForm({ type: mediaForm.type, name: '', file: null })
+        setFormState({ name: '', file: null })
         fetchMedia()
       } else {
         setMediaMessage({ type: 'error', text: data.message || 'Upload failed' })
@@ -4055,113 +4056,146 @@ function App() {
 
         {/* Media: Testimonials, Transformations, See The Difference */}
         {activeTab === 'media' && (
-          <div className="orders-section">
-            <div className="section-header">
-              <h2 className="section-title">Media</h2>
-              <button type="button" className="secondary-button" onClick={fetchMedia} disabled={loadingMedia}>
+          <div className="media-page">
+            <div className="orders-section media-section">
+            <div className="section-header media-header">
+              <div>
+                <h2 className="section-title media-title">Media</h2>
+                <p className="media-subtitle">Manage testimonials, transformations, and homepage visuals</p>
+              </div>
+              <button type="button" className="secondary-button media-refresh-button" onClick={fetchMedia} disabled={loadingMedia}>
                 {loadingMedia ? 'Loading...' : 'Refresh'}
               </button>
             </div>
             {mediaMessage.text && (
-              <div className={mediaMessage.type === 'error' ? 'error-message' : 'success-message'} style={{ marginBottom: 12 }}>
+              <div className={`media-message ${mediaMessage.type === 'error' ? 'media-message-error' : 'media-message-success'}`}>
                 {mediaMessage.text}
               </div>
             )}
 
             {/* Testimonials: video upload */}
-            <div style={{ marginBottom: 28 }}>
-              <h3 style={{ fontSize: 18, marginBottom: 10 }}>Customer Testimonials (videos)</h3>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'flex-end', marginBottom: 12 }}>
-                <select
-                  value={mediaForm.type}
-                  onChange={(e) => setMediaForm((f) => ({ ...f, type: e.target.value }))}
-                  style={{ padding: '8px 12px', border: '1px solid #ddd', borderRadius: 6 }}
-                >
-                  <option value="testimonials">Testimonials</option>
-                  <option value="transformations">Transformations</option>
-                </select>
+            <div className="media-block">
+              <h3 className="media-block-title">Customer Testimonials (videos)</h3>
+              <div className="media-upload-toolbar">
                 <input
                   type="text"
                   placeholder="Name (optional)"
-                  value={mediaForm.name}
-                  onChange={(e) => setMediaForm((f) => ({ ...f, name: e.target.value }))}
-                  style={{ padding: '8px 12px', border: '1px solid #ddd', borderRadius: 6, minWidth: 160 }}
+                  value={testimonialMediaForm.name}
+                  onChange={(e) => setTestimonialMediaForm((f) => ({ ...f, name: e.target.value }))}
+                  className="media-control media-name-input"
                 />
-                <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <span style={{ fontSize: 14 }}>Video:</span>
+                <label className="media-file-input-wrap">
+                  <span className="media-file-button">Choose video</span>
                   <input
                     type="file"
                     accept="video/mp4,video/webm,video/quicktime"
-                    onChange={(e) => setMediaForm((f) => ({ ...f, file: e.target.files?.[0] || null }))}
+                    onChange={(e) => setTestimonialMediaForm((f) => ({ ...f, file: e.target.files?.[0] || null }))}
                   />
                 </label>
-                <button type="button" className="primary-button" onClick={uploadMediaFile} disabled={uploadingMedia || !mediaForm.file}>
+                <span className="media-selected-file">{testimonialMediaForm.file?.name || 'No file selected'}</span>
+                <button
+                  type="button"
+                  className="media-upload-button"
+                  onClick={() => uploadMediaFile('testimonials', testimonialMediaForm, setTestimonialMediaForm)}
+                  disabled={uploadingMedia || !testimonialMediaForm.file}
+                >
                   {uploadingMedia ? 'Uploading...' : 'Upload'}
                 </button>
               </div>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+              <div className="media-items-grid">
                 {(mediaList.filter((m) => m.type === 'testimonials') || []).map((m) => (
-                  <div key={m._id} style={{ border: '1px solid #ddd', borderRadius: 8, padding: 8, display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <div key={m._id} className="media-item-card">
                     {m.url.match(/\.(mp4|webm|mov)$/i) ? (
-                      <video src={UPLOADS_BASE + m.url} controls style={{ width: 120, height: 68, objectFit: 'cover' }} />
+                      <video src={UPLOADS_BASE + m.url} controls className="media-item-preview" />
                     ) : (
-                      <img src={UPLOADS_BASE + m.url} alt="" style={{ width: 120, height: 68, objectFit: 'cover' }} />
+                      <img src={UPLOADS_BASE + m.url} alt="" className="media-item-preview" />
                     )}
-                    <span>{m.name || 'Video'}</span>
-                    <button type="button" className="secondary-button" style={{ padding: '4px 8px' }} onClick={() => deleteMediaItem(m._id)}>Delete</button>
+                    <span className="media-item-name">{m.name || 'Video'}</span>
+                    <button type="button" className="secondary-button media-delete-button" onClick={() => deleteMediaItem(m._id)}>Delete</button>
                   </div>
                 ))}
               </div>
             </div>
 
             {/* Transformations: video upload (same form, type=transformations) - list below */}
-            <div style={{ marginBottom: 28 }}>
-              <h3 style={{ fontSize: 18, marginBottom: 10 }}>See The Transformations (videos)</h3>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+            <div className="media-block">
+              <h3 className="media-block-title">See The Transformations (videos)</h3>
+              <div className="media-upload-toolbar">
+                <input
+                  type="text"
+                  placeholder="Name (optional)"
+                  value={transformationMediaForm.name}
+                  onChange={(e) => setTransformationMediaForm((f) => ({ ...f, name: e.target.value }))}
+                  className="media-control media-name-input"
+                />
+                <label className="media-file-input-wrap">
+                  <span className="media-file-button">Choose video</span>
+                  <input
+                    type="file"
+                    accept="video/mp4,video/webm,video/quicktime"
+                    onChange={(e) => setTransformationMediaForm((f) => ({ ...f, file: e.target.files?.[0] || null }))}
+                  />
+                </label>
+                <span className="media-selected-file">{transformationMediaForm.file?.name || 'No file selected'}</span>
+                <button
+                  type="button"
+                  className="media-upload-button"
+                  onClick={() => uploadMediaFile('transformations', transformationMediaForm, setTransformationMediaForm)}
+                  disabled={uploadingMedia || !transformationMediaForm.file}
+                >
+                  {uploadingMedia ? 'Uploading...' : 'Upload'}
+                </button>
+              </div>
+              <div className="media-items-grid">
                 {(mediaList.filter((m) => m.type === 'transformations') || []).map((m) => (
-                  <div key={m._id} style={{ border: '1px solid #ddd', borderRadius: 8, padding: 8, display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <div key={m._id} className="media-item-card">
                     {m.url.match(/\.(mp4|webm|mov)$/i) ? (
-                      <video src={UPLOADS_BASE + m.url} controls style={{ width: 120, height: 68, objectFit: 'cover' }} />
+                      <video src={UPLOADS_BASE + m.url} controls className="media-item-preview" />
                     ) : (
-                      <img src={UPLOADS_BASE + m.url} alt="" style={{ width: 120, height: 68, objectFit: 'cover' }} />
+                      <img src={UPLOADS_BASE + m.url} alt="" className="media-item-preview" />
                     )}
-                    <span>{m.name || 'Video'}</span>
-                    <button type="button" className="secondary-button" style={{ padding: '4px 8px' }} onClick={() => deleteMediaItem(m._id)}>Delete</button>
+                    <span className="media-item-name">{m.name || 'Video'}</span>
+                    <button type="button" className="secondary-button media-delete-button" onClick={() => deleteMediaItem(m._id)}>Delete</button>
                   </div>
                 ))}
               </div>
             </div>
 
             {/* See The Difference: 3 images */}
-            <div style={{ marginBottom: 28 }}>
-              <h3 style={{ fontSize: 18, marginBottom: 10 }}>See The Difference (3 images)</h3>
-              <p style={{ fontSize: 14, color: '#666', marginBottom: 10 }}>Upload exactly 3 images. They will replace the current set.</p>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'flex-end', marginBottom: 12 }}>
-                <label>Image 1: <input type="file" accept="image/*" onChange={(e) => setSeeDiffFiles((f) => ({ ...f, image1: e.target.files?.[0] || null }))} /></label>
-                <label>Image 2: <input type="file" accept="image/*" onChange={(e) => setSeeDiffFiles((f) => ({ ...f, image2: e.target.files?.[0] || null }))} /></label>
-                <label>Image 3: <input type="file" accept="image/*" onChange={(e) => setSeeDiffFiles((f) => ({ ...f, image3: e.target.files?.[0] || null }))} /></label>
-                <button type="button" className="primary-button" onClick={uploadSeeTheDifference} disabled={uploadingSeeDiff}> {uploadingSeeDiff ? 'Uploading...' : 'Upload 3 images'} </button>
+            <div className="media-block">
+              <h3 className="media-block-title">See The Difference (3 images)</h3>
+              <p className="media-help-text">Upload exactly 3 images. They will replace the current set.</p>
+              <div className="media-upload-toolbar">
+                <label className="media-file-input-wrap"><span className="media-file-button">Image 1</span><input type="file" accept="image/*" onChange={(e) => setSeeDiffFiles((f) => ({ ...f, image1: e.target.files?.[0] || null }))} /></label>
+                <label className="media-file-input-wrap"><span className="media-file-button">Image 2</span><input type="file" accept="image/*" onChange={(e) => setSeeDiffFiles((f) => ({ ...f, image2: e.target.files?.[0] || null }))} /></label>
+                <label className="media-file-input-wrap"><span className="media-file-button">Image 3</span><input type="file" accept="image/*" onChange={(e) => setSeeDiffFiles((f) => ({ ...f, image3: e.target.files?.[0] || null }))} /></label>
+                <button type="button" className="media-upload-button" onClick={uploadSeeTheDifference} disabled={uploadingSeeDiff}> {uploadingSeeDiff ? 'Uploading...' : 'Upload 3 images'} </button>
               </div>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+              <div className="media-see-diff-grid">
                 {(mediaList.filter((m) => m.type === 'seeTheDifference') || []).sort((a, b) => a.order - b.order).map((m) => (
-                  <div key={m._id} style={{ border: '1px solid #ddd', borderRadius: 8, padding: 8 }}>
-                    <img src={UPLOADS_BASE + m.url} alt={m.name} style={{ width: 160, height: 100, objectFit: 'cover', display: 'block' }} />
-                    <span style={{ fontSize: 13 }}>{m.name || `Slide ${m.order + 1}`}</span>
+                  <div key={m._id} className="media-see-diff-card">
+                    <img src={UPLOADS_BASE + m.url} alt={m.name} className="media-see-diff-image" />
+                    <span className="media-see-diff-label">{m.name || `Slide ${m.order + 1}`}</span>
                   </div>
                 ))}
               </div>
             </div>
           </div>
+          </div>
         )}
 
         {/* Orders */}
         {activeTab === 'orders' && (
-          <div className="orders-section">
-            <div className="section-header">
-              <h2 className="section-title">Orders</h2>
+          <div className="orders-page">
+            <div className="orders-section orders-section-modern">
+            <div className="section-header orders-header">
+              <div>
+                <h2 className="section-title orders-title">Orders</h2>
+                <p className="orders-subtitle">{orders.length} total</p>
+              </div>
               <button
                 type="button"
-                className="secondary-button"
+                className="secondary-button orders-refresh-button"
                 onClick={fetchOrders}
               >
                 Refresh
@@ -4310,7 +4344,7 @@ function App() {
                         <div className="order-card-actions">
                           <button
                             type="button"
-                            className="primary-button"
+                            className="orders-action-button orders-action-button-primary"
                             onClick={async () => {
                               const phone = selectedOrder.customer?.phone
                               const amountInput = window.prompt(`Add amount to wallet for ${phone}`, '500')
@@ -4364,7 +4398,7 @@ function App() {
                       <div className="order-card-actions">
                         <button
                           type="button"
-                          className="secondary-button"
+                          className="orders-action-button orders-action-button-secondary"
                           disabled={selectedOrder.status === 'Completed'}
                           onClick={() => markOrderDelivered(selectedOrder._id)}
                         >
@@ -4376,6 +4410,7 @@ function App() {
                 })()}
               </div>
             )}
+          </div>
           </div>
         )}
 
