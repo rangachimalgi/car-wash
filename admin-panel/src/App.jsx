@@ -7,6 +7,10 @@ import './App.css'
 // - Production build (npm run build) without either uses the same backend as the customer app (Render)
 const API_BASE_URL = (typeof window !== 'undefined' && window.__API_BASE_URL__) || import.meta.env.VITE_API_URL || (import.meta.env.PROD ? 'https://car-wash-vbry.onrender.com/api' : 'http://localhost:8000/api')
 const UPLOADS_BASE = API_BASE_URL.replace(/\/api\/?$/, '')
+const MAX_MEDIA_VIDEO_SIZE_MB = 25
+const MAX_MEDIA_IMAGE_SIZE_MB = 10
+const MAX_MEDIA_VIDEO_SIZE_BYTES = MAX_MEDIA_VIDEO_SIZE_MB * 1024 * 1024
+const MAX_MEDIA_IMAGE_SIZE_BYTES = MAX_MEDIA_IMAGE_SIZE_MB * 1024 * 1024
 const DEFAULT_PACKAGE_CARD = {
   name: '',
   description: '',
@@ -2098,6 +2102,12 @@ function App() {
       setMediaMessage({ type: 'error', text: 'Please select a video file' })
       return
     }
+    if (formState.file.size > MAX_MEDIA_VIDEO_SIZE_BYTES) {
+      const msg = `Size limit exceeded. Max allowed is ${MAX_MEDIA_VIDEO_SIZE_MB} MB per video.`
+      setMediaMessage({ type: 'error', text: msg })
+      window.alert(msg)
+      return
+    }
     setUploadingMedia(true)
     setMediaMessage({ type: '', text: '' })
     try {
@@ -2127,6 +2137,14 @@ function App() {
   const uploadSeeTheDifference = async () => {
     if (!seeDiffFiles.image1 || !seeDiffFiles.image2 || !seeDiffFiles.image3) {
       setMediaMessage({ type: 'error', text: 'Please select all 3 images' })
+      return
+    }
+    const tooLargeImage = [seeDiffFiles.image1, seeDiffFiles.image2, seeDiffFiles.image3]
+      .find((file) => file && file.size > MAX_MEDIA_IMAGE_SIZE_BYTES)
+    if (tooLargeImage) {
+      const msg = `Size limit exceeded. Max allowed is ${MAX_MEDIA_IMAGE_SIZE_MB} MB per image.`
+      setMediaMessage({ type: 'error', text: msg })
+      window.alert(msg)
       return
     }
     setUploadingSeeDiff(true)
@@ -2177,10 +2195,10 @@ function App() {
       if (data.success) {
         setCoupons(data.data || [])
       } else {
-        setCouponMessage({ type: 'error', text: data.message || 'Failed to load coupons' })
+        setCouponMessage({ type: 'error', text: data.message || 'Failed to load Woosh Coins' })
       }
     } catch (e) {
-      setCouponMessage({ type: 'error', text: e.message || 'Failed to load coupons' })
+      setCouponMessage({ type: 'error', text: e.message || 'Failed to load Woosh Coins' })
     } finally {
       setLoadingCoupons(false)
     }
@@ -2208,7 +2226,7 @@ function App() {
       }))
       const data = await res.json()
       if (data.success) {
-        setCouponMessage({ type: 'success', text: 'Coupon created successfully' })
+        setCouponMessage({ type: 'success', text: 'Woosh Coin created successfully' })
         setCouponForm({
           code: '',
           discountValue: '',
@@ -2216,10 +2234,10 @@ function App() {
         })
         fetchCoupons()
       } else {
-        setCouponMessage({ type: 'error', text: data.message || 'Failed to create coupon' })
+        setCouponMessage({ type: 'error', text: data.message || 'Failed to create Woosh Coin' })
       }
     } catch (e) {
-      setCouponMessage({ type: 'error', text: e.message || 'Failed to create coupon' })
+      setCouponMessage({ type: 'error', text: e.message || 'Failed to create Woosh Coin' })
     }
   }
 
@@ -2359,7 +2377,7 @@ function App() {
         { id: 'slots', label: 'Time slots', icon: 'slots' },
         { id: 'dailyCleaningServices', label: 'Daily Cleaning Services', icon: 'packages' },
         { id: 'packages', label: 'Packages', icon: 'packages' },
-        { id: 'coupons', label: 'Coupons', icon: 'coverage' },
+        { id: 'coupons', label: 'Woosh Coins', icon: 'coverage' },
       ],
     },
     { type: 'item', id: 'orders', label: 'Orders', icon: 'orders' },
@@ -2386,7 +2404,7 @@ function App() {
     slots: 'Time Slots',
     dailyCleaningServices: 'Daily Cleaning Services',
     packages: 'Packages',
-    coupons: 'Coupons',
+    coupons: 'Woosh Coins',
     orders: 'Orders',
     reviews: 'Reviews',
     media: 'Media (Testimonials & Transformations)',
@@ -3132,7 +3150,7 @@ function App() {
             <div className="form-section coupons-form-section">
               <div className="section-header coupons-header">
                 <div>
-                  <h2 className="section-title coupons-title">Create Coupon</h2>
+                  <h2 className="section-title coupons-title">Create Woosh Coin</h2>
                   <p className="coupons-subtitle">Add discount codes for customer orders</p>
                 </div>
               </div>
@@ -3181,7 +3199,7 @@ function App() {
                 )}
 
                 <div className="form-actions">
-                  <button type="submit" className="submit-button">Create Coupon</button>
+                  <button type="submit" className="submit-button">Create Woosh Coin</button>
                 </div>
               </form>
             </div>
@@ -3189,7 +3207,7 @@ function App() {
             <div className="services-section coupons-list-section">
               <div className="section-header coupons-list-header">
                 <div>
-                  <h2 className="section-title">All Coupons</h2>
+                  <h2 className="section-title">All Woosh Coins</h2>
                   <p className="coupons-list-subtitle">{coupons.length} total</p>
                 </div>
                 <button type="button" className="refresh-button coupons-refresh-button" onClick={fetchCoupons} disabled={loadingCoupons}>
@@ -3198,9 +3216,9 @@ function App() {
               </div>
 
               {loadingCoupons ? (
-                <div className="loading-text">Loading coupons...</div>
+                <div className="loading-text">Loading Woosh Coins...</div>
               ) : coupons.length === 0 ? (
-                <div className="info-text">No coupons created yet.</div>
+                <div className="info-text">No Woosh Coins created yet.</div>
               ) : (
                 <div className="addons-grid">
                   {coupons.map((coupon) => (
@@ -4076,6 +4094,7 @@ function App() {
             {/* Testimonials: video upload */}
             <div className="media-block">
               <h3 className="media-block-title">Customer Testimonials (videos)</h3>
+              <p className="media-help-text">Max video size: {MAX_MEDIA_VIDEO_SIZE_MB} MB</p>
               <div className="media-upload-toolbar">
                 <input
                   type="text"
@@ -4089,7 +4108,17 @@ function App() {
                   <input
                     type="file"
                     accept="video/mp4,video/webm,video/quicktime"
-                    onChange={(e) => setTestimonialMediaForm((f) => ({ ...f, file: e.target.files?.[0] || null }))}
+                    onChange={(e) => {
+                      const file = e.target.files?.[0] || null
+                      if (file && file.size > MAX_MEDIA_VIDEO_SIZE_BYTES) {
+                        const msg = `Size limit exceeded. Max allowed is ${MAX_MEDIA_VIDEO_SIZE_MB} MB per video.`
+                        setMediaMessage({ type: 'error', text: msg })
+                        window.alert(msg)
+                        e.target.value = ''
+                        return
+                      }
+                      setTestimonialMediaForm((f) => ({ ...f, file }))
+                    }}
                   />
                 </label>
                 <span className="media-selected-file">{testimonialMediaForm.file?.name || 'No file selected'}</span>
@@ -4120,6 +4149,7 @@ function App() {
             {/* Transformations: video upload (same form, type=transformations) - list below */}
             <div className="media-block">
               <h3 className="media-block-title">See The Transformations (videos)</h3>
+              <p className="media-help-text">Max video size: {MAX_MEDIA_VIDEO_SIZE_MB} MB</p>
               <div className="media-upload-toolbar">
                 <input
                   type="text"
@@ -4133,7 +4163,17 @@ function App() {
                   <input
                     type="file"
                     accept="video/mp4,video/webm,video/quicktime"
-                    onChange={(e) => setTransformationMediaForm((f) => ({ ...f, file: e.target.files?.[0] || null }))}
+                    onChange={(e) => {
+                      const file = e.target.files?.[0] || null
+                      if (file && file.size > MAX_MEDIA_VIDEO_SIZE_BYTES) {
+                        const msg = `Size limit exceeded. Max allowed is ${MAX_MEDIA_VIDEO_SIZE_MB} MB per video.`
+                        setMediaMessage({ type: 'error', text: msg })
+                        window.alert(msg)
+                        e.target.value = ''
+                        return
+                      }
+                      setTransformationMediaForm((f) => ({ ...f, file }))
+                    }}
                   />
                 </label>
                 <span className="media-selected-file">{transformationMediaForm.file?.name || 'No file selected'}</span>
@@ -4164,11 +4204,41 @@ function App() {
             {/* See The Difference: 3 images */}
             <div className="media-block">
               <h3 className="media-block-title">See The Difference (3 images)</h3>
-              <p className="media-help-text">Upload exactly 3 images. They will replace the current set.</p>
+              <p className="media-help-text">Upload exactly 3 images (max {MAX_MEDIA_IMAGE_SIZE_MB} MB each). They will replace the current set.</p>
               <div className="media-upload-toolbar">
-                <label className="media-file-input-wrap"><span className="media-file-button">Image 1</span><input type="file" accept="image/*" onChange={(e) => setSeeDiffFiles((f) => ({ ...f, image1: e.target.files?.[0] || null }))} /></label>
-                <label className="media-file-input-wrap"><span className="media-file-button">Image 2</span><input type="file" accept="image/*" onChange={(e) => setSeeDiffFiles((f) => ({ ...f, image2: e.target.files?.[0] || null }))} /></label>
-                <label className="media-file-input-wrap"><span className="media-file-button">Image 3</span><input type="file" accept="image/*" onChange={(e) => setSeeDiffFiles((f) => ({ ...f, image3: e.target.files?.[0] || null }))} /></label>
+                <label className="media-file-input-wrap"><span className="media-file-button">Image 1</span><input type="file" accept="image/*" onChange={(e) => {
+                  const file = e.target.files?.[0] || null
+                  if (file && file.size > MAX_MEDIA_IMAGE_SIZE_BYTES) {
+                    const msg = `Size limit exceeded. Max allowed is ${MAX_MEDIA_IMAGE_SIZE_MB} MB per image.`
+                    setMediaMessage({ type: 'error', text: msg })
+                    window.alert(msg)
+                    e.target.value = ''
+                    return
+                  }
+                  setSeeDiffFiles((f) => ({ ...f, image1: file }))
+                }} /></label>
+                <label className="media-file-input-wrap"><span className="media-file-button">Image 2</span><input type="file" accept="image/*" onChange={(e) => {
+                  const file = e.target.files?.[0] || null
+                  if (file && file.size > MAX_MEDIA_IMAGE_SIZE_BYTES) {
+                    const msg = `Size limit exceeded. Max allowed is ${MAX_MEDIA_IMAGE_SIZE_MB} MB per image.`
+                    setMediaMessage({ type: 'error', text: msg })
+                    window.alert(msg)
+                    e.target.value = ''
+                    return
+                  }
+                  setSeeDiffFiles((f) => ({ ...f, image2: file }))
+                }} /></label>
+                <label className="media-file-input-wrap"><span className="media-file-button">Image 3</span><input type="file" accept="image/*" onChange={(e) => {
+                  const file = e.target.files?.[0] || null
+                  if (file && file.size > MAX_MEDIA_IMAGE_SIZE_BYTES) {
+                    const msg = `Size limit exceeded. Max allowed is ${MAX_MEDIA_IMAGE_SIZE_MB} MB per image.`
+                    setMediaMessage({ type: 'error', text: msg })
+                    window.alert(msg)
+                    e.target.value = ''
+                    return
+                  }
+                  setSeeDiffFiles((f) => ({ ...f, image3: file }))
+                }} /></label>
                 <button type="button" className="media-upload-button" onClick={uploadSeeTheDifference} disabled={uploadingSeeDiff}> {uploadingSeeDiff ? 'Uploading...' : 'Upload 3 images'} </button>
               </div>
               <div className="media-see-diff-grid">

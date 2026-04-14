@@ -165,8 +165,8 @@ export default function CheckoutScreen({ navigation, route }) {
       setAppliedCoupon(trimmedCode);
       setCouponCode('');
     } catch (error) {
-      const msg = error?.response?.data?.message || 'Invalid coupon code';
-      Alert.alert('Coupon', msg);
+      const msg = error?.response?.data?.message || 'Invalid Woosh Coin code';
+      Alert.alert('Woosh Coin', msg);
       setCouponCode('');
     } finally {
       setCouponLoading(false);
@@ -445,17 +445,17 @@ export default function CheckoutScreen({ navigation, route }) {
           </View>
         </View>
 
-        {/* Apply Coupon Section */}
+        {/* Apply Woosh Coin Section */}
         <View style={styles.couponSection}>
           <View style={styles.couponHeader}>
             <MaterialCommunityIcons name="ticket-percent" size={20} color={'LIGHT_BLUE'} />
-            <Text style={styles.sectionTitle}>Apply Coupon</Text>
+            <Text style={styles.sectionTitle}>Apply Woosh Coin</Text>
           </View>
           {appliedCoupon ? (
             <View style={styles.appliedCouponContainer}>
               <View style={styles.appliedCouponRow}>
                 <MaterialCommunityIcons name="check-circle" size={20} color={LIGHT_BLUE} />
-                <Text style={styles.appliedCouponText}>{appliedCoupon} Applied</Text>
+                <Text style={styles.appliedCouponText}>{appliedCoupon} Woosh Coin Applied</Text>
                 <Text style={styles.discountText}>-₹{discount.toFixed(2)}</Text>
               </View>
               <TouchableOpacity 
@@ -470,7 +470,7 @@ export default function CheckoutScreen({ navigation, route }) {
               <View style={styles.couponInputContainer}>
                 <TextInput
                   style={styles.couponInput}
-                  placeholder="Enter coupon code"
+                  placeholder="Enter Woosh Coin code"
                   placeholderTextColor={theme.textSecondary}
                   value={couponCode}
                   onChangeText={setCouponCode}
@@ -486,7 +486,7 @@ export default function CheckoutScreen({ navigation, route }) {
               </View>
               {couponSuggestions.length > 0 && (
                 <View style={styles.couponSuggestionsWrap}>
-                  <Text style={styles.couponSuggestionsTitle}>Suggested coupons</Text>
+                  <Text style={styles.couponSuggestionsTitle}>Suggested Woosh Coins</Text>
                   <View style={styles.couponSuggestionsRow}>
                     {couponSuggestions.map((coupon) => (
                       <TouchableOpacity

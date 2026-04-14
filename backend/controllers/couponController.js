@@ -5,19 +5,19 @@ const round2 = (n) => Number(Number(n || 0).toFixed(2));
 export const computeCouponDiscount = ({ coupon, orderAmount, phone }) => {
   const amount = Number(orderAmount || 0);
   if (!coupon || !coupon.isActive) {
-    return { valid: false, message: 'Coupon is not active' };
+    return { valid: false, message: 'Woosh Coin is not active' };
   }
   if (amount <= 0) {
     return { valid: false, message: 'Invalid order amount' };
   }
   if (coupon.expiryDate && new Date(coupon.expiryDate) < new Date()) {
-    return { valid: false, message: 'Coupon has expired' };
+    return { valid: false, message: 'Woosh Coin has expired' };
   }
   if (amount < Number(coupon.minOrderAmount || 0)) {
     return { valid: false, message: `Minimum order amount is ₹${coupon.minOrderAmount}` };
   }
   if (Number(coupon.usageLimit || 0) > 0 && Number(coupon.usedCount || 0) >= Number(coupon.usageLimit)) {
-    return { valid: false, message: 'Coupon usage limit reached' };
+    return { valid: false, message: 'Woosh Coin usage limit reached' };
   }
 
   const normalizedPhone = String(phone || '').trim();
@@ -25,7 +25,7 @@ export const computeCouponDiscount = ({ coupon, orderAmount, phone }) => {
     ? (coupon.usageByPhone || []).find((u) => u.phone === normalizedPhone)?.count || 0
     : 0;
   if (normalizedPhone && Number(coupon.perUserLimit || 0) > 0 && userUsage >= Number(coupon.perUserLimit)) {
-    return { valid: false, message: 'Coupon usage limit reached for this user' };
+    return { valid: false, message: 'Woosh Coin usage limit reached for this user' };
   }
 
   let discount = 0;
@@ -39,12 +39,12 @@ export const computeCouponDiscount = ({ coupon, orderAmount, phone }) => {
   }
   discount = round2(Math.min(discount, amount));
   if (discount <= 0) {
-    return { valid: false, message: 'Coupon not applicable' };
+    return { valid: false, message: 'Woosh Coin not applicable' };
   }
 
   return {
     valid: true,
-    message: 'Coupon applied',
+    message: 'Woosh Coin applied',
     discountAmount: discount,
     finalAmount: round2(amount - discount),
   };
@@ -68,7 +68,7 @@ export const createCoupon = async (req, res) => {
     } = req.body || {};
 
     if (!code || String(code).trim().length < 3) {
-      return res.status(400).json({ success: false, message: 'Valid coupon code is required' });
+      return res.status(400).json({ success: false, message: 'Valid Woosh Coin code is required' });
     }
     if (Number(discountValue) <= 0) {
       return res.status(400).json({ success: false, message: 'Discount value must be greater than 0' });
@@ -92,10 +92,10 @@ export const createCoupon = async (req, res) => {
     res.status(201).json({ success: true, data: coupon });
   } catch (error) {
     if (error?.code === 11000) {
-      return res.status(409).json({ success: false, message: 'Coupon code already exists' });
+      return res.status(409).json({ success: false, message: 'Woosh Coin code already exists' });
     }
-    console.error('Error creating coupon:', error);
-    res.status(500).json({ success: false, message: 'Error creating coupon', error: error.message });
+    console.error('Error creating Woosh Coin:', error);
+    res.status(500).json({ success: false, message: 'Error creating Woosh Coin', error: error.message });
   }
 };
 
@@ -107,8 +107,8 @@ export const listCoupons = async (_req, res) => {
     const coupons = await Coupon.find().sort({ createdAt: -1 });
     res.status(200).json({ success: true, count: coupons.length, data: coupons });
   } catch (error) {
-    console.error('Error listing coupons:', error);
-    res.status(500).json({ success: false, message: 'Error listing coupons', error: error.message });
+    console.error('Error listing Woosh Coins:', error);
+    res.status(500).json({ success: false, message: 'Error listing Woosh Coins', error: error.message });
   }
 };
 
@@ -119,12 +119,12 @@ export const validateCoupon = async (req, res) => {
   try {
     const { code, orderAmount, phone } = req.body || {};
     if (!code) {
-      return res.status(400).json({ success: false, message: 'Coupon code is required' });
+      return res.status(400).json({ success: false, message: 'Woosh Coin code is required' });
     }
 
     const coupon = await Coupon.findOne({ code: String(code).trim().toUpperCase() });
     if (!coupon) {
-      return res.status(404).json({ success: false, message: 'Invalid coupon code' });
+      return res.status(404).json({ success: false, message: 'Invalid Woosh Coin code' });
     }
 
     const result = computeCouponDiscount({
@@ -147,7 +147,7 @@ export const validateCoupon = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error('Error validating coupon:', error);
-    res.status(500).json({ success: false, message: 'Error validating coupon', error: error.message });
+    console.error('Error validating Woosh Coin:', error);
+    res.status(500).json({ success: false, message: 'Error validating Woosh Coin', error: error.message });
   }
 };

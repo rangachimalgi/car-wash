@@ -24,6 +24,11 @@ export const errorHandler = (err, req, res, next) => {
     error = { message, statusCode: 400 };
   }
 
+  // Multer upload size limit
+  if (err.code === 'LIMIT_FILE_SIZE') {
+    error = { message: 'File size limit exceeded', statusCode: 400 };
+  }
+
   res.status(error.statusCode || 500).json({
     success: false,
     message: error.message || 'Server Error',

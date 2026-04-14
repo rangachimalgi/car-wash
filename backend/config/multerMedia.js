@@ -24,7 +24,7 @@ const allowedImage = /^image\/(jpeg|jpg|png|webp|gif)$/i;
 
 export const uploadMediaSingle = multer({
   storage,
-  limits: { fileSize: 100 * 1024 * 1024 },
+  limits: { fileSize: 25 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
     if (allowedVideo.test(file.mimetype) || allowedImage.test(file.mimetype)) {
       cb(null, true);
