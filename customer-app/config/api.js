@@ -10,7 +10,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 // Your computer's IP address
 // Find it with: ipconfig getifaddr en0 (Mac) or ipconfig (Windows)
 // Update this if your IP changes!
-const COMPUTER_IP = '192.168.1.3';
+const COMPUTER_IP = '192.168.1.18';
 
 // Determine the correct base URL based on platform
 const getBaseURL = () => {

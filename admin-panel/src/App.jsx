@@ -117,6 +117,22 @@ function App() {
   const [documentViewEmployee, setDocumentViewEmployee] = useState(null)
   const [documentViewUrls, setDocumentViewUrls] = useState(null)
   const [loadingDocumentView, setLoadingDocumentView] = useState(false)
+  const [selectedEmployeeDetails, setSelectedEmployeeDetails] = useState(null)
+  const [employeeEditForm, setEmployeeEditForm] = useState({ name: '', phone: '', address: '', isActive: true })
+  const [employeePasswordForm, setEmployeePasswordForm] = useState({ newPassword: '' })
+  const [employeeEditMessage, setEmployeeEditMessage] = useState({ type: '', text: '' })
+  const [employeePasswordMessage, setEmployeePasswordMessage] = useState({ type: '', text: '' })
+  const [savingEmployeeDetails, setSavingEmployeeDetails] = useState(false)
+  const [changingEmployeePassword, setChangingEmployeePassword] = useState(false)
+  const [showCreateEmployeeForm, setShowCreateEmployeeForm] = useState(false)
+  const [creatingEmployee, setCreatingEmployee] = useState(false)
+  const [createEmployeeMessage, setCreateEmployeeMessage] = useState({ type: '', text: '' })
+  const [employeeCreateForm, setEmployeeCreateForm] = useState({
+    name: '',
+    phone: '',
+    address: '',
+    password: '',
+  })
 
   // Employee incentive targets (extra earnings above target)
   const [incentiveForm, setIncentiveForm] = useState({
@@ -656,6 +672,116 @@ function App() {
     }
   }
 
+  const handleCreateEmployee = async (e) => {
+    e.preventDefault()
+    const payload = {
+      name: employeeCreateForm.name.trim(),
+      phone: employeeCreateForm.phone.trim(),
+      address: employeeCreateForm.address.trim(),
+      password: employeeCreateForm.password,
+    }
+
+    if (!payload.name || !payload.phone || !payload.address || !payload.password) {
+      setCreateEmployeeMessage({ type: 'error', text: 'Name, phone, address, and password are required.' })
+      return
+    }
+
+    setCreatingEmployee(true)
+    setCreateEmployeeMessage({ type: '', text: '' })
+    try {
+      const response = await fetch(`${API_BASE_URL}/employees`, getFetchOptions({
+        method: 'POST',
+        body: JSON.stringify(payload),
+      }))
+      const data = await response.json()
+      if (data.success) {
+        const generatedId = data?.data?.employeeId ? ` (${data.data.employeeId})` : ''
+        setCreateEmployeeMessage({ type: 'success', text: `Employee created successfully${generatedId}.` })
+        setEmployeeCreateForm({ name: '', phone: '', address: '', password: '' })
+        await fetchEmployees()
+        setShowCreateEmployeeForm(false)
+      } else {
+        setCreateEmployeeMessage({ type: 'error', text: data.message || 'Failed to create employee.' })
+      }
+    } catch (error) {
+      setCreateEmployeeMessage({ type: 'error', text: error.message || 'Failed to create employee.' })
+    } finally {
+      setCreatingEmployee(false)
+    }
+  }
+
+  const handleSaveEmployeeDetails = async (e) => {
+    e.preventDefault()
+    if (!selectedEmployeeDetails?.employeeId) return
+
+    const payload = {
+      name: employeeEditForm.name.trim(),
+      phone: employeeEditForm.phone.trim(),
+      address: employeeEditForm.address.trim(),
+      isActive: Boolean(employeeEditForm.isActive),
+    }
+    if (!payload.name || !payload.phone || !payload.address) {
+      setEmployeeEditMessage({ type: 'error', text: 'Name, phone, and address are required.' })
+      return
+    }
+
+    setSavingEmployeeDetails(true)
+    setEmployeeEditMessage({ type: '', text: '' })
+    try {
+      const response = await fetch(`${API_BASE_URL}/employees/${encodeURIComponent(selectedEmployeeDetails.employeeId)}`, getFetchOptions({
+        method: 'PUT',
+        body: JSON.stringify(payload),
+      }))
+      const data = await response.json()
+      if (data.success && data.data) {
+        setEmployeeEditMessage({ type: 'success', text: 'Employee details updated.' })
+        setSelectedEmployeeDetails((prev) => (prev ? { ...prev, ...data.data } : prev))
+        setEmployees((prev) => prev.map((emp) => (
+          emp.employeeId === selectedEmployeeDetails.employeeId ? { ...emp, ...data.data } : emp
+        )))
+      } else {
+        setEmployeeEditMessage({ type: 'error', text: data.message || 'Failed to update employee.' })
+      }
+    } catch (error) {
+      setEmployeeEditMessage({ type: 'error', text: error.message || 'Failed to update employee.' })
+    } finally {
+      setSavingEmployeeDetails(false)
+    }
+  }
+
+  const handleChangeEmployeePassword = async (e) => {
+    e.preventDefault()
+    if (!selectedEmployeeDetails?.employeeId) return
+
+    const payload = {
+      newPassword: employeePasswordForm.newPassword,
+    }
+    if (!payload.newPassword) {
+      setEmployeePasswordMessage({ type: 'error', text: 'New password is required.' })
+      return
+    }
+
+    setChangingEmployeePassword(true)
+    setEmployeePasswordMessage({ type: '', text: '' })
+    try {
+      const response = await fetch(`${API_BASE_URL}/employees/${encodeURIComponent(selectedEmployeeDetails.employeeId)}/password`, getFetchOptions({
+        method: 'PUT',
+        body: JSON.stringify(payload),
+      }))
+      const data = await response.json()
+      if (data.success) {
+        setEmployeePasswordMessage({ type: 'success', text: 'Password reset successfully.' })
+        setEmployeePasswordForm({ newPassword: '' })
+      } else {
+        setEmployeePasswordMessage({ type: 'error', text: data.message || 'Failed to change password.' })
+      }
+    } catch (error) {
+      setEmployeePasswordMessage({ type: 'error', text: error.message || 'Failed to change password.' })
+    } finally {
+      setChangingEmployeePassword(false)
+    }
+  }
+
   // Get employee info by employeeId
   const getEmployeeInfo = (employeeId) => {
     return employees.find(emp => emp.employeeId === employeeId) || null
@@ -684,6 +810,13 @@ function App() {
   const closeDocumentView = () => {
     setDocumentViewEmployee(null)
     setDocumentViewUrls(null)
+  }
+
+  const closeEmployeeDetails = () => {
+    setSelectedEmployeeDetails(null)
+    setEmployeeEditMessage({ type: '', text: '' })
+    setEmployeePasswordMessage({ type: '', text: '' })
+    setEmployeePasswordForm({ newPassword: '' })
   }
 
   const fetchIncentiveConfig = async () => {
@@ -856,6 +989,13 @@ function App() {
       hour: '2-digit',
       minute: '2-digit',
     })
+  }
+
+  const formatDateTime = (value) => {
+    if (!value) return '—'
+    const date = new Date(value)
+    if (Number.isNaN(date.getTime())) return '—'
+    return date.toLocaleString('en-IN')
   }
 
   // Fetch inventory items
@@ -4489,59 +4629,226 @@ function App() {
           <div className="attendance-section">
             <div className="section-header">
               <h2 className="section-title">Employees</h2>
-              <button
-                type="button"
-                className="secondary-button"
-                onClick={fetchEmployees}
-                disabled={loadingEmployees}
-              >
-                {loadingEmployees ? 'Loading...' : 'Refresh'}
-              </button>
+              <div style={{ display: 'flex', gap: '10px' }}>
+                <button
+                  type="button"
+                  className="secondary-button"
+                  onClick={() => {
+                    setShowCreateEmployeeForm((v) => !v)
+                    setCreateEmployeeMessage({ type: '', text: '' })
+                  }}
+                >
+                  {showCreateEmployeeForm ? 'Close' : 'Create Employee'}
+                </button>
+                <button
+                  type="button"
+                  className="secondary-button"
+                  onClick={fetchEmployees}
+                  disabled={loadingEmployees}
+                >
+                  {loadingEmployees ? 'Loading...' : 'Refresh'}
+                </button>
+              </div>
             </div>
-            <div style={{ overflowX: 'auto', marginTop: '16px' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', backgroundColor: '#fff', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
-                <thead>
-                  <tr style={{ backgroundColor: '#f8f9fa' }}>
-                    <th style={{ padding: '12px', textAlign: 'left', borderBottom: '2px solid #ddd', fontWeight: '600' }}>Employee ID</th>
-                    <th style={{ padding: '12px', textAlign: 'left', borderBottom: '2px solid #ddd', fontWeight: '600' }}>Name</th>
-                    <th style={{ padding: '12px', textAlign: 'left', borderBottom: '2px solid #ddd', fontWeight: '600' }}>Phone</th>
-                    <th style={{ padding: '12px', textAlign: 'left', borderBottom: '2px solid #ddd', fontWeight: '600' }}>Documents</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {loadingEmployees ? (
-                    <tr><td colSpan="4" style={{ padding: '20px', textAlign: 'center' }}>Loading employees...</td></tr>
-                  ) : employees.length === 0 ? (
-                    <tr><td colSpan="4" style={{ padding: '20px', textAlign: 'center', color: '#6B7280' }}>No employees found.</td></tr>
-                  ) : employees.map((emp) => {
-                    const docsUploaded = !!emp.documentsUploaded
-                    return (
-                      <tr key={emp.employeeId || emp._id} style={{ borderBottom: '1px solid #eee' }}>
-                        <td style={{ padding: '12px' }}>{emp.employeeId}</td>
-                        <td style={{ padding: '12px' }}>{emp.name || '—'}</td>
-                        <td style={{ padding: '12px' }}>{emp.phone || '—'}</td>
-                        <td style={{ padding: '12px' }}>
-                          {docsUploaded ? (
-                            <>
-                              <span style={{ marginRight: '8px', fontSize: '12px', color: '#155724' }}>Uploaded</span>
+            {selectedEmployeeDetails ? (
+              <div style={{ marginTop: '14px', backgroundColor: '#fff', border: '1px solid #E5E7EB', borderRadius: '10px', padding: '16px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
+                  <div>
+                    <h3 style={{ margin: 0, fontSize: '20px' }}>{selectedEmployeeDetails.name || 'Employee'}</h3>
+                    <div style={{ fontSize: '12px', color: '#6B7280', marginTop: '4px' }}>Employee ID: {selectedEmployeeDetails.employeeId || '—'}</div>
+                  </div>
+                  <button type="button" className="secondary-button" onClick={closeEmployeeDetails}>Back to list</button>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '14px', marginBottom: '14px' }}>
+                  <div style={{ border: '1px solid #E5E7EB', borderRadius: '8px', padding: '12px' }}>
+                    <div style={{ fontSize: '12px', color: '#6B7280' }}>Documents</div>
+                    <div style={{ fontWeight: 700, marginTop: '4px' }}>{selectedEmployeeDetails.documentsUploaded ? 'Uploaded' : 'Not uploaded'}</div>
+                    {selectedEmployeeDetails.documentsUploaded ? (
+                      <button type="button" onClick={() => openEmployeeDocuments(selectedEmployeeDetails)} style={{ marginTop: '8px', padding: '6px 10px', fontSize: '12px', cursor: 'pointer', backgroundColor: '#2F8CF4', color: '#fff', border: 'none', borderRadius: '6px' }}>View documents</button>
+                    ) : null}
+                  </div>
+                  <div style={{ border: '1px solid #E5E7EB', borderRadius: '8px', padding: '12px' }}>
+                    <div style={{ fontSize: '12px', color: '#6B7280' }}>Created At</div>
+                    <div style={{ fontWeight: 700, marginTop: '4px' }}>{formatDateTime(selectedEmployeeDetails.createdAt)}</div>
+                    <div style={{ fontSize: '12px', color: '#6B7280', marginTop: '8px' }}>Updated At</div>
+                    <div style={{ fontWeight: 700, marginTop: '4px' }}>{formatDateTime(selectedEmployeeDetails.updatedAt)}</div>
+                  </div>
+                </div>
+
+                <form onSubmit={handleSaveEmployeeDetails} style={{ border: '1px solid #E5E7EB', borderRadius: '8px', padding: '14px', marginBottom: '14px' }}>
+                  <div style={{ fontWeight: 700, marginBottom: '10px' }}>Edit employee details</div>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '10px' }}>
+                    <input type="text" placeholder="Name" value={employeeEditForm.name} onChange={(e) => setEmployeeEditForm((p) => ({ ...p, name: e.target.value }))} style={{ padding: '10px', border: '1px solid #D1D5DB', borderRadius: '6px' }} required />
+                    <input type="text" placeholder="Phone Number" value={employeeEditForm.phone} onChange={(e) => setEmployeeEditForm((p) => ({ ...p, phone: e.target.value }))} style={{ padding: '10px', border: '1px solid #D1D5DB', borderRadius: '6px' }} required />
+                    <select value={employeeEditForm.isActive ? 'active' : 'inactive'} onChange={(e) => setEmployeeEditForm((p) => ({ ...p, isActive: e.target.value === 'active' }))} style={{ padding: '10px', border: '1px solid #D1D5DB', borderRadius: '6px' }}>
+                      <option value="active">Active</option>
+                      <option value="inactive">Inactive</option>
+                    </select>
+                  </div>
+                  <textarea placeholder="Address" value={employeeEditForm.address} onChange={(e) => setEmployeeEditForm((p) => ({ ...p, address: e.target.value }))} rows={3} style={{ marginTop: '10px', width: '100%', padding: '10px', border: '1px solid #D1D5DB', borderRadius: '6px', resize: 'vertical' }} required />
+                  {employeeEditMessage.text ? (
+                    <div style={{ marginTop: '10px', color: employeeEditMessage.type === 'error' ? '#B91C1C' : '#166534', fontSize: '13px', fontWeight: 600 }}>
+                      {employeeEditMessage.text}
+                    </div>
+                  ) : null}
+                  <div style={{ marginTop: '10px', display: 'flex', justifyContent: 'flex-end' }}>
+                    <button type="submit" className="submit-button" disabled={savingEmployeeDetails}>
+                      {savingEmployeeDetails ? 'Saving...' : 'Save details'}
+                    </button>
+                  </div>
+                </form>
+
+                <form onSubmit={handleChangeEmployeePassword} style={{ border: '1px solid #E5E7EB', borderRadius: '8px', padding: '14px' }}>
+                  <div style={{ fontWeight: 700, marginBottom: '4px' }}>Reset password</div>
+                  <div style={{ fontSize: '12px', color: '#6B7280', marginBottom: '10px' }}>
+                    Admin can directly set a new password for this employee account.
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '10px' }}>
+                    <input type="password" placeholder="New Password" value={employeePasswordForm.newPassword} onChange={(e) => setEmployeePasswordForm((p) => ({ ...p, newPassword: e.target.value }))} style={{ padding: '10px', border: '1px solid #D1D5DB', borderRadius: '6px' }} required />
+                  </div>
+                  {employeePasswordMessage.text ? (
+                    <div style={{ marginTop: '10px', color: employeePasswordMessage.type === 'error' ? '#B91C1C' : '#166534', fontSize: '13px', fontWeight: 600 }}>
+                      {employeePasswordMessage.text}
+                    </div>
+                  ) : null}
+                  <div style={{ marginTop: '10px', display: 'flex', justifyContent: 'flex-end' }}>
+                    <button type="submit" className="submit-button" disabled={changingEmployeePassword}>
+                      {changingEmployeePassword ? 'Updating...' : 'Reset password'}
+                    </button>
+                  </div>
+                </form>
+              </div>
+            ) : (
+              <>
+                {showCreateEmployeeForm && (
+                  <form onSubmit={handleCreateEmployee} style={{ marginTop: '14px', marginBottom: '16px', padding: '14px', border: '1px solid #E5E7EB', borderRadius: '8px', backgroundColor: '#fff' }}>
+                    <div style={{ marginBottom: '10px', fontSize: '12px', color: '#4B5563' }}>
+                      Employee ID is auto-generated (for example: WOOSHER01).
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '10px' }}>
+                      <input
+                        type="text"
+                        placeholder="Name"
+                        value={employeeCreateForm.name}
+                        onChange={(e) => setEmployeeCreateForm((p) => ({ ...p, name: e.target.value }))}
+                        style={{ padding: '10px', border: '1px solid #D1D5DB', borderRadius: '6px' }}
+                        required
+                      />
+                      <input
+                        type="text"
+                        placeholder="Phone Number"
+                        value={employeeCreateForm.phone}
+                        onChange={(e) => setEmployeeCreateForm((p) => ({ ...p, phone: e.target.value }))}
+                        style={{ padding: '10px', border: '1px solid #D1D5DB', borderRadius: '6px' }}
+                        required
+                      />
+                      <input
+                        type="password"
+                        placeholder="Password"
+                        value={employeeCreateForm.password}
+                        onChange={(e) => setEmployeeCreateForm((p) => ({ ...p, password: e.target.value }))}
+                        style={{ padding: '10px', border: '1px solid #D1D5DB', borderRadius: '6px' }}
+                        required
+                      />
+                    </div>
+                    <textarea
+                      placeholder="Address"
+                      value={employeeCreateForm.address}
+                      onChange={(e) => setEmployeeCreateForm((p) => ({ ...p, address: e.target.value }))}
+                      rows={3}
+                      style={{ marginTop: '10px', width: '100%', padding: '10px', border: '1px solid #D1D5DB', borderRadius: '6px', resize: 'vertical' }}
+                      required
+                    />
+                    {createEmployeeMessage.text && (
+                      <div style={{ marginTop: '10px', color: createEmployeeMessage.type === 'error' ? '#B91C1C' : '#166534', fontSize: '13px', fontWeight: 600 }}>
+                        {createEmployeeMessage.text}
+                      </div>
+                    )}
+                    <div style={{ marginTop: '10px', display: 'flex', justifyContent: 'flex-end' }}>
+                      <button type="submit" className="submit-button" disabled={creatingEmployee}>
+                        {creatingEmployee ? 'Creating...' : 'Create Employee'}
+                      </button>
+                    </div>
+                  </form>
+                )}
+                <div style={{ overflowX: 'auto', marginTop: '16px' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', backgroundColor: '#fff', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
+                    <thead>
+                      <tr style={{ backgroundColor: '#f8f9fa' }}>
+                        <th style={{ padding: '12px', textAlign: 'left', borderBottom: '2px solid #ddd', fontWeight: '600' }}>Employee ID</th>
+                        <th style={{ padding: '12px', textAlign: 'left', borderBottom: '2px solid #ddd', fontWeight: '600' }}>Name</th>
+                        <th style={{ padding: '12px', textAlign: 'left', borderBottom: '2px solid #ddd', fontWeight: '600' }}>Phone</th>
+                        <th style={{ padding: '12px', textAlign: 'left', borderBottom: '2px solid #ddd', fontWeight: '600' }}>Address</th>
+                        <th style={{ padding: '12px', textAlign: 'left', borderBottom: '2px solid #ddd', fontWeight: '600' }}>Documents</th>
+                        <th style={{ padding: '12px', textAlign: 'left', borderBottom: '2px solid #ddd', fontWeight: '600' }}>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {loadingEmployees ? (
+                        <tr><td colSpan="6" style={{ padding: '20px', textAlign: 'center' }}>Loading employees...</td></tr>
+                      ) : employees.length === 0 ? (
+                        <tr><td colSpan="6" style={{ padding: '20px', textAlign: 'center', color: '#6B7280' }}>No employees found.</td></tr>
+                      ) : employees.map((emp) => {
+                        const docsUploaded = !!emp.documentsUploaded
+                        return (
+                          <tr key={emp.employeeId || emp._id} style={{ borderBottom: '1px solid #eee' }}>
+                            <td style={{ padding: '12px' }}>{emp.employeeId}</td>
+                            <td style={{ padding: '12px' }}>{emp.name || '—'}</td>
+                            <td style={{ padding: '12px' }}>{emp.phone || '—'}</td>
+                            <td style={{ padding: '12px' }}>{emp.address || '—'}</td>
+                            <td style={{ padding: '12px' }}>
+                              {docsUploaded ? (
+                                <>
+                                  <span style={{ marginRight: '8px', fontSize: '12px', color: '#155724' }}>Uploaded</span>
+                                  <button
+                                    type="button"
+                                    onClick={() => openEmployeeDocuments(emp)}
+                                    style={{ padding: '4px 10px', fontSize: '12px', cursor: 'pointer', backgroundColor: '#2F8CF4', color: '#fff', border: 'none', borderRadius: '6px' }}
+                                  >
+                                    View
+                                  </button>
+                                </>
+                              ) : (
+                                <span style={{ fontSize: '12px', color: '#6B7280' }}>Not uploaded</span>
+                              )}
+                            </td>
+                            <td style={{ padding: '12px' }}>
                               <button
                                 type="button"
-                                onClick={() => openEmployeeDocuments(emp)}
-                                style={{ padding: '4px 10px', fontSize: '12px', cursor: 'pointer', backgroundColor: '#2F8CF4', color: '#fff', border: 'none', borderRadius: '6px' }}
+                                onClick={() => {
+                                  setSelectedEmployeeDetails(emp)
+                                  setEmployeeEditForm({
+                                    name: emp?.name || '',
+                                    phone: emp?.phone || '',
+                                    address: emp?.address || '',
+                                    isActive: emp?.isActive !== false,
+                                  })
+                                  setEmployeePasswordForm({ newPassword: '' })
+                                  setEmployeeEditMessage({ type: '', text: '' })
+                                  setEmployeePasswordMessage({ type: '', text: '' })
+                                }}
+                                style={{
+                                  padding: '4px 10px',
+                                  fontSize: '12px',
+                                  cursor: 'pointer',
+                                  backgroundColor: '#111827',
+                                  color: '#fff',
+                                  border: 'none',
+                                  borderRadius: '6px',
+                                }}
                               >
                                 View
                               </button>
-                            </>
-                          ) : (
-                            <span style={{ fontSize: '12px', color: '#6B7280' }}>Not uploaded</span>
-                          )}
-                        </td>
-                      </tr>
-                    )
-                  })}
-                </tbody>
-              </table>
-            </div>
+                            </td>
+                          </tr>
+                        )
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </>
+            )}
           </div>
         )}
 

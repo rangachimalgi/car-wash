@@ -2,6 +2,28 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import Employee from '../models/Employee.js';
 
+const EMPLOYEE_ID_PREFIX = 'WOOSHER';
+
+const generateNextEmployeeId = async () => {
+  const docs = await Employee.find({
+    employeeId: { $regex: `^${EMPLOYEE_ID_PREFIX}\\d+$` },
+  })
+    .select('employeeId')
+    .lean();
+
+  let maxNumber = 0;
+  for (const doc of docs) {
+    const value = String(doc?.employeeId || '');
+    const numberPart = value.slice(EMPLOYEE_ID_PREFIX.length);
+    const parsed = Number.parseInt(numberPart, 10);
+    if (Number.isFinite(parsed) && parsed > maxNumber) {
+      maxNumber = parsed;
+    }
+  }
+
+  return `${EMPLOYEE_ID_PREFIX}${String(maxNumber + 1).padStart(2, '0')}`;
+};
+
 // @desc    Employee login
 // @route   POST /api/employees/login
 // @access  Public (will add auth later)
@@ -222,28 +244,30 @@ export const updatePushToken = async (req, res) => {
 // @access  Public (demo only)
 export const createEmployee = async (req, res) => {
   try {
-    const { employeeId, name, phone, password } = req.body;
+    const { name, phone, address, password } = req.body;
 
-    if (!employeeId || !name || !phone || !password) {
+    if (!name || !phone || !address || !password) {
       return res.status(400).json({
         success: false,
-        message: 'employeeId, name, phone, and password are required',
+        message: 'name, phone, address, and password are required',
       });
     }
 
-    const existing = await Employee.findOne({ employeeId });
-    if (existing) {
+    const existingPhone = await Employee.findOne({ phone: phone.trim() });
+    if (existingPhone) {
       return res.status(409).json({
         success: false,
-        message: 'Employee ID already exists',
+        message: 'Phone number already exists',
       });
     }
 
+    const employeeId = await generateNextEmployeeId();
     const passwordHash = await bcrypt.hash(password, 10);
     const employee = await Employee.create({
-      employeeId: employeeId.trim(),
+      employeeId,
       name: name.trim(),
       phone: phone.trim(),
+      address: address.trim(),
       passwordHash,
       isActive: true,
     });
@@ -254,6 +278,7 @@ export const createEmployee = async (req, res) => {
         employeeId: employee.employeeId,
         name: employee.name,
         phone: employee.phone,
+        address: employee.address,
       },
     });
   } catch (error) {
@@ -261,6 +286,120 @@ export const createEmployee = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error creating employee',
+      error: error.message,
+    });
+  }
+};
+
+// @desc    Update employee details (admin)
+// @route   PUT /api/employees/:employeeId
+// @access  Public (admin panel)
+export const updateEmployee = async (req, res) => {
+  try {
+    const { employeeId } = req.params;
+    const { name, phone, address, isActive } = req.body || {};
+
+    const employee = await Employee.findOne({ employeeId: String(employeeId || '').trim() });
+    if (!employee) {
+      return res.status(404).json({
+        success: false,
+        message: 'Employee not found',
+      });
+    }
+
+    if (!name || !phone || !address) {
+      return res.status(400).json({
+        success: false,
+        message: 'name, phone, and address are required',
+      });
+    }
+
+    const normalizedPhone = String(phone).trim();
+    const existingPhone = await Employee.findOne({
+      phone: normalizedPhone,
+      employeeId: { $ne: employee.employeeId },
+    });
+    if (existingPhone) {
+      return res.status(409).json({
+        success: false,
+        message: 'Phone number already exists',
+      });
+    }
+
+    employee.name = String(name).trim();
+    employee.phone = normalizedPhone;
+    employee.address = String(address).trim();
+    if (typeof isActive === 'boolean') {
+      employee.isActive = isActive;
+    }
+    await employee.save();
+
+    res.status(200).json({
+      success: true,
+      data: {
+        employeeId: employee.employeeId,
+        name: employee.name,
+        phone: employee.phone,
+        address: employee.address,
+        isActive: employee.isActive,
+        documentsUploaded: !!employee.documentsUploaded,
+        pushToken: employee.pushToken || '',
+        createdAt: employee.createdAt,
+        updatedAt: employee.updatedAt,
+      },
+    });
+  } catch (error) {
+    console.error('Error updating employee:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error updating employee',
+      error: error.message,
+    });
+  }
+};
+
+// @desc    Change employee password (admin)
+// @route   PUT /api/employees/:employeeId/password
+// @access  Public (admin panel)
+export const changeEmployeePassword = async (req, res) => {
+  try {
+    const { employeeId } = req.params;
+    const { newPassword } = req.body || {};
+
+    if (!newPassword) {
+      return res.status(400).json({
+        success: false,
+        message: 'newPassword is required',
+      });
+    }
+
+    if (String(newPassword).trim().length < 4) {
+      return res.status(400).json({
+        success: false,
+        message: 'New password must be at least 4 characters',
+      });
+    }
+
+    const employee = await Employee.findOne({ employeeId: String(employeeId || '').trim() });
+    if (!employee) {
+      return res.status(404).json({
+        success: false,
+        message: 'Employee not found',
+      });
+    }
+
+    employee.passwordHash = await bcrypt.hash(String(newPassword), 10);
+    await employee.save();
+
+    res.status(200).json({
+      success: true,
+      message: 'Password updated successfully',
+    });
+  } catch (error) {
+    console.error('Error changing employee password:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error changing employee password',
       error: error.message,
     });
   }

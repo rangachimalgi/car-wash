@@ -17,6 +17,11 @@ const employeeSchema = new mongoose.Schema({
     required: true,
     trim: true,
   },
+  address: {
+    type: String,
+    required: true,
+    trim: true,
+  },
   passwordHash: {
     type: String,
     required: true,

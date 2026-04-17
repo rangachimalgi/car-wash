@@ -1,8 +1,10 @@
 import express from 'express';
 import {
   createEmployee,
+  changeEmployeePassword,
   loginEmployee,
   getEmployees,
+  updateEmployee,
   updatePushToken,
   getMyDocuments,
   uploadMyDocuments,
@@ -16,6 +18,8 @@ const router = express.Router();
 router.post('/login', loginEmployee);
 router.get('/', getEmployees);
 router.post('/', createEmployee);
+router.put('/:employeeId', updateEmployee);
+router.put('/:employeeId/password', changeEmployeePassword);
 router.put('/me/push-token', protectEmployee, updatePushToken);
 
 router.get('/me/documents', protectEmployee, getMyDocuments);
