@@ -404,3 +404,31 @@ export const changeEmployeePassword = async (req, res) => {
     });
   }
 };
+
+// @desc    Remove employee (admin)
+// @route   DELETE /api/employees/:employeeId
+// @access  Public (admin panel)
+export const removeEmployee = async (req, res) => {
+  try {
+    const { employeeId } = req.params;
+    const deletedEmployee = await Employee.findOneAndDelete({ employeeId: String(employeeId || '').trim() });
+    if (!deletedEmployee) {
+      return res.status(404).json({
+        success: false,
+        message: 'Employee not found',
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'Employee removed successfully',
+    });
+  } catch (error) {
+    console.error('Error removing employee:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error removing employee',
+      error: error.message,
+    });
+  }
+};

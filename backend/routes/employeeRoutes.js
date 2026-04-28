@@ -4,6 +4,7 @@ import {
   changeEmployeePassword,
   loginEmployee,
   getEmployees,
+  removeEmployee,
   updateEmployee,
   updatePushToken,
   getMyDocuments,
@@ -20,6 +21,7 @@ router.get('/', getEmployees);
 router.post('/', createEmployee);
 router.put('/:employeeId', updateEmployee);
 router.put('/:employeeId/password', changeEmployeePassword);
+router.delete('/:employeeId', removeEmployee);
 router.put('/me/push-token', protectEmployee, updatePushToken);
 
 router.get('/me/documents', protectEmployee, getMyDocuments);

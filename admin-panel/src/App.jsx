@@ -782,6 +782,34 @@ function App() {
     }
   }
 
+  const handleRemoveEmployee = async (employee) => {
+    const employeeId = employee?.employeeId
+    if (!employeeId) return
+
+    const label = employee?.name ? `${employee.name} (${employeeId})` : employeeId
+    const confirmed = window.confirm(`Remove employee ${label}?`)
+    if (!confirmed) return
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/employees/${encodeURIComponent(employeeId)}`, getFetchOptions({
+        method: 'DELETE',
+      }))
+      const data = await response.json()
+      if (!data.success) {
+        window.alert(data.message || 'Failed to remove employee.')
+        return
+      }
+
+      setEmployees((prev) => prev.filter((emp) => emp.employeeId !== employeeId))
+      if (selectedEmployeeDetails?.employeeId === employeeId) {
+        closeEmployeeDetails()
+      }
+      window.alert('Employee removed successfully.')
+    } catch (error) {
+      window.alert(error.message || 'Failed to remove employee.')
+    }
+  }
+
   // Get employee info by employeeId
   const getEmployeeInfo = (employeeId) => {
     return employees.find(emp => emp.employeeId === employeeId) || null
@@ -4657,7 +4685,16 @@ function App() {
                     <h3 style={{ margin: 0, fontSize: '20px' }}>{selectedEmployeeDetails.name || 'Employee'}</h3>
                     <div style={{ fontSize: '12px', color: '#6B7280', marginTop: '4px' }}>Employee ID: {selectedEmployeeDetails.employeeId || '—'}</div>
                   </div>
-                  <button type="button" className="secondary-button" onClick={closeEmployeeDetails}>Back to list</button>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveEmployee(selectedEmployeeDetails)}
+                      style={{ padding: '8px 12px', borderRadius: '8px', border: 'none', backgroundColor: '#DC2626', color: '#fff', cursor: 'pointer', fontWeight: 600 }}
+                    >
+                      Remove employee
+                    </button>
+                    <button type="button" className="secondary-button" onClick={closeEmployeeDetails}>Back to list</button>
+                  </div>
                 </div>
 
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '14px', marginBottom: '14px' }}>
@@ -4814,32 +4851,67 @@ function App() {
                               )}
                             </td>
                             <td style={{ padding: '12px' }}>
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setSelectedEmployeeDetails(emp)
-                                  setEmployeeEditForm({
-                                    name: emp?.name || '',
-                                    phone: emp?.phone || '',
-                                    address: emp?.address || '',
-                                    isActive: emp?.isActive !== false,
-                                  })
-                                  setEmployeePasswordForm({ newPassword: '' })
-                                  setEmployeeEditMessage({ type: '', text: '' })
-                                  setEmployeePasswordMessage({ type: '', text: '' })
-                                }}
-                                style={{
-                                  padding: '4px 10px',
-                                  fontSize: '12px',
-                                  cursor: 'pointer',
-                                  backgroundColor: '#111827',
-                                  color: '#fff',
-                                  border: 'none',
-                                  borderRadius: '6px',
-                                }}
-                              >
-                                View
-                              </button>
+                              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setSelectedEmployeeDetails(emp)
+                                    setEmployeeEditForm({
+                                      name: emp?.name || '',
+                                      phone: emp?.phone || '',
+                                      address: emp?.address || '',
+                                      isActive: emp?.isActive !== false,
+                                    })
+                                    setEmployeePasswordForm({ newPassword: '' })
+                                    setEmployeeEditMessage({ type: '', text: '' })
+                                    setEmployeePasswordMessage({ type: '', text: '' })
+                                  }}
+                                  style={{
+                                    width: '30px',
+                                    height: '30px',
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    cursor: 'pointer',
+                                    backgroundColor: '#111827',
+                                    color: '#fff',
+                                    border: 'none',
+                                    borderRadius: '6px',
+                                  }}
+                                  aria-label="View employee details"
+                                  title="View employee details"
+                                >
+                                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                                    <path d="M1.5 12s3.5-7 10.5-7 10.5 7 10.5 7-3.5 7-10.5 7S1.5 12 1.5 12z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                                    <circle cx="12" cy="12" r="3.2" stroke="currentColor" strokeWidth="1.8" />
+                                  </svg>
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleRemoveEmployee(emp)}
+                                  style={{
+                                    width: '30px',
+                                    height: '30px',
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    cursor: 'pointer',
+                                    backgroundColor: '#DC2626',
+                                    color: '#fff',
+                                    border: 'none',
+                                    borderRadius: '6px',
+                                  }}
+                                  aria-label="Remove employee"
+                                  title="Remove employee"
+                                >
+                                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                                    <path d="M3.5 6.5h17" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+                                    <path d="M8 6.5V5a1.5 1.5 0 011.5-1.5h5A1.5 1.5 0 0116 5v1.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+                                    <path d="M6.5 6.5l1 13a1.5 1.5 0 001.5 1.4h6a1.5 1.5 0 001.5-1.4l1-13" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                                    <path d="M10 10.5v6M14 10.5v6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+                                  </svg>
+                                </button>
+                              </div>
                             </td>
                           </tr>
                         )
