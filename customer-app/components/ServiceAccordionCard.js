@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image, ActivityIndicator } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { resolveAssetUrl } from '../config/api';
 import { useTheme } from '../theme/ThemeContext';
 import AddOnServicesList from './AddOnServicesList';
 
@@ -58,17 +59,17 @@ export default function ServiceAccordionCard({
   const service = serviceDetails || serviceSummary || {};
   const title = toTitleCase(serviceSummary?.name || service?.name);
   const durationLabel = normalizeDuration(service?.duration);
-  const imageUri =
-    service?.image ||
-    serviceSummary?.image ||
+  const resolvedMainImage =
+    resolveAssetUrl(service?.image || serviceSummary?.image || '') ||
     'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=800&h=600&fit=crop&auto=format';
+  const imageUri = resolvedMainImage;
 
   const addOnServices =
     (service?.addOnServices || []).map((addon) => ({
       _id: addon._id,
       title: toTitleCase(addon.name),
       price: addon.basePrice,
-      imageUri: addon.image,
+      imageUri: resolveAssetUrl(addon.image || ''),
       imageSource: !addon.image ? fallbackImageSource : undefined,
     })) || [];
 

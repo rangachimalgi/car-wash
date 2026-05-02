@@ -1,6 +1,7 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { ActivityIndicator, View, Text, StyleSheet } from 'react-native';
 import ServiceDetailsLayout from '../components/ServiceDetailsLayout';
+import { resolveAssetUrl } from '../config/api';
 import { getServiceById } from '../services/serviceApi';
 import { useTheme } from '../theme/ThemeContext';
 
@@ -66,7 +67,7 @@ export default function BikeWashDetailsScreen({ navigation, route }) {
   const getServiceData = () => {
     if (service) {
       return {
-        imageUri: service.image || 'https://images.unsplash.com/photo-1558981806-ec527fa84c39?w=800&h=400&fit=crop&auto=format',
+        imageUri: resolveAssetUrl(service.image || '') || 'https://images.unsplash.com/photo-1558981806-ec527fa84c39?w=800&h=400&fit=crop&auto=format',
         specs: {
           duration: service.duration || '',
           rating: service.rating?.toFixed(1) || '0',
@@ -87,7 +88,7 @@ export default function BikeWashDetailsScreen({ navigation, route }) {
 
   // Map API add-on services to component format
   const addOnServices = service?.addOnServices?.map(addon => ({
-    imageUri: addon.image || 'https://images.unsplash.com/photo-1558981806-ec527fa84c39?w=200&h=200&fit=crop',
+    imageUri: resolveAssetUrl(addon.image || '') || 'https://images.unsplash.com/photo-1558981806-ec527fa84c39?w=200&h=200&fit=crop',
     imageSource: !addon.image ? FALLBACK_ADDON_IMAGE : undefined,
     title: addon.name,
     price: addon.basePrice,

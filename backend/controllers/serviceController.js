@@ -31,7 +31,7 @@ export const uploadServiceImage = async (req, res) => {
 // @access  Public
 export const getServices = async (req, res) => {
   try {
-    const { category, isActive, search, sortBy } = req.query;
+    const { category, isActive, search, sortBy, includeInactive } = req.query;
 
     // Build query
     const query = {};
@@ -42,7 +42,9 @@ export const getServices = async (req, res) => {
     }
 
     // Filter by active status (default: only active services for customers)
-    if (isActive !== undefined) {
+    if (includeInactive === 'true') {
+      // Omit isActive — return active and inactive (admin / tooling)
+    } else if (isActive !== undefined) {
       query.isActive = isActive === 'true';
     } else {
       // Default: show only active services for public access
@@ -513,6 +515,43 @@ export const updateService = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error updating service',
+      error: error.message,
+    });
+  }
+};
+
+// @desc    Delete service by ID
+// @route   DELETE /api/services/:id
+// @access  Admin (will add auth middleware later)
+export const deleteService = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const deleted = await Service.findByIdAndDelete(id);
+    if (!deleted) {
+      return res.status(404).json({
+        success: false,
+        message: 'Service not found',
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'Service deleted successfully',
+    });
+  } catch (error) {
+    console.error('Error deleting service:', error);
+
+    if (error.name === 'CastError') {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid service ID',
+      });
+    }
+
+    res.status(500).json({
+      success: false,
+      message: 'Error deleting service',
       error: error.message,
     });
   }

@@ -7,6 +7,7 @@ import AddOnCard from '../components/AddOnCard';
 import MonthlyPackageCard from '../components/MonthlyPackageCard';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTheme } from '../theme/ThemeContext';
+import { resolveAssetUrl } from '../config/api';
 import { getAddressKeys, getVehicleKeys } from '../services/addressStorage';
 import { getServiceById } from '../services/serviceApi';
 import { useFocusEffect } from '@react-navigation/native';
@@ -285,7 +286,7 @@ export default function CartScreen({ navigation, route }) {
     const s = serviceDetailsById?.[serviceId];
     const list = s?.addOnServices || [];
     return list.map(addon => ({
-      imageUri: addon.image,
+      imageUri: resolveAssetUrl(addon.image || ''),
       imageSource: !addon.image ? FALLBACK_IMAGE : undefined,
       title: addon.name,
       price: addon.basePrice,

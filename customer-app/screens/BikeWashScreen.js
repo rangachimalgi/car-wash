@@ -9,6 +9,7 @@ import ServiceDetailsBottomSheet from '../components/ServiceDetailsBottomSheet';
 import AddOnServicesList from '../components/AddOnServicesList';
 import PricingPackages, { AddToCartButton } from '../components/PricingPackages';
 import ServiceCoverage from '../components/ServiceCoverage';
+import { resolveAssetUrl } from '../config/api';
 import { getServiceById, getServicesByCategory } from '../services/serviceApi';
 import { useTheme } from '../theme/ThemeContext';
 
@@ -121,7 +122,7 @@ export default function BikeWashScreen({ navigation }) {
     if (!sheetService) return null;
     return {
       imageUri:
-        sheetService.image ||
+        resolveAssetUrl(sheetService.image || '') ||
         'https://images.unsplash.com/photo-1558981806-ec527fa84c39?w=800&h=400&fit=crop&auto=format',
       specs: {
         duration: sheetService.duration || '',
@@ -137,7 +138,7 @@ export default function BikeWashScreen({ navigation }) {
     const fromApi =
       sheetService.addOnServices?.map((addon) => ({
         imageUri:
-          addon.image ||
+          resolveAssetUrl(addon.image || '') ||
           'https://images.unsplash.com/photo-1558981806-ec527fa84c39?w=200&h=200&fit=crop',
         imageSource: !addon.image ? FALLBACK_ADDON_IMAGE : undefined,
         title: addon.name,

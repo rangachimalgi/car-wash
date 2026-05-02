@@ -55,6 +55,9 @@ function App() {
     applicableFor: [], // Array for CarWash, BikeWash, AutoWash, or any combination
   })
 
+  const [editingAddOnId, setEditingAddOnId] = useState(null)
+  const [editingCoverageId, setEditingCoverageId] = useState(null)
+
   const [availableAddOns, setAvailableAddOns] = useState([])
   const [allAddOns, setAllAddOns] = useState([]) // All add-ons for listing
   const [addOnFilter, setAddOnFilter] = useState('car') // 'car', 'bike', 'auto'
@@ -172,7 +175,7 @@ function App() {
   const [inventoryMessage, setInventoryMessage] = useState({ type: '', text: '' })
   const [stockUpdateModal, setStockUpdateModal] = useState({ open: false, item: null, quantity: '', operation: 'add' })
   const [sidebarOpen, setSidebarOpen] = useState(false)
-  const [navOpen, setNavOpen] = useState({ customer: true, employees: true })
+  const [navOpen, setNavOpen] = useState({ customer: true, orderManagement: true, employees: true })
 
   // Media (testimonials, transformations, see the difference)
   const [mediaList, setMediaList] = useState([])
@@ -272,7 +275,7 @@ function App() {
   const fetchAllAddOns = async () => {
     setLoadingAllAddOns(true)
     try {
-      const response = await fetch(`${API_BASE_URL}/services?category=AddOn`)
+      const response = await fetch(`${API_BASE_URL}/services?category=AddOn&includeInactive=true`)
       const data = await response.json()
       if (data.success) {
         setAllAddOns(data.data || [])
@@ -288,7 +291,7 @@ function App() {
   const fetchAllCoverage = async () => {
     setLoadingAllCoverage(true)
     try {
-      const response = await fetch(`${API_BASE_URL}/services?category=Coverage`)
+      const response = await fetch(`${API_BASE_URL}/services?category=Coverage&includeInactive=true`)
       const data = await response.json()
       if (data.success) {
         setAllCoverage(data.data || [])
@@ -334,12 +337,12 @@ function App() {
     return true
   })
 
-  // For package creation: only CarWash applicable items
-  const packageCarWashAddOns = allAddOns.filter((addOn) =>
-    Array.isArray(addOn.applicableFor) && addOn.applicableFor.includes('CarWash')
+  // For package creation: only CarWash applicable items (active only; admin list can include inactive)
+  const packageCarWashAddOns = allAddOns.filter(
+    (addOn) => addOn.isActive !== false && Array.isArray(addOn.applicableFor) && addOn.applicableFor.includes('CarWash')
   )
-  const packageCarWashCoverage = allCoverage.filter((item) =>
-    Array.isArray(item.applicableFor) && item.applicableFor.includes('CarWash')
+  const packageCarWashCoverage = allCoverage.filter(
+    (item) => item.isActive !== false && Array.isArray(item.applicableFor) && item.applicableFor.includes('CarWash')
   )
 
   useEffect(() => {
@@ -2118,6 +2121,27 @@ function App() {
     }
   }
 
+  const handleNewAddOn = () => {
+    setEditingAddOnId(null)
+    setAddOnFormData({
+      name: '',
+      basePrice: '',
+      isActive: true,
+      applicableFor: [],
+    })
+    setAddOnMessage({ type: '', text: '' })
+  }
+
+  const handleNewCoverage = () => {
+    setEditingCoverageId(null)
+    setCoverageFormData({
+      name: '',
+      isActive: true,
+      applicableFor: [],
+    })
+    setCoverageMessage({ type: '', text: '' })
+  }
+
   const handleAddOnSubmit = async (e) => {
     e.preventDefault()
     setLoadingAddOn(true)
@@ -2134,22 +2158,28 @@ function App() {
     }
 
     try {
+      const existing = editingAddOnId ? allAddOns.find((a) => a._id === editingAddOnId) : null
       const addOnData = {
         name: addOnFormData.name,
         category: 'AddOn', // Always AddOn for add-ons
         basePrice: parseFloat(addOnFormData.basePrice),
         isActive: addOnFormData.isActive,
         applicableFor: addOnFormData.applicableFor || [], // CarWash, BikeWash, or both
-        addOnServices: [],
-        packages: {
+        addOnServices: existing?.addOnServices || [],
+        packages: existing?.packages || {
           monthly: [],
           quarterly: [],
           yearly: [],
         },
       }
 
-      const response = await fetch(`${API_BASE_URL}/services`, {
-        method: 'POST',
+      const url = editingAddOnId
+        ? `${API_BASE_URL}/services/${editingAddOnId}`
+        : `${API_BASE_URL}/services`
+      const method = editingAddOnId ? 'PUT' : 'POST'
+
+      const response = await fetch(url, {
+        method,
         headers: {
           'Content-Type': 'application/json',
         },
@@ -2159,30 +2189,46 @@ function App() {
       const data = await response.json()
 
       if (response.ok && data.success) {
-        setAddOnMessage({ type: 'success', text: 'Add-On created successfully!' })
-        // Reset form
-        setAddOnFormData({
-          name: '',
-          basePrice: '',
-          isActive: true,
-          applicableFor: [],
+        setAddOnMessage({
+          type: 'success',
+          text: editingAddOnId ? 'Add-On updated successfully!' : 'Add-On created successfully!',
         })
-        // Refresh add-ons list
+        handleNewAddOn()
         fetchAddOns()
+        fetchAllAddOns()
       } else {
         setAddOnMessage({ 
           type: 'error', 
-          text: data.message || 'Failed to create add-on' 
+          text: data.message || (editingAddOnId ? 'Failed to update add-on' : 'Failed to create add-on')
         })
       }
     } catch (error) {
-      console.error('Error creating add-on:', error)
+      console.error('Error saving add-on:', error)
       setAddOnMessage({ 
         type: 'error', 
         text: error.message || 'Network error. Please check if backend is running.' 
       })
     } finally {
       setLoadingAddOn(false)
+    }
+  }
+
+  const handleDeleteAddOn = async (addOn) => {
+    if (!window.confirm(`Delete add-on "${addOn.name}"? This cannot be undone.`)) return
+    try {
+      const response = await fetch(`${API_BASE_URL}/services/${addOn._id}`, { ...getFetchOptions(), method: 'DELETE' })
+      const data = await response.json()
+      if (response.ok && data.success) {
+        if (editingAddOnId && String(editingAddOnId) === String(addOn._id)) handleNewAddOn()
+        setAddOnMessage({ type: 'success', text: 'Add-on deleted.' })
+        fetchAddOns()
+        fetchAllAddOns()
+      } else {
+        setAddOnMessage({ type: 'error', text: data.message || 'Failed to delete add-on' })
+      }
+    } catch (error) {
+      console.error('Error deleting add-on:', error)
+      setAddOnMessage({ type: 'error', text: error.message || 'Failed to delete add-on' })
     }
   }
 
@@ -2201,22 +2247,28 @@ function App() {
     }
 
     try {
+      const existing = editingCoverageId ? allCoverage.find((c) => c._id === editingCoverageId) : null
       const coverageData = {
         name: coverageFormData.name,
         category: 'Coverage',
         basePrice: 0,
         isActive: coverageFormData.isActive,
         applicableFor: coverageFormData.applicableFor || [],
-        addOnServices: [],
-        packages: {
+        addOnServices: existing?.addOnServices || [],
+        packages: existing?.packages || {
           monthly: [],
           quarterly: [],
           yearly: [],
         },
       }
 
-      const response = await fetch(`${API_BASE_URL}/services`, {
-        method: 'POST',
+      const url = editingCoverageId
+        ? `${API_BASE_URL}/services/${editingCoverageId}`
+        : `${API_BASE_URL}/services`
+      const method = editingCoverageId ? 'PUT' : 'POST'
+
+      const response = await fetch(url, {
+        method,
         headers: {
           'Content-Type': 'application/json',
         },
@@ -2226,27 +2278,46 @@ function App() {
       const data = await response.json()
 
       if (response.ok && data.success) {
-        setCoverageMessage({ type: 'success', text: 'Coverage item created successfully!' })
-        setCoverageFormData({
-          name: '',
-          isActive: true,
-          applicableFor: [],
+        setCoverageMessage({
+          type: 'success',
+          text: editingCoverageId ? 'Coverage item updated successfully!' : 'Coverage item created successfully!',
         })
+        handleNewCoverage()
         fetchCoverage()
+        fetchAllCoverage()
       } else {
         setCoverageMessage({
           type: 'error',
-          text: data.message || 'Failed to create coverage item'
+          text: data.message || (editingCoverageId ? 'Failed to update coverage item' : 'Failed to create coverage item')
         })
       }
     } catch (error) {
-      console.error('Error creating coverage item:', error)
+      console.error('Error saving coverage item:', error)
       setCoverageMessage({
         type: 'error',
         text: error.message || 'Network error. Please check if backend is running.'
       })
     } finally {
       setLoadingCoverage(false)
+    }
+  }
+
+  const handleDeleteCoverage = async (item) => {
+    if (!window.confirm(`Delete coverage "${item.name}"? This cannot be undone.`)) return
+    try {
+      const response = await fetch(`${API_BASE_URL}/services/${item._id}`, { ...getFetchOptions(), method: 'DELETE' })
+      const data = await response.json()
+      if (response.ok && data.success) {
+        if (editingCoverageId && String(editingCoverageId) === String(item._id)) handleNewCoverage()
+        setCoverageMessage({ type: 'success', text: 'Coverage item deleted.' })
+        fetchCoverage()
+        fetchAllCoverage()
+      } else {
+        setCoverageMessage({ type: 'error', text: data.message || 'Failed to delete coverage item' })
+      }
+    } catch (error) {
+      console.error('Error deleting coverage item:', error)
+      setCoverageMessage({ type: 'error', text: error.message || 'Failed to delete coverage item' })
     }
   }
 
@@ -2536,7 +2607,7 @@ function App() {
     {
       type: 'group',
       id: 'customer',
-      label: 'Customer app',
+      label: 'Backend app',
       icon: 'customer',
       items: [
         { id: 'services', label: 'Services', icon: 'services' },
@@ -2548,7 +2619,13 @@ function App() {
         { id: 'coupons', label: 'Woosh Coins', icon: 'coverage' },
       ],
     },
-    { type: 'item', id: 'orders', label: 'Orders', icon: 'orders' },
+    {
+      type: 'group',
+      id: 'orderManagement',
+      label: 'Order management',
+      icon: 'orders',
+      items: [{ id: 'orders', label: 'Orders', icon: 'orders' }],
+    },
     { type: 'item', id: 'reviews', label: 'Reviews', icon: 'reviews' },
     { type: 'item', id: 'media', label: 'Media', icon: 'media' },
     {
@@ -3436,9 +3513,21 @@ function App() {
             <div className="form-section form-section-flat addons-form-section">
               <div className="section-header addons-form-header">
                 <div>
-                  <h2 className="section-title addons-form-title">Create New Add-On</h2>
+                  <h2 className="section-title addons-form-title">
+                    {editingAddOnId ? 'Edit Add-On' : 'Create New Add-On'}
+                  </h2>
                   <p className="addons-form-subtitle">Create extras for customer wash services</p>
+                  {editingAddOnId && (
+                    <p className="addons-form-editing-note" style={{ margin: '6px 0 0', fontSize: '13px', color: '#64748b' }}>
+                      Editing selected item — choose Save to apply changes
+                    </p>
+                  )}
                 </div>
+                {editingAddOnId && (
+                  <button type="button" className="secondary-button" onClick={handleNewAddOn}>
+                    + Create New
+                  </button>
+                )}
               </div>
               <form onSubmit={handleAddOnSubmit} className="form">
             <div className="form-group">
@@ -3527,9 +3616,22 @@ function App() {
               </div>
             )}
 
-            <button type="submit" className="submit-button" disabled={loadingAddOn}>
-              {loadingAddOn ? 'Creating...' : 'Create Add-On'}
-            </button>
+            <div className="form-actions" style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem', alignItems: 'center' }}>
+              <button
+                type="submit"
+                className={`submit-button ${editingAddOnId ? '' : 'submit-button-create'}`.trim()}
+                disabled={loadingAddOn}
+              >
+                {loadingAddOn
+                  ? (editingAddOnId ? 'Saving...' : 'Creating...')
+                  : (editingAddOnId ? 'Save Add-On' : 'Create Add-On')}
+              </button>
+              {editingAddOnId && (
+                <button type="button" className="cancel-button" onClick={handleNewAddOn} disabled={loadingAddOn}>
+                  Cancel
+                </button>
+              )}
+            </div>
               </form>
             </div>
 
@@ -3593,11 +3695,78 @@ function App() {
                             : 'N/A'}
                         </span>
                       </div>
-                      <div className="addon-list-meta">
-                        <span className="addon-list-price">₹{addOn.basePrice}</span>
-                        <span className={`addon-status ${addOn.isActive ? 'active' : 'inactive'}`}>
-                          {addOn.isActive ? 'Active' : 'Inactive'}
-                        </span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexShrink: 0 }}>
+                        <div className="addon-list-meta">
+                          <span className="addon-list-price">₹{addOn.basePrice}</span>
+                          <span className={`addon-status ${addOn.isActive ? 'active' : 'inactive'}`}>
+                            {addOn.isActive ? 'Active' : 'Inactive'}
+                          </span>
+                        </div>
+                        <div className="addon-list-actions" style={{ display: 'flex', gap: '8px' }}>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setEditingAddOnId(addOn._id)
+                              setAddOnFormData({
+                                name: addOn.name || '',
+                                basePrice: addOn.basePrice != null ? String(addOn.basePrice) : '',
+                                isActive: addOn.isActive !== false,
+                                applicableFor: Array.isArray(addOn.applicableFor) ? [...addOn.applicableFor] : [],
+                              })
+                              setAddOnMessage({ type: '', text: '' })
+                              window.scrollTo({ top: 0, behavior: 'smooth' })
+                            }}
+                            style={{
+                              width: '30px',
+                              height: '30px',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              cursor: 'pointer',
+                              backgroundColor: '#111827',
+                              color: '#fff',
+                              border: 'none',
+                              borderRadius: '6px',
+                            }}
+                            aria-label="Edit add-on"
+                            title="Edit add-on"
+                          >
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                              <path
+                                d="M4 20.5h4.2L19.2 9.5l-4-4L4 16.4V20.5z"
+                                stroke="currentColor"
+                                strokeWidth="1.7"
+                                strokeLinejoin="round"
+                              />
+                              <path d="M15 5.5l3.5 3.5" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+                            </svg>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteAddOn(addOn)}
+                            style={{
+                              width: '30px',
+                              height: '30px',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              cursor: 'pointer',
+                              backgroundColor: '#DC2626',
+                              color: '#fff',
+                              border: 'none',
+                              borderRadius: '6px',
+                            }}
+                            aria-label="Delete add-on"
+                            title="Delete add-on"
+                          >
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                              <path d="M3.5 6.5h17" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+                              <path d="M8 6.5V5a1.5 1.5 0 011.5-1.5h5A1.5 1.5 0 0116 5v1.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+                              <path d="M6.5 6.5l1 13a1.5 1.5 0 001.5 1.4h6a1.5 1.5 0 001.5-1.4l1-13" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                              <path d="M10 10.5v6M14 10.5v6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+                            </svg>
+                          </button>
+                        </div>
                       </div>
                     </div>
                   ))}
@@ -3614,9 +3783,21 @@ function App() {
             <div className="form-section form-section-flat coverage-form-section">
               <div className="section-header coverage-form-header">
                 <div>
-                  <h2 className="section-title coverage-form-title">Create Coverage Item</h2>
+                  <h2 className="section-title coverage-form-title">
+                    {editingCoverageId ? 'Edit Coverage Item' : 'Create Coverage Item'}
+                  </h2>
                   <p className="coverage-form-subtitle">Define what each wash service includes</p>
+                  {editingCoverageId && (
+                    <p style={{ margin: '6px 0 0', fontSize: '13px', color: '#64748b' }}>
+                      Editing selected item — choose Save to apply changes
+                    </p>
+                  )}
                 </div>
+                {editingCoverageId && (
+                  <button type="button" className="secondary-button" onClick={handleNewCoverage}>
+                    + Create New
+                  </button>
+                )}
               </div>
               <form onSubmit={handleCoverageSubmit} className="form">
               <div className="form-group">
@@ -3689,9 +3870,22 @@ function App() {
                 </div>
               )}
 
-              <button type="submit" className="submit-button" disabled={loadingCoverage}>
-                {loadingCoverage ? 'Creating...' : 'Create Coverage'}
-              </button>
+              <div className="form-actions" style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem', alignItems: 'center' }}>
+                <button
+                  type="submit"
+                  className={`submit-button ${editingCoverageId ? '' : 'submit-button-create'}`.trim()}
+                  disabled={loadingCoverage}
+                >
+                  {loadingCoverage
+                    ? (editingCoverageId ? 'Saving...' : 'Creating...')
+                    : (editingCoverageId ? 'Save Coverage' : 'Create Coverage')}
+                </button>
+                {editingCoverageId && (
+                  <button type="button" className="cancel-button" onClick={handleNewCoverage} disabled={loadingCoverage}>
+                    Cancel
+                  </button>
+                )}
+              </div>
               </form>
             </div>
 
@@ -3755,10 +3949,76 @@ function App() {
                             : 'N/A'}
                         </span>
                       </div>
-                      <div className="addon-list-meta">
-                        <span className={`addon-status ${item.isActive ? 'active' : 'inactive'}`}>
-                          {item.isActive ? 'Active' : 'Inactive'}
-                        </span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexShrink: 0 }}>
+                        <div className="addon-list-meta">
+                          <span className={`addon-status ${item.isActive ? 'active' : 'inactive'}`}>
+                            {item.isActive ? 'Active' : 'Inactive'}
+                          </span>
+                        </div>
+                        <div className="addon-list-actions" style={{ display: 'flex', gap: '8px' }}>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setEditingCoverageId(item._id)
+                              setCoverageFormData({
+                                name: item.name || '',
+                                isActive: item.isActive !== false,
+                                applicableFor: Array.isArray(item.applicableFor) ? [...item.applicableFor] : [],
+                              })
+                              setCoverageMessage({ type: '', text: '' })
+                              window.scrollTo({ top: 0, behavior: 'smooth' })
+                            }}
+                            style={{
+                              width: '30px',
+                              height: '30px',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              cursor: 'pointer',
+                              backgroundColor: '#111827',
+                              color: '#fff',
+                              border: 'none',
+                              borderRadius: '6px',
+                            }}
+                            aria-label="Edit coverage item"
+                            title="Edit coverage item"
+                          >
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                              <path
+                                d="M4 20.5h4.2L19.2 9.5l-4-4L4 16.4V20.5z"
+                                stroke="currentColor"
+                                strokeWidth="1.7"
+                                strokeLinejoin="round"
+                              />
+                              <path d="M15 5.5l3.5 3.5" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+                            </svg>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteCoverage(item)}
+                            style={{
+                              width: '30px',
+                              height: '30px',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              cursor: 'pointer',
+                              backgroundColor: '#DC2626',
+                              color: '#fff',
+                              border: 'none',
+                              borderRadius: '6px',
+                            }}
+                            aria-label="Delete coverage item"
+                            title="Delete coverage item"
+                          >
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                              <path d="M3.5 6.5h17" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+                              <path d="M8 6.5V5a1.5 1.5 0 011.5-1.5h5A1.5 1.5 0 0116 5v1.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+                              <path d="M6.5 6.5l1 13a1.5 1.5 0 001.5 1.4h6a1.5 1.5 0 001.5-1.4l1-13" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                              <path d="M10 10.5v6M14 10.5v6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+                            </svg>
+                          </button>
+                        </div>
                       </div>
                     </div>
                   ))}

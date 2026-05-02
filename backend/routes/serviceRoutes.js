@@ -6,6 +6,7 @@ import {
   getServicesByCategory,
   createService,
   updateService,
+  deleteService,
   uploadServiceImage,
 } from '../controllers/serviceController.js';
 import { uploadServiceImageSingle } from '../config/multerServiceImages.js';
@@ -44,5 +45,10 @@ router.get('/:id', getServiceById);
 // @desc    Update service
 // @access  Admin (will add auth middleware later)
 router.put('/:id', updateService);
+
+// @route   DELETE /api/services/:id
+// @desc    Delete service
+// @access  Admin (will add auth middleware later)
+router.delete('/:id', deleteService);
 
 export default router;

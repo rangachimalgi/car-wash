@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { resolveAssetUrl } from '../config/api';
 import { useTheme } from '../theme/ThemeContext';
 
 export default function RecentServiceCard({ service, onReBook, onPress, onRate }) {
@@ -8,6 +9,7 @@ export default function RecentServiceCard({ service, onReBook, onPress, onRate }
   const styles = useMemo(() => createStyles(theme), [theme]);
   const isCompleted = service.status === 'Completed';
   const hasRating = typeof service.rating === 'number' && service.rating >= 1 && service.rating <= 5;
+  const imageUri = resolveAssetUrl(service.image || '');
 
   return (
     <TouchableOpacity 
@@ -17,11 +19,17 @@ export default function RecentServiceCard({ service, onReBook, onPress, onRate }
     >
       <View style={styles.content}>
         <View style={styles.imageSection}>
-          <Image 
-            source={{ uri: service.image }}
-            style={styles.image}
-            resizeMode="cover"
-          />
+          {imageUri ? (
+            <Image 
+              source={{ uri: imageUri }}
+              style={styles.image}
+              resizeMode="cover"
+            />
+          ) : (
+            <View style={[styles.image, { backgroundColor: theme.cardBackground, alignItems: 'center', justifyContent: 'center' }]}>
+              <MaterialCommunityIcons name="image-outline" size={32} color={theme.textSecondary} />
+            </View>
+          )}
           <View style={styles.completedBadge}>
             <MaterialCommunityIcons name="check-circle" size={16} color="#4CAF50" />
           </View>

@@ -8,6 +8,7 @@ import PackageAccordionCard from '../components/PackageAccordionCard';
 import ServiceDetailsBottomSheet from '../components/ServiceDetailsBottomSheet';
 import AddOnServicesList from '../components/AddOnServicesList';
 import ServiceCoverage from '../components/ServiceCoverage';
+import { resolveAssetUrl } from '../config/api';
 import { getPackagePricing } from '../services/packagePricingApi';
 import { getServicesByCategory } from '../services/serviceApi';
 import { useTheme } from '../theme/ThemeContext';
@@ -198,7 +199,7 @@ export default function PackagesScreen({ navigation }) {
                   _id: addon._id,
                   title: addon.name,
                   price: addon.basePrice,
-                  imageUri: addon.image,
+                  imageUri: resolveAssetUrl(addon.image || ''),
                   imageSource: !addon.image ? FALLBACK_ADDON_IMAGE : undefined,
                 }))}
                 maxVisible={5}

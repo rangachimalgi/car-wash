@@ -3,6 +3,7 @@ import { ActivityIndicator, View, Text, StyleSheet, TouchableOpacity } from 'rea
 import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { resolveAssetUrl } from '../config/api';
 import { getServiceById } from '../services/serviceApi';
 import { useTheme } from '../theme/ThemeContext';
 import ServiceDetailsBottomSheet from '../components/ServiceDetailsBottomSheet';
@@ -86,7 +87,7 @@ export default function ServiceDetailsScreen({ navigation, route }) {
     if (service) {
       const effectiveCategory = service.category || category;
       return {
-        imageUri: service.image || getDefaultImageForCategory(effectiveCategory),
+        imageUri: resolveAssetUrl(service.image || '') || getDefaultImageForCategory(effectiveCategory),
         specs: {
           duration: service.duration || '',
           rating: service.rating?.toFixed(1) || '0',
@@ -108,7 +109,7 @@ export default function ServiceDetailsScreen({ navigation, route }) {
 
   // Map API add-on services to component format
   const addOnServices = service?.addOnServices?.map(addon => ({
-    imageUri: addon.image || 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=200&h=200&fit=crop',
+    imageUri: resolveAssetUrl(addon.image || '') || 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=200&h=200&fit=crop',
     imageSource: !addon.image ? FALLBACK_ADDON_IMAGE : undefined,
     title: addon.name,
     price: addon.basePrice,

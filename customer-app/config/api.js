@@ -10,7 +10,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 // Your computer's IP address
 // Find it with: ipconfig getifaddr en0 (Mac) or ipconfig (Windows)
 // Update this if your IP changes!
-const COMPUTER_IP = '192.168.29.174';
+const COMPUTER_IP = '192.168.1.18';
 
 // Determine the correct base URL based on platform
 const getBaseURL = () => {
@@ -100,6 +100,20 @@ api.interceptors.response.use(
 );
 
 export const getUploadsBase = () => API_BASE_URL.replace(/\/api\/?$/, '');
+
+/**
+ * Backend stores relative paths (e.g. "/uploads/services/foo.jpg"). React Native Image
+ * requires an absolute URL. Already-absolute URLs are returned unchanged.
+ */
+export const resolveAssetUrl = (path) => {
+  if (path == null || path === '') return '';
+  const s = String(path).trim();
+  if (!s) return '';
+  if (/^https?:\/\//i.test(s)) return s;
+  const base = getUploadsBase().replace(/\/$/, '');
+  const p = s.startsWith('/') ? s : `/${s}`;
+  return `${base}${p}`;
+};
 
 export const getMedia = async () => {
   const base = getUploadsBase();
