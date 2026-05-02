@@ -1083,6 +1083,60 @@
   background: #fcfcfd;
 }
 
+.service-mini-card--dragging {
+  opacity: 0.65;
+  border-color: #94a3b8;
+}
+
+.service-mini-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+
+.service-mini-card-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.service-drag-handle {
+  flex-shrink: 0;
+  cursor: grab;
+  user-select: none;
+  font-size: 1rem;
+  line-height: 1;
+  padding: 0.35rem 0.2rem 0.2rem;
+  color: #94a3b8;
+  border-radius: 6px;
+  border: 1px dashed #e2e8f0;
+  background: #f8fafc;
+}
+
+.service-drag-handle:active {
+  cursor: grabbing;
+}
+
+.services-reorder-hint {
+  width: 100%;
+  margin: 0.35rem 0 0;
+  font-size: 0.8rem;
+  color: #64748b;
+  line-height: 1.4;
+}
+
+.services-reorder-grip {
+  display: inline-block;
+  font-weight: 800;
+  color: #334155;
+  padding: 0 0.15rem;
+  border: 1px dashed #e2e8f0;
+  border-radius: 4px;
+  background: #f8fafc;
+}
+
 .service-mini-top {
   display: flex;
   align-items: flex-start;

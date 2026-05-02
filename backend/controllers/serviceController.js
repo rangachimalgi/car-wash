@@ -1,5 +1,7 @@
 import Service from '../models/Service.js';
 
+const WASH_SERVICE_CATEGORIES = ['CarWash', 'BikeWash', 'AutoWash'];
+
 export const uploadServiceImage = async (req, res) => {
   try {
     if (!req.file) {
@@ -67,6 +69,8 @@ export const getServices = async (req, res) => {
       sortOptions = { basePrice: -1 };
     } else if (sortBy === 'rating') {
       sortOptions = { rating: -1, totalReviews: -1 };
+    } else if (category && WASH_SERVICE_CATEGORIES.includes(category)) {
+      sortOptions = { sortOrder: 1, createdAt: 1 };
     } else {
       // Default: sort by category first, then by price (low to high)
       sortOptions = { category: 1, basePrice: 1 };
@@ -227,6 +231,8 @@ export const getServicesByCategory = async (req, res) => {
       sortOptions = { basePrice: 1 };
     } else if (sortBy === 'price-high') {
       sortOptions = { basePrice: -1 };
+    } else if (WASH_SERVICE_CATEGORIES.includes(category)) {
+      sortOptions = { sortOrder: 1, createdAt: 1 };
     } else {
       sortOptions = { createdAt: -1 };
     }
@@ -359,6 +365,18 @@ export const createService = async (req, res) => {
       applicableFor: applicableFor || [], // Only for AddOn category
     };
 
+    if (WASH_SERVICE_CATEGORIES.includes(category)) {
+      const agg = await Service.aggregate([
+        { $match: { category } },
+        { $group: { _id: null, maxOrder: { $max: '$sortOrder' } } },
+      ]);
+      const maxOrder = agg[0]?.maxOrder;
+      serviceData.sortOrder =
+        typeof maxOrder === 'number' && !Number.isNaN(maxOrder)
+          ? maxOrder + 1
+          : await Service.countDocuments({ category });
+    }
+
     // Create service
     const service = await Service.create(serviceData);
 
@@ -409,6 +427,7 @@ export const updateService = async (req, res) => {
       addOnServices,
       packages,
       applicableFor,
+      sortOrder,
     } = req.body;
 
     // Find service
@@ -483,6 +502,9 @@ export const updateService = async (req, res) => {
     if (addOnServices !== undefined) service.addOnServices = addOnServices;
     if (packages !== undefined) service.packages = packages;
     if (applicableFor !== undefined) service.applicableFor = applicableFor;
+    if (sortOrder !== undefined && service.category && WASH_SERVICE_CATEGORIES.includes(service.category)) {
+      service.sortOrder = Number(sortOrder);
+    }
 
     // Save updated service
     await service.save();
@@ -515,6 +537,70 @@ export const updateService = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error updating service',
+      error: error.message,
+    });
+  }
+};
+
+// @desc    Set display order for active wash services in one category (admin)
+// @route   PUT /api/services/wash-order
+// @access  Admin (will add auth middleware later)
+export const reorderWashServices = async (req, res) => {
+  try {
+    const { category, orderedIds } = req.body || {};
+
+    if (!category || !WASH_SERVICE_CATEGORIES.includes(category)) {
+      return res.status(400).json({
+        success: false,
+        message: 'category must be CarWash, BikeWash, or AutoWash',
+      });
+    }
+
+    if (!Array.isArray(orderedIds) || orderedIds.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'orderedIds must be a non-empty array of service IDs',
+      });
+    }
+
+    const activeInCat = await Service.find({ category, isActive: true }).select('_id').lean();
+    const expectedSet = new Set(activeInCat.map((x) => x._id.toString()));
+    const receivedSet = new Set(orderedIds.map((id) => String(id)));
+
+    if (expectedSet.size !== receivedSet.size) {
+      return res.status(400).json({
+        success: false,
+        message: 'orderedIds must include every active service in this category exactly once',
+      });
+    }
+
+    for (const id of orderedIds) {
+      if (!expectedSet.has(String(id))) {
+        return res.status(400).json({
+          success: false,
+          message: 'orderedIds contains an invalid or inactive service for this category',
+        });
+      }
+    }
+
+    const bulk = orderedIds.map((id, index) => ({
+      updateOne: {
+        filter: { _id: id, category },
+        update: { $set: { sortOrder: index } },
+      },
+    }));
+
+    await Service.bulkWrite(bulk);
+
+    res.status(200).json({
+      success: true,
+      message: 'Display order updated',
+    });
+  } catch (error) {
+    console.error('Error reordering wash services:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error updating display order',
       error: error.message,
     });
   }

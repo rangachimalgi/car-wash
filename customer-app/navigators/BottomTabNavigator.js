@@ -6,7 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import HomeScreen from '../screens/HomeScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import BookingsScreen from '../screens/BookingsScreen';
-import NotificationsScreen from '../screens/NotificationsScreen';
+// import NotificationsScreen from '../screens/NotificationsScreen';
 import { useTheme } from '../theme/ThemeContext';
 
 const Tab = createBottomTabNavigator();
@@ -36,7 +36,7 @@ function SimpleTabBar({ state, descriptors, navigation }) {
         const iconName = {
           Home: focused ? 'home' : 'home-outline',
           Bookings: focused ? 'calendar-clock' : 'calendar-clock-outline',
-          Notifications: focused ? 'bell' : 'bell-outline',
+          // Notifications: focused ? 'bell' : 'bell-outline',
           Profile: focused ? 'account' : 'account-outline',
         }[route.name] || 'circle-outline';
 
@@ -109,6 +109,7 @@ export default function BottomTabNavigator() {
           ),
         }}
       />
+      {/* Temporarily hidden — restore Notifications tab when ready
       <Tab.Screen 
         name="Notifications" 
         component={NotificationsScreen}
@@ -120,6 +121,7 @@ export default function BottomTabNavigator() {
           ),
         }}
       />
+      */}
       <Tab.Screen 
         name="Profile" 
         component={ProfileScreen}

@@ -22,6 +22,19 @@ const DEFAULT_PACKAGE_CARD = {
   coverageNotIncluded: [],
 }
 
+function sortWashServicesForDisplay(list) {
+  return [...list].sort((a, b) => {
+    const ao = Number(a.sortOrder)
+    const bo = Number(b.sortOrder)
+    const aOk = Number.isFinite(ao)
+    const bOk = Number.isFinite(bo)
+    if (aOk && bOk && ao !== bo) return ao - bo
+    if (aOk && !bOk) return -1
+    if (!aOk && bOk) return 1
+    return new Date(a.createdAt || 0) - new Date(b.createdAt || 0)
+  })
+}
+
 function App() {
   const [activeTab, setActiveTab] = useState('services') // 'services', 'addons', 'coverage', 'orders', 'reviews', 'attendance', 'inventory', 'media'
   
@@ -83,6 +96,7 @@ function App() {
   const [allServices, setAllServices] = useState([])
   const [serviceFilter, setServiceFilter] = useState('car') // 'all', 'car', 'bike', 'auto'
   const [serviceSearch, setServiceSearch] = useState('') // Search query
+  const [draggingServiceId, setDraggingServiceId] = useState(null)
   const [editingServiceId, setEditingServiceId] = useState(null) // Track which service is being edited
   const [servicesError, setServicesError] = useState('')
   const [uploadingMainImage, setUploadingMainImage] = useState(false)
@@ -1676,13 +1690,13 @@ function App() {
     }
   }
 
-  // Filter services based on selected filter and search
-  const filteredServices = allServices.filter(service => {
+  // Filter services based on selected filter and search (wash categories only; sorted for display order)
+  const filteredServices = sortWashServicesForDisplay(allServices.filter(service => {
     // Category filter
     if (serviceFilter === 'car' && service.category !== 'CarWash') return false
     if (serviceFilter === 'bike' && service.category !== 'BikeWash') return false
     if (serviceFilter === 'auto' && service.category !== 'AutoWash') return false
-    
+
     // Search filter
     if (serviceSearch) {
       const searchLower = serviceSearch.toLowerCase()
@@ -1690,9 +1704,61 @@ function App() {
       const matchesDescription = service.description?.toLowerCase().includes(searchLower)
       if (!matchesName && !matchesDescription) return false
     }
-    
+
     return true
-  })
+  }))
+
+  const persistWashServiceOrder = async (category, orderedIds) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/services/wash-order`, getFetchOptions({
+        method: 'PUT',
+        body: JSON.stringify({ category, orderedIds }),
+      }))
+      const data = await response.json()
+      if (response.ok && data.success) {
+        await fetchAllServices()
+      } else {
+        window.alert(data.message || 'Failed to save display order')
+      }
+    } catch (error) {
+      console.error(error)
+      window.alert(error.message || 'Failed to save display order')
+    }
+  }
+
+  const handleWashServiceDragStart = (e, serviceId) => {
+    e.dataTransfer.effectAllowed = 'move'
+    e.dataTransfer.setData('text/plain', String(serviceId))
+    setDraggingServiceId(serviceId)
+  }
+
+  const handleWashServiceDragEnd = () => {
+    setDraggingServiceId(null)
+  }
+
+  const handleWashServiceDragOver = (e) => {
+    e.preventDefault()
+    e.dataTransfer.dropEffect = 'move'
+  }
+
+  const handleWashServiceDrop = (e, targetService) => {
+    e.preventDefault()
+    const fromId = e.dataTransfer.getData('text/plain')
+    setDraggingServiceId(null)
+    if (serviceSearch || !fromId || !targetService?._id) return
+    if (String(fromId) === String(targetService._id)) return
+    const catMap = { car: 'CarWash', bike: 'BikeWash', auto: 'AutoWash' }
+    const category = catMap[serviceFilter]
+    if (!category) return
+    const orderedIds = filteredServices.map((s) => s._id)
+    const fromIdx = orderedIds.findIndex((id) => String(id) === String(fromId))
+    const toIdx = orderedIds.findIndex((id) => String(id) === String(targetService._id))
+    if (fromIdx < 0 || toIdx < 0) return
+    const next = [...orderedIds]
+    const [removed] = next.splice(fromIdx, 1)
+    next.splice(toIdx, 0, removed)
+    persistWashServiceOrder(category, next)
+  }
   const categoryCounts = {
     car: allServices.filter((s) => s.category === 'CarWash').length,
     bike: allServices.filter((s) => s.category === 'BikeWash').length,
@@ -2844,6 +2910,11 @@ function App() {
                     Auto Wash ({categoryCounts.auto})
                   </button>
                 </div>
+                {!serviceSearch ? (
+                  <p className="services-reorder-hint">
+                    Drag <span className="services-reorder-grip">⋮⋮</span> on a card to change order in the customer app (same category tab).
+                  </p>
+                ) : null}
               </div>
 
               {servicesError ? (
@@ -2877,7 +2948,28 @@ function App() {
                 <>
                   <div className="services-mini-grid">
                     {filteredServices.map(service => (
-                      <div key={service._id} className="service-mini-card">
+                      <div
+                        key={service._id}
+                        className={`service-mini-card${draggingServiceId === service._id ? ' service-mini-card--dragging' : ''}`}
+                        onDragOver={serviceSearch ? undefined : handleWashServiceDragOver}
+                        onDrop={serviceSearch ? undefined : (e) => handleWashServiceDrop(e, service)}
+                      >
+                        <div className="service-mini-row">
+                          {!serviceSearch ? (
+                            <span
+                              className="service-drag-handle"
+                              draggable
+                              onDragStart={(e) => handleWashServiceDragStart(e, service._id)}
+                              onDragEnd={handleWashServiceDragEnd}
+                              title="Drag to reorder"
+                              aria-label="Drag to reorder"
+                              role="button"
+                              tabIndex={0}
+                            >
+                              ⋮⋮
+                            </span>
+                          ) : null}
+                          <div className="service-mini-card-main">
                         <div className="service-mini-top">
                           <h3 className="service-mini-name" title={service.name}>{service.name}</h3>
                           <div className="service-mini-price">₹{service.basePrice}</div>
@@ -2897,6 +2989,8 @@ function App() {
                         >
                           Edit
                         </button>
+                          </div>
+                        </div>
                       </div>
                     ))}
                   </div>

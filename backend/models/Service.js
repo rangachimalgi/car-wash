@@ -61,6 +61,11 @@ const serviceSchema = new mongoose.Schema({
     default: true,
     index: true,
   },
+  /** Display order for wash services (CarWash / BikeWash / AutoWash). Lower = earlier in lists. */
+  sortOrder: {
+    type: Number,
+    default: 0,
+  },
   // For admin tracking
   createdBy: {
     type: mongoose.Schema.Types.ObjectId,
@@ -109,6 +114,7 @@ const serviceSchema = new mongoose.Schema({
 
 // Indexes for better query performance
 serviceSchema.index({ category: 1, isActive: 1 });
+serviceSchema.index({ category: 1, isActive: 1, sortOrder: 1 });
 serviceSchema.index({ rating: -1, totalReviews: -1 });
 
 const Service = mongoose.model('Service', serviceSchema);

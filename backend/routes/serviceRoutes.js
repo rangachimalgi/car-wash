@@ -7,6 +7,7 @@ import {
   createService,
   updateService,
   deleteService,
+  reorderWashServices,
   uploadServiceImage,
 } from '../controllers/serviceController.js';
 import { uploadServiceImageSingle } from '../config/multerServiceImages.js';
@@ -35,6 +36,9 @@ router.get('/popular', getPopularServices);
 // @desc    Get services by category
 // @access  Public
 router.get('/category/:category', getServicesByCategory);
+
+// @route   PUT /api/services/wash-order
+router.put('/wash-order', reorderWashServices);
 
 // @route   GET /api/services/:id
 // @desc    Get single service by ID
