@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, TextInput, Dimensions, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, TextInput, Dimensions, Alert, Share } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import BackHeader from '../components/BackHeader';
@@ -7,7 +7,7 @@ import { createOrder } from '../services/orderApi';
 import { getCoupons as getCouponsApi, validateCoupon as validateCouponApi } from '../services/couponApi';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getAddressKeys, getVehicleKeys } from '../services/addressStorage';
-import { getWallet } from '../services/walletApi';
+import { getWallet, getReferralInfo } from '../services/walletApi';
 import { useTheme } from '../theme/ThemeContext';
 import { useFocusEffect } from '@react-navigation/native';
 
@@ -40,6 +40,12 @@ export default function CheckoutScreen({ navigation, route }) {
   const [walletBalance, setWalletBalance] = useState(0);
   const [walletLoading, setWalletLoading] = useState(false);
   const [useWallet, setUseWallet] = useState(false);
+  const [referralInfo, setReferralInfo] = useState({
+    code: '',
+    totalReferrals: 0,
+    totalEarnings: 0,
+    perReferralRewardReferred: 100,
+  });
   const { theme, isLightMode } = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
   // Load address and vehicle data
@@ -82,7 +88,7 @@ export default function CheckoutScreen({ navigation, route }) {
         setVehicle(null);
       }
 
-      // Load wallet balance (if logged in)
+      // Load wallet balance and referral info (if logged in)
       if (storedPhone) {
         try {
           setWalletLoading(true);
@@ -94,6 +100,18 @@ export default function CheckoutScreen({ navigation, route }) {
         } finally {
           setWalletLoading(false);
         }
+        try {
+          const referral = await getReferralInfo(storedPhone);
+          if (referral) {
+            setReferralInfo((prev) => ({
+              ...prev,
+              code: referral.referralCode || '',
+              totalReferrals: referral.totalReferrals || 0,
+              totalEarnings: referral.totalReferralEarnings || 0,
+              perReferralRewardReferred: referral.perReferralRewardReferred ?? prev.perReferralRewardReferred,
+            }));
+          }
+        } catch (_) {}
       } else {
         setWalletBalance(0);
       }
@@ -540,6 +558,46 @@ export default function CheckoutScreen({ navigation, route }) {
           </View>
         )}
 
+        {/* Refer & Earn — matches Home */}
+        <View style={styles.checkoutReferralSection}>
+          <View style={styles.checkoutReferralBanner}>
+            <View style={styles.checkoutReferralLeft}>
+              <View style={styles.checkoutReferralTitleWrap}>
+                <MaterialCommunityIcons name="gift-outline" size={18} color={theme.accent} />
+                <Text style={styles.checkoutReferralTitle}>Refer &amp; Earn</Text>
+              </View>
+              <Text style={styles.checkoutReferralSubtitle}>
+                Invite friends and both of you get ₹{referralInfo.perReferralRewardReferred || 100} in wallet.
+              </Text>
+              <View style={styles.checkoutReferralCodeChip}>
+                <Text style={styles.checkoutReferralCodeChipLabel}>Code</Text>
+                <Text style={styles.checkoutReferralCodeChipValue}>{referralInfo.code || 'COMINGSOON'}</Text>
+              </View>
+              <Text style={styles.checkoutReferralStats}>
+                {referralInfo.totalReferrals} joined  |  ₹{referralInfo.totalEarnings} earned
+              </Text>
+            </View>
+            <View style={styles.checkoutReferralRight}>
+              <View style={styles.checkoutReferralIconWrap}>
+                <MaterialCommunityIcons name="gift" size={24} color={theme.accent} />
+              </View>
+              <TouchableOpacity
+                style={styles.checkoutReferralShareBtn}
+                activeOpacity={0.85}
+                onPress={() => {
+                  const codeText = referralInfo.code || 'your Woosh referral code';
+                  Share.share({
+                    message: `Use my Woosh referral code ${codeText} and we both get ₹${referralInfo.perReferralRewardReferred || 100} in wallet on your first order!`,
+                  }).catch(() => {});
+                }}
+              >
+                <MaterialCommunityIcons name="share-variant" size={16} color="#000000" />
+                <Text style={styles.checkoutReferralShareText}>Invite</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+
         {/* Payment Summary Section */}
         <View style={styles.paymentSummarySection}>
           <Text style={styles.sectionTitle}>Payment Summary</Text>
@@ -772,6 +830,98 @@ const createStyles = theme => StyleSheet.create({
     fontSize: 12,
     color: theme.danger,
     fontWeight: '600',
+  },
+  checkoutReferralSection: {
+    paddingHorizontal: 16,
+    marginTop: 20,
+    paddingTop: 4,
+    paddingBottom: 4,
+  },
+  checkoutReferralBanner: {
+    backgroundColor: theme.cardBackground,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: theme.cardBorder,
+    padding: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  checkoutReferralLeft: {
+    flex: 1,
+  },
+  checkoutReferralRight: {
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    minHeight: 118,
+    paddingVertical: 2,
+  },
+  checkoutReferralIconWrap: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: theme.accentSoft,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  checkoutReferralTitleWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 4,
+  },
+  checkoutReferralTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: theme.textPrimary,
+  },
+  checkoutReferralSubtitle: {
+    fontSize: 12,
+    color: theme.textSecondary,
+    lineHeight: 17,
+    marginBottom: 8,
+  },
+  checkoutReferralCodeChip: {
+    backgroundColor: theme.accentSoft,
+    borderRadius: 999,
+    alignSelf: 'flex-start',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    marginBottom: 7,
+  },
+  checkoutReferralCodeChipLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: theme.accent,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  checkoutReferralCodeChipValue: {
+    fontSize: 12,
+    fontWeight: '900',
+    color: theme.textPrimary,
+    letterSpacing: 0.5,
+  },
+  checkoutReferralStats: {
+    fontSize: 11,
+    color: theme.textSecondary,
+  },
+  checkoutReferralShareBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: theme.accent,
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  checkoutReferralShareText: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: '#000000',
   },
   paymentSummarySection: {
     marginTop: 24,
