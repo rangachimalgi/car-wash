@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import './App.css'
+import RevenueDashboard from './RevenueDashboard'
 
 // API configuration for dev and prod
 // - Set VITE_API_URL at build time to override (e.g. in .env: VITE_API_URL=https://your-api.com/api)
@@ -189,7 +190,14 @@ function App() {
   const [inventoryMessage, setInventoryMessage] = useState({ type: '', text: '' })
   const [stockUpdateModal, setStockUpdateModal] = useState({ open: false, item: null, quantity: '', operation: 'add' })
   const [sidebarOpen, setSidebarOpen] = useState(false)
-  const [navOpen, setNavOpen] = useState({ customer: true, orderManagement: true, employees: true })
+  const [navOpen, setNavOpen] = useState({
+    revenueAnalytics: false,
+    customerManagement: false,
+    customer: true,
+    orderManagement: true,
+    employees: true,
+    inventoryManagement: true,
+  })
 
   // Media (testimonials, transformations, see the difference)
   const [mediaList, setMediaList] = useState([])
@@ -380,7 +388,7 @@ function App() {
   }, [coverageMessage.text, activeTab])
 
   useEffect(() => {
-    if (activeTab === 'orders') {
+    if (activeTab === 'orders' || activeTab === 'revenue' || activeTab === 'activeWashes') {
       fetchOrders()
     }
     if (activeTab === 'reviews') {
@@ -2672,6 +2680,25 @@ function App() {
   const navStructure = [
     {
       type: 'group',
+      id: 'revenueAnalytics',
+      label: 'Revenue & Analytic Dashboard',
+      icon: 'cash',
+      items: [
+        { id: 'revenue', label: 'Revenue', icon: 'cash' },
+        { id: 'activeWashes', label: 'Active washes', icon: 'orders' },
+        { id: 'employeeAvailability', label: 'Employee availability', icon: 'employees' },
+        { id: 'inventoryAlert', label: 'Inventory alert', icon: 'inventory' },
+      ],
+    },
+    {
+      type: 'group',
+      id: 'customerManagement',
+      label: 'Customer Management',
+      icon: 'customer',
+      items: [],
+    },
+    {
+      type: 'group',
       id: 'customer',
       label: 'Backend app',
       icon: 'customer',
@@ -2697,14 +2724,20 @@ function App() {
     {
       type: 'group',
       id: 'employees',
-      label: 'Employees',
+      label: 'Employee management',
       icon: 'employeesGroup',
       items: [
         { id: 'employees', label: 'Employee', icon: 'employees' },
         { id: 'attendance', label: 'Attendance', icon: 'attendance' },
         { id: 'employeeIncentives', label: 'Earnings targets', icon: 'cash' },
-        { id: 'inventory', label: 'Inventory', icon: 'inventory', badge: inventoryLowStockCount },
       ],
+    },
+    {
+      type: 'group',
+      id: 'inventoryManagement',
+      label: 'Inventory management',
+      icon: 'inventory',
+      items: [{ id: 'inventory', label: 'Inventory', icon: 'inventory', badge: inventoryLowStockCount }],
     },
   ]
 
@@ -2723,7 +2756,19 @@ function App() {
     attendance: 'Employee Attendance',
     employeeIncentives: 'Employee earnings (incentives)',
     inventory: 'Inventory',
+    revenue: 'Revenue',
+    activeWashes: 'Active washes',
+    employeeAvailability: 'Employee availability',
+    inventoryAlert: 'Inventory alert',
   }
+
+  const completedStatuses = ['completed', 'delivered', 'done']
+  const closedStatuses = ['cancelled', 'canceled', 'rejected', 'failed']
+  const completedOrders = orders.filter((order) => completedStatuses.includes(String(order?.status || '').toLowerCase()))
+  const pendingOrders = orders.filter((order) => {
+    const status = String(order?.status || '').toLowerCase()
+    return !completedStatuses.includes(status) && !closedStatuses.includes(status)
+  })
 
   return (
     <div className="app">
@@ -2831,10 +2876,13 @@ function App() {
           <button type="button" className="menu-toggle" onClick={() => setSidebarOpen(true)} aria-label="Open menu">
             ☰
           </button>
-          <h1 className="page-title">{pageTitles[activeTab]}</h1>
+          {activeTab !== 'revenue' && <h1 className="page-title">{pageTitles[activeTab]}</h1>}
         </header>
 
         <div className="container">
+        {/* Revenue */}
+        {activeTab === 'revenue' && <RevenueDashboard orders={orders} loadingOrders={loadingOrders} />}
+
         {/* Services Tab */}
         {activeTab === 'services' && (
           <>
@@ -4773,6 +4821,110 @@ function App() {
               </div>
             </div>
           </div>
+          </div>
+        )}
+
+        {/* Active washes */}
+        {activeTab === 'activeWashes' && (
+          <div className="active-washes-page">
+            <div className="orders-section orders-section-modern">
+              <div className="section-header orders-header">
+                <div>
+                  <h2 className="section-title orders-title">Active Washes</h2>
+                  <p className="orders-subtitle">Pending and completed orders with details</p>
+                </div>
+                <button
+                  type="button"
+                  className="secondary-button orders-refresh-button"
+                  onClick={fetchOrders}
+                >
+                  Refresh
+                </button>
+              </div>
+
+              {loadingOrders ? (
+                <div className="loading-text">Loading active washes...</div>
+              ) : (
+                <>
+                  <div className="active-washes-summary-grid">
+                    <div className="active-washes-summary-card pending">
+                      <span className="active-washes-summary-label">Pending Orders</span>
+                      <strong className="active-washes-summary-value">{pendingOrders.length}</strong>
+                    </div>
+                    <div className="active-washes-summary-card completed">
+                      <span className="active-washes-summary-label">Completed Orders</span>
+                      <strong className="active-washes-summary-value">{completedOrders.length}</strong>
+                    </div>
+                  </div>
+
+                  <div className="active-washes-grid">
+                    <div className="active-washes-column">
+                      <div className="active-washes-column-header pending">
+                        <h3>Pending Orders</h3>
+                        <span>{pendingOrders.length}</span>
+                      </div>
+                      <div className="active-washes-list">
+                        {pendingOrders.length === 0 ? (
+                          <div className="info-text">No pending orders.</div>
+                        ) : pendingOrders.map((order) => (
+                          <div key={order._id} className="active-wash-card">
+                            <div className="active-wash-card-top">
+                              <strong>#{order._id?.slice(-6) || '—'}</strong>
+                              <span className={`order-status ${String(order.status || '').toLowerCase()}`}>{order.status || 'Pending'}</span>
+                            </div>
+                            <div className="active-wash-meta">
+                              <span>{order.customer?.name || '—'}</span>
+                              <span>{order.customer?.phone || '—'}</span>
+                              <span>₹{Number(order.totalAmount || 0).toFixed(2)}</span>
+                            </div>
+                            <div className="active-wash-items">
+                              {(order.items || []).map((item, idx) => (
+                                <div key={`${order._id}-pending-item-${idx}`} className="active-wash-item-row">
+                                  <span>{item?.serviceName || item?.service?.name || 'Service'}</span>
+                                  <span>{item?.scheduledDate ? new Date(item.scheduledDate).toLocaleDateString() : '—'} {item?.scheduledTimeSlot || ''}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="active-washes-column">
+                      <div className="active-washes-column-header completed">
+                        <h3>Completed Orders</h3>
+                        <span>{completedOrders.length}</span>
+                      </div>
+                      <div className="active-washes-list">
+                        {completedOrders.length === 0 ? (
+                          <div className="info-text">No completed orders.</div>
+                        ) : completedOrders.map((order) => (
+                          <div key={order._id} className="active-wash-card completed">
+                            <div className="active-wash-card-top">
+                              <strong>#{order._id?.slice(-6) || '—'}</strong>
+                              <span className={`order-status ${String(order.status || '').toLowerCase()}`}>{order.status || 'Completed'}</span>
+                            </div>
+                            <div className="active-wash-meta">
+                              <span>{order.customer?.name || '—'}</span>
+                              <span>{order.customer?.phone || '—'}</span>
+                              <span>₹{Number(order.totalAmount || 0).toFixed(2)}</span>
+                            </div>
+                            <div className="active-wash-items">
+                              {(order.items || []).map((item, idx) => (
+                                <div key={`${order._id}-completed-item-${idx}`} className="active-wash-item-row">
+                                  <span>{item?.serviceName || item?.service?.name || 'Service'}</span>
+                                  <span>{item?.scheduledDate ? new Date(item.scheduledDate).toLocaleDateString() : '—'} {item?.scheduledTimeSlot || ''}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
           </div>
         )}
 
