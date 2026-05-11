@@ -47,6 +47,9 @@ function App() {
     basePrice: '',
     duration: '30 mins',
     image: '',
+    listPrice: '',
+    membershipDurationMonths: '12',
+    membershipDiscountPercent: '40',
     packages: {
       monthly: [],
       quarterly: [],
@@ -95,7 +98,7 @@ function App() {
   const [reviews, setReviews] = useState([])
   const [loadingReviews, setLoadingReviews] = useState(false)
   const [allServices, setAllServices] = useState([])
-  const [serviceFilter, setServiceFilter] = useState('car') // 'all', 'car', 'bike', 'auto'
+  const [serviceFilter, setServiceFilter] = useState('car') // 'car', 'bike', 'auto', 'membership'
   const [serviceSearch, setServiceSearch] = useState('') // Search query
   const [draggingServiceId, setDraggingServiceId] = useState(null)
   const [editingServiceId, setEditingServiceId] = useState(null) // Track which service is being edited
@@ -1677,12 +1680,15 @@ function App() {
     setLoadingAllServices(true)
     setServicesError('')
     try {
-      const response = await fetch(`${API_BASE_URL}/services?isActive=true`)
+      const response = await fetch(`${API_BASE_URL}/services?includeInactive=true`)
       const data = await response.json()
       if (data.success) {
-        // Filter to only customer-facing wash categories
         const services = (data.data || []).filter(
-          s => s.category === 'CarWash' || s.category === 'BikeWash' || s.category === 'AutoWash'
+          (s) =>
+            s.category === 'CarWash' ||
+            s.category === 'BikeWash' ||
+            s.category === 'AutoWash' ||
+            s.category === 'Membership'
         )
         setAllServices(services)
       } else {
@@ -1698,14 +1704,17 @@ function App() {
     }
   }
 
-  // Filter services based on selected filter and search (wash categories only; sorted for display order)
+  // Filter services by tab + search (washes or membership)
   const filteredServices = sortWashServicesForDisplay(allServices.filter(service => {
-    // Category filter
-    if (serviceFilter === 'car' && service.category !== 'CarWash') return false
-    if (serviceFilter === 'bike' && service.category !== 'BikeWash') return false
-    if (serviceFilter === 'auto' && service.category !== 'AutoWash') return false
+    if (service.category === 'Membership') {
+      if (serviceFilter !== 'membership') return false
+    } else {
+      if (serviceFilter === 'car' && service.category !== 'CarWash') return false
+      if (serviceFilter === 'bike' && service.category !== 'BikeWash') return false
+      if (serviceFilter === 'auto' && service.category !== 'AutoWash') return false
+      if (serviceFilter === 'membership') return false
+    }
 
-    // Search filter
     if (serviceSearch) {
       const searchLower = serviceSearch.toLowerCase()
       const matchesName = service.name?.toLowerCase().includes(searchLower)
@@ -1771,7 +1780,11 @@ function App() {
     car: allServices.filter((s) => s.category === 'CarWash').length,
     bike: allServices.filter((s) => s.category === 'BikeWash').length,
     auto: allServices.filter((s) => s.category === 'AutoWash').length,
+    membership: allServices.filter((s) => s.category === 'Membership').length,
   }
+
+  const washReorderEnabled =
+    (serviceFilter === 'car' || serviceFilter === 'bike' || serviceFilter === 'auto') && !serviceSearch
 
   const markOrderDelivered = async (orderId) => {
     try {
@@ -2049,6 +2062,9 @@ function App() {
           basePrice: String(service.basePrice || ''),
           duration: service.duration || '30 mins',
           image: service.image || '',
+          listPrice: String(service.listPrice ?? ''),
+          membershipDurationMonths: String(service.membershipDurationMonths ?? '12'),
+          membershipDiscountPercent: String(service.membershipDiscountPercent ?? '0'),
           packages: formatPackagesForForm(service.packages),
         })
         
@@ -2072,10 +2088,13 @@ function App() {
     setFormData({
       name: '',
       description: '',
-      category: 'CarWash',
+      category: serviceFilter === 'membership' ? 'Membership' : 'CarWash',
       basePrice: '',
-      duration: '30 mins',
+      duration: serviceFilter === 'membership' ? '' : '30 mins',
       image: '',
+      listPrice: '',
+      membershipDurationMonths: '12',
+      membershipDiscountPercent: '40',
       packages: {
         monthly: [],
         quarterly: [],
@@ -2091,31 +2110,10 @@ function App() {
     setMessage({ type: '', text: '' })
 
     try {
-      const coverage = (
+      const isWashCategory =
         formData.category === 'CarWash' ||
         formData.category === 'BikeWash' ||
         formData.category === 'AutoWash'
-      )
-        ? selectedCoverage
-        : []
-
-      const notIncluded = (
-        formData.category === 'CarWash' ||
-        formData.category === 'BikeWash' ||
-        formData.category === 'AutoWash'
-      )
-        ? availableCoverage
-            .map(item => item.name)
-            .filter(name => !selectedCoverage.includes(name))
-        : []
-
-      const applicableAddOnIds = (
-        formData.category === 'CarWash' ||
-        formData.category === 'BikeWash' ||
-        formData.category === 'AutoWash'
-      )
-        ? availableAddOns.map(addOn => addOn._id)
-        : []
 
       const formatPackages = (pkg) => {
         const normalizeRow = (row) => {
@@ -2138,20 +2136,59 @@ function App() {
         }
       }
 
-      const serviceData = {
-        name: formData.name,
-        description: formData.description,
-        category: formData.category,
-        basePrice: parseFloat(formData.basePrice),
-        duration: formData.duration,
-        image: formData.image,
-        images: [],
-        specifications: {
-          coverage: coverage,
-          notIncluded: notIncluded,
-        },
-        addOnServices: applicableAddOnIds, // Auto-attach all applicable add-ons
-        packages: formatPackages(formData.packages),
+      let serviceData
+
+      if (formData.category === 'Membership') {
+        const lp = parseFloat(formData.listPrice)
+        const months = parseInt(formData.membershipDurationMonths, 10)
+        const disc = parseFloat(formData.membershipDiscountPercent)
+        serviceData = {
+          name: formData.name.trim(),
+          description: (formData.description || '').trim(),
+          category: 'Membership',
+          basePrice: parseFloat(formData.basePrice),
+          duration: (formData.duration || '').trim(),
+          image: formData.image,
+          images: [],
+          specifications: { coverage: [], notIncluded: [] },
+          addOnServices: [],
+          packages: { monthly: [], quarterly: [], yearly: [] },
+          applicableFor: [],
+          listPrice: Number.isFinite(lp) ? lp : 0,
+          membershipDurationMonths:
+            Number.isFinite(months) && months > 0 ? months : 12,
+          membershipDiscountPercent: Number.isFinite(disc)
+            ? Math.min(100, Math.max(0, disc))
+            : 0,
+        }
+      } else {
+        const coverage = isWashCategory ? selectedCoverage : []
+
+        const notIncluded = isWashCategory
+          ? availableCoverage
+              .map(item => item.name)
+              .filter(name => !selectedCoverage.includes(name))
+          : []
+
+        const applicableAddOnIds = isWashCategory
+          ? availableAddOns.map(addOn => addOn._id)
+          : []
+
+        serviceData = {
+          name: formData.name,
+          description: formData.description,
+          category: formData.category,
+          basePrice: parseFloat(formData.basePrice),
+          duration: formData.duration,
+          image: formData.image,
+          images: [],
+          specifications: {
+            coverage: coverage,
+            notIncluded: notIncluded,
+          },
+          addOnServices: applicableAddOnIds,
+          packages: formatPackages(formData.packages),
+        }
       }
 
       const url = editingServiceId 
@@ -2957,8 +2994,15 @@ function App() {
                   >
                     Auto Wash ({categoryCounts.auto})
                   </button>
+                  <button
+                    type="button"
+                    className={`services-filter-tab ${serviceFilter === 'membership' ? 'active' : ''}`}
+                    onClick={() => setServiceFilter('membership')}
+                  >
+                    Woosh Black ({categoryCounts.membership})
+                  </button>
                 </div>
-                {!serviceSearch ? (
+                {washReorderEnabled ? (
                   <p className="services-reorder-hint">
                     Drag <span className="services-reorder-grip">⋮⋮</span> on a card to change order in the customer app (same category tab).
                   </p>
@@ -2999,11 +3043,11 @@ function App() {
                       <div
                         key={service._id}
                         className={`service-mini-card${draggingServiceId === service._id ? ' service-mini-card--dragging' : ''}`}
-                        onDragOver={serviceSearch ? undefined : handleWashServiceDragOver}
-                        onDrop={serviceSearch ? undefined : (e) => handleWashServiceDrop(e, service)}
+                        onDragOver={washReorderEnabled ? handleWashServiceDragOver : undefined}
+                        onDrop={washReorderEnabled ? (e) => handleWashServiceDrop(e, service) : undefined}
                       >
                         <div className="service-mini-row">
-                          {!serviceSearch ? (
+                          {washReorderEnabled ? (
                             <span
                               className="service-drag-handle"
                               draggable
@@ -3020,7 +3064,12 @@ function App() {
                           <div className="service-mini-card-main">
                         <div className="service-mini-top">
                           <h3 className="service-mini-name" title={service.name}>{service.name}</h3>
-                          <div className="service-mini-price">₹{service.basePrice}</div>
+                          <div className="service-mini-price">
+                            ₹{service.basePrice}
+                            {service.category === 'Membership' && service.listPrice ? (
+                              <span className="service-mini-mrp"> · MRP ₹{service.listPrice}</span>
+                            ) : null}
+                          </div>
                         </div>
                         {service.description ? (
                           <p className="service-mini-desc" title={service.description}>
@@ -3084,13 +3133,24 @@ function App() {
               </div>
 
               <div className="form-group">
-                <label htmlFor="description">Description *</label>
+                <label htmlFor="description">
+                  Description
+                  {(formData.category === 'CarWash' ||
+                    formData.category === 'BikeWash' ||
+                    formData.category === 'AutoWash') ? (
+                    <span> *</span>
+                  ) : null}
+                </label>
                 <textarea
                   id="description"
                   name="description"
                   value={formData.description}
                   onChange={handleChange}
-                  required
+                  required={
+                    formData.category === 'CarWash' ||
+                    formData.category === 'BikeWash' ||
+                    formData.category === 'AutoWash'
+                  }
                   rows="3"
                   placeholder="Enter service description"
                 />
@@ -3109,12 +3169,15 @@ function App() {
                 <option value="CarWash">Car Wash</option>
                 <option value="BikeWash">Bike Wash</option>
                 <option value="AutoWash">Auto Wash</option>
+                <option value="Membership">Woosh Black (Membership)</option>
                 <option value="AddOn">Add-On</option>
               </select>
             </div>
 
             <div className="form-group">
-              <label htmlFor="basePrice">Base Price (₹) *</label>
+              <label htmlFor="basePrice">
+                {formData.category === 'Membership' ? 'Member price (₹) *' : 'Base Price (₹) *'}
+              </label>
               <input
                 type="number"
                 id="basePrice"
@@ -3129,18 +3192,77 @@ function App() {
             </div>
 
             <div className="form-group">
-              <label htmlFor="duration">Duration *</label>
+              <label htmlFor="duration">
+                Duration
+                {(formData.category === 'CarWash' ||
+                  formData.category === 'BikeWash' ||
+                  formData.category === 'AutoWash') ? (
+                  <span> *</span>
+                ) : null}
+              </label>
               <input
                 type="text"
                 id="duration"
                 name="duration"
                 value={formData.duration}
                 onChange={handleChange}
-                required
+                required={
+                  formData.category === 'CarWash' ||
+                  formData.category === 'BikeWash' ||
+                  formData.category === 'AutoWash'
+                }
                 placeholder="30 mins"
               />
             </div>
           </div>
+
+              {formData.category === 'Membership' && (
+                <div className="form-row">
+                  <div className="form-group">
+                    <label htmlFor="listPrice">List / MRP (₹) *</label>
+                    <input
+                      type="number"
+                      id="listPrice"
+                      name="listPrice"
+                      value={formData.listPrice}
+                      onChange={handleChange}
+                      required
+                      min="0"
+                      step="0.01"
+                      placeholder="999"
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label htmlFor="membershipDurationMonths">Duration (months) *</label>
+                    <input
+                      type="number"
+                      id="membershipDurationMonths"
+                      name="membershipDurationMonths"
+                      value={formData.membershipDurationMonths}
+                      onChange={handleChange}
+                      required
+                      min="1"
+                      step="1"
+                      placeholder="12"
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label htmlFor="membershipDiscountPercent">Wash discount (%) *</label>
+                    <input
+                      type="number"
+                      id="membershipDiscountPercent"
+                      name="membershipDiscountPercent"
+                      value={formData.membershipDiscountPercent}
+                      onChange={handleChange}
+                      required
+                      min="0"
+                      max="100"
+                      step="0.1"
+                      placeholder="40"
+                    />
+                  </div>
+                </div>
+              )}
 
               <div className="form-group">
                 <label>Main Image</label>

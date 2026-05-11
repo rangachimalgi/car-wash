@@ -1,6 +1,14 @@
 import Service from '../models/Service.js';
 
 const WASH_SERVICE_CATEGORIES = ['CarWash', 'BikeWash', 'AutoWash'];
+const ALL_SERVICE_CATEGORIES = [
+  'CarWash',
+  'BikeWash',
+  'AutoWash',
+  'AddOn',
+  'Coverage',
+  'Membership',
+];
 
 export const uploadServiceImage = async (req, res) => {
   try {
@@ -217,11 +225,11 @@ export const getServicesByCategory = async (req, res) => {
     const { sortBy } = req.query;
 
     // Validate category
-    const validCategories = ['CarWash', 'BikeWash', 'AutoWash', 'AddOn', 'Coverage'];
+    const validCategories = ALL_SERVICE_CATEGORIES;
     if (!validCategories.includes(category)) {
       return res.status(400).json({
         success: false,
-        message: 'Invalid category. Must be one of: CarWash, BikeWash, AutoWash, AddOn, Coverage',
+        message: `Invalid category. Must be one of: ${validCategories.join(', ')}`,
       });
     }
 
@@ -280,6 +288,9 @@ export const createService = async (req, res) => {
       addOnServices,
       packages,
       applicableFor,
+      listPrice,
+      membershipDurationMonths,
+      membershipDiscountPercent,
     } = req.body;
 
     // Validate required fields
@@ -291,11 +302,11 @@ export const createService = async (req, res) => {
     }
 
     // Validate category
-    const validCategories = ['CarWash', 'BikeWash', 'AutoWash', 'AddOn', 'Coverage'];
+    const validCategories = ALL_SERVICE_CATEGORIES;
     if (!validCategories.includes(category)) {
       return res.status(400).json({
         success: false,
-        message: 'Invalid category. Must be one of: CarWash, BikeWash, AutoWash, AddOn, Coverage',
+        message: `Invalid category. Must be one of: ${validCategories.join(', ')}`,
       });
     }
 
@@ -307,8 +318,8 @@ export const createService = async (req, res) => {
       });
     }
 
-    // Validate required fields for non-add-on/non-coverage services
-    if (category !== 'AddOn' && category !== 'Coverage') {
+    // Validate required fields for wash services only
+    if (WASH_SERVICE_CATEGORIES.includes(category)) {
       if (!description || !duration) {
         return res.status(400).json({
           success: false,
@@ -346,7 +357,11 @@ export const createService = async (req, res) => {
       description: description ? description.trim() : '',
       category,
       basePrice: Number(basePrice),
-      duration: duration || (category === 'AddOn' || category === 'Coverage' ? '' : '30 mins'),
+      duration:
+        duration ||
+        (category === 'AddOn' || category === 'Coverage' || category === 'Membership'
+          ? ''
+          : '30 mins'),
       image: image || '',
       images: images || [],
       rating: rating || 0,
@@ -356,14 +371,29 @@ export const createService = async (req, res) => {
         coverage: specifications?.coverage || [],
         notIncluded: specifications?.notIncluded || [],
       },
-      addOnServices: addOnServices || [],
-      packages: packages || {
-        monthly: [],
-        quarterly: [],
-        yearly: [],
-      },
-      applicableFor: applicableFor || [], // Only for AddOn category
+      addOnServices: category === 'Membership' ? [] : addOnServices || [],
+      packages:
+        category === 'Membership'
+          ? { monthly: [], quarterly: [], yearly: [] }
+          : packages || {
+              monthly: [],
+              quarterly: [],
+              yearly: [],
+            },
+      applicableFor: category === 'Membership' ? [] : applicableFor || [],
     };
+
+    if (category === 'Membership') {
+      serviceData.listPrice = Math.max(0, Number(listPrice) || 0);
+      serviceData.membershipDurationMonths = Math.max(
+        1,
+        Number(membershipDurationMonths) || 12
+      );
+      serviceData.membershipDiscountPercent = Math.min(
+        100,
+        Math.max(0, Number(membershipDiscountPercent) || 0)
+      );
+    }
 
     if (WASH_SERVICE_CATEGORIES.includes(category)) {
       const agg = await Service.aggregate([
@@ -428,6 +458,9 @@ export const updateService = async (req, res) => {
       packages,
       applicableFor,
       sortOrder,
+      listPrice,
+      membershipDurationMonths,
+      membershipDiscountPercent,
     } = req.body;
 
     // Find service
@@ -449,18 +482,20 @@ export const updateService = async (req, res) => {
 
     // Validate category if provided
     if (category) {
-      const validCategories = ['CarWash', 'BikeWash', 'AutoWash', 'AddOn', 'Coverage'];
+      const validCategories = ALL_SERVICE_CATEGORIES;
       if (!validCategories.includes(category)) {
         return res.status(400).json({
           success: false,
-          message: 'Invalid category. Must be one of: CarWash, BikeWash, AddOn, Coverage',
+          message: `Invalid category. Must be one of: ${validCategories.join(', ')}`,
         });
       }
     }
 
+    const effectiveCategory = category !== undefined ? category : service.category;
+
     // Validate applicableFor for AddOn or Coverage category
     if (
-      (category === 'AddOn' || category === 'Coverage' || service.category === 'AddOn' || service.category === 'Coverage') &&
+      (effectiveCategory === 'AddOn' || effectiveCategory === 'Coverage') &&
       applicableFor !== undefined &&
       (!Array.isArray(applicableFor) || applicableFor.length === 0)
     ) {
@@ -504,6 +539,19 @@ export const updateService = async (req, res) => {
     if (applicableFor !== undefined) service.applicableFor = applicableFor;
     if (sortOrder !== undefined && service.category && WASH_SERVICE_CATEGORIES.includes(service.category)) {
       service.sortOrder = Number(sortOrder);
+    }
+
+    if (listPrice !== undefined) {
+      service.listPrice = Math.max(0, Number(listPrice) || 0);
+    }
+    if (membershipDurationMonths !== undefined) {
+      service.membershipDurationMonths = Math.max(1, Number(membershipDurationMonths) || 12);
+    }
+    if (membershipDiscountPercent !== undefined) {
+      service.membershipDiscountPercent = Math.min(
+        100,
+        Math.max(0, Number(membershipDiscountPercent) || 0)
+      );
     }
 
     // Save updated service
