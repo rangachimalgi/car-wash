@@ -9,6 +9,7 @@ import ServiceDetailsBottomSheet from '../components/ServiceDetailsBottomSheet';
 import AddOnServicesList from '../components/AddOnServicesList';
 import PricingPackages, { AddToCartButton } from '../components/PricingPackages';
 import ServiceCoverage from '../components/ServiceCoverage';
+import WooshBlackCard from '../components/WooshBlackCard';
 import { resolveAssetUrl } from '../config/api';
 import { getServiceById, getServicesByCategory } from '../services/serviceApi';
 import { useTheme } from '../theme/ThemeContext';
@@ -256,8 +257,14 @@ export default function CarWashScreen({ navigation, route }) {
         }
       >
         <View style={styles.content}>
-          {/* <Text style={styles.browseTitle}>browse woosh!</Text> */}
-          
+          {screenCategory === 'CarWash' && (
+            <WooshBlackCard
+              onPressAdd={() =>
+                Alert.alert('Woosh Black', 'Membership coming soon — UI preview only.', [{ text: 'OK' }])
+              }
+            />
+          )}
+
           {services.length === 0 ? (
             <View style={styles.emptyContainer}>
               <MaterialCommunityIcons name={emptyIcon} size={64} color={theme.textSecondary} />
