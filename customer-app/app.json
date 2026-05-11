@@ -12,6 +12,9 @@
       "resizeMode": "cover",
       "backgroundColor": "#ffffff"
     },
+    "plugins": [
+      "expo-video"
+    ],
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.anonymous.customerapp",

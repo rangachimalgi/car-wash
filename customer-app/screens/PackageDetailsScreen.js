@@ -14,6 +14,10 @@ import { applyWooshMembershipDiscount } from '../utils/membershipPricing';
 const DAILY_CLEANING_OPTIONS = ['Daily (Sun - Sat)', 'Alternate days (~15 days / month)'];
 const TIME_SLOTS = ['7:00 AM - 8:00 AM', '8:00 AM - 9:00 AM', '10:00 AM - 11:00 AM'];
 
+/** Fixed labels so month always shows (Hermes/Android can drop `month` in `toLocaleDateString`). */
+const PILL_MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const PILL_WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
 function SelectChips({ options, selected, onSelect, multi = false }) {
   return (
     <View style={stylesGlobal.chipsWrap}>
@@ -33,6 +37,44 @@ function SelectChips({ options, selected, onSelect, multi = false }) {
           </TouchableOpacity>
         );
       })}
+    </View>
+  );
+}
+
+/** Read-only strip: same date + day pills as interior/exterior; highlights days included for daily cleaning. */
+function DatePillPreviewRow({ title, monthDates, includedKeys, styles, dateKey, formatDatePill }) {
+  const included = useMemo(() => new Set(includedKeys), [includedKeys]);
+  return (
+    <View style={styles.dateRowBlock}>
+      <View style={styles.dateRowHeader}>
+        <View style={styles.dateRowHeaderLeft}>
+          <MaterialCommunityIcons name="calendar-month-outline" size={18} color="#6B7280" />
+          <Text style={styles.dateRowTitle}>{title}</Text>
+        </View>
+      </View>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.datePillsScrollContent}
+        nestedScrollEnabled
+      >
+        {monthDates.map((date) => {
+          const key = dateKey(date);
+          const isIncluded = included.has(key);
+          const { monthLabel, dayNumber, weekdayShort } = formatDatePill(date);
+          return (
+            <View
+              key={key}
+              style={[styles.datePill, isIncluded ? styles.datePillActive : styles.datePillPreviewMuted]}
+              accessibilityLabel={`${weekdayShort} ${dayNumber} ${monthLabel}${isIncluded ? ', daily cleaning' : ''}`}
+            >
+              <Text style={[styles.datePillMonth, isIncluded && styles.datePillMonthActive]}>{monthLabel}</Text>
+              <Text style={[styles.datePillDate, isIncluded && styles.datePillDateActive]}>{dayNumber}</Text>
+              <Text style={[styles.datePillDay, isIncluded && styles.datePillDayActive]}>{weekdayShort}</Text>
+            </View>
+          );
+        })}
+      </ScrollView>
     </View>
   );
 }
@@ -67,7 +109,7 @@ function DatePillRow({
         {monthDates.map((date) => {
           const key = dateKey(date);
           const isActive = selectedDates.includes(key);
-          const { dateText, dayText } = formatDatePill(date);
+          const { monthLabel, dayNumber, weekdayShort } = formatDatePill(date);
           return (
             <TouchableOpacity
               key={key}
@@ -75,8 +117,9 @@ function DatePillRow({
               onPress={() => onToggle(key)}
               activeOpacity={0.85}
             >
-              <Text style={[styles.datePillDate, isActive && styles.datePillDateActive]}>{dateText}</Text>
-              <Text style={[styles.datePillDay, isActive && styles.datePillDayActive]}>{dayText}</Text>
+              <Text style={[styles.datePillMonth, isActive && styles.datePillMonthActive]}>{monthLabel}</Text>
+              <Text style={[styles.datePillDate, isActive && styles.datePillDateActive]}>{dayNumber}</Text>
+              <Text style={[styles.datePillDay, isActive && styles.datePillDayActive]}>{weekdayShort}</Text>
             </TouchableOpacity>
           );
         })}
@@ -199,6 +242,14 @@ export default function PackageDetailsScreen({ navigation, route }) {
     });
   }, [packageStartDate, packageDurationDays]);
 
+  /** ISO date keys when daily cleaning runs: every package day (Daily), or every other day from start (Alternate). */
+  const dailyCleaningIncludedKeys = useMemo(() => {
+    const everyDay = dailyMode.startsWith('Daily');
+    return monthDates
+      .filter((_, idx) => everyDay || idx % 2 === 0)
+      .map((d) => d.toISOString().split('T')[0]);
+  }, [monthDates, dailyMode]);
+
   const formatHeaderDate = (date) =>
     date.toLocaleDateString('en-GB', {
       day: '2-digit',
@@ -207,12 +258,12 @@ export default function PackageDetailsScreen({ navigation, route }) {
     });
 
   const formatDatePill = (date) => {
-    const dateText = date.toLocaleDateString('en-GB', {
-      day: 'numeric',
-      month: 'short',
-    });
-    const dayText = date.toLocaleDateString('en-GB', { weekday: 'short' });
-    return { dateText, dayText };
+    const d = new Date(date);
+    return {
+      monthLabel: PILL_MONTHS[d.getMonth()],
+      dayNumber: String(d.getDate()),
+      weekdayShort: PILL_WEEKDAYS[d.getDay()],
+    };
   };
 
   const dateKey = (date) => date.toISOString().split('T')[0];
@@ -355,7 +406,19 @@ export default function PackageDetailsScreen({ navigation, route }) {
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Daily Cleaning Mode</Text>
+          <Text style={styles.helperText}>
+            Choose how often daily cleaning runs. Highlighted pills match your mode for this {packageDurationDays}-day
+            window (same calendar strip as above).
+          </Text>
           <SelectChips options={DAILY_CLEANING_OPTIONS} selected={dailyMode} onSelect={setDailyMode} />
+          <DatePillPreviewRow
+            title="Daily cleaning dates"
+            monthDates={monthDates}
+            includedKeys={dailyCleaningIncludedKeys}
+            styles={styles}
+            dateKey={dateKey}
+            formatDatePill={formatDatePill}
+          />
         </View>
       </ScrollView>
 
@@ -527,12 +590,12 @@ const createStyles = (theme) => StyleSheet.create({
     paddingRight: 8,
   },
   datePill: {
-    minWidth: 72,
+    minWidth: 78,
     borderRadius: 10,
     borderWidth: 1,
     borderColor: '#E2E8F0',
     backgroundColor: '#F8FAFC',
-    paddingVertical: 10,
+    paddingVertical: 8,
     paddingHorizontal: 10,
     alignItems: 'center',
     justifyContent: 'center',
@@ -540,6 +603,21 @@ const createStyles = (theme) => StyleSheet.create({
   datePillActive: {
     backgroundColor: '#2F8EDC',
     borderColor: '#2F8EDC',
+  },
+  datePillPreviewMuted: {
+    opacity: 0.55,
+    backgroundColor: '#F1F5F9',
+    borderColor: '#E2E8F0',
+  },
+  datePillMonth: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#64748B',
+    letterSpacing: 0.4,
+    marginBottom: 2,
+  },
+  datePillMonthActive: {
+    color: '#DBEAFE',
   },
   datePillDate: {
     fontSize: 24,

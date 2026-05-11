@@ -9,11 +9,44 @@ import {
   Dimensions,
   Modal,
   ActivityIndicator,
+  Platform,
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { Video, ResizeMode } from 'expo-av';
+import { Audio } from 'expo-av';
+import { useEvent } from 'expo';
+import { useVideoPlayer, VideoView } from 'expo-video';
 import * as VideoThumbnails from 'expo-video-thumbnails';
 import { useTheme } from '../theme/ThemeContext';
+
+/** expo-av `Video` is unreliable in some prod / New-Arch builds; expo-video uses the platform player. */
+function TestimonialModalVideo({ uri, styles: s }) {
+  const player = useVideoPlayer(uri, (p) => {
+    p.loop = false;
+    p.muted = false;
+    p.play();
+  });
+  const { status } = useEvent(player, 'statusChange', { status: player.status });
+  const showLoading = status !== 'readyToPlay' && status !== 'error';
+
+  return (
+    <View style={s.videoPlayerWrap}>
+      <VideoView
+        style={s.videoPlayer}
+        player={player}
+        nativeControls
+        contentFit="contain"
+        allowsFullscreen
+        useExoShutter={false}
+        {...(Platform.OS === 'android' ? { surfaceType: 'textureView' } : {})}
+      />
+      {showLoading ? (
+        <View style={s.videoLoadingOverlay} pointerEvents="none">
+          <ActivityIndicator size="large" color="#FFFFFF" />
+        </View>
+      ) : null}
+    </View>
+  );
+}
 
 const { width } = Dimensions.get('window');
 
@@ -34,11 +67,16 @@ export default function CustomerTestimonials({
   const styles = useMemo(() => createStyles(theme), [theme]);
   const [activeVideoUrl, setActiveVideoUrl] = useState(null);
   const [videoThumbnails, setVideoThumbnails] = useState({});
-  const [modalVideoLoaded, setModalVideoLoaded] = useState(false);
 
   useEffect(() => {
-    setModalVideoLoaded(false);
-  }, [activeVideoUrl]);
+    Audio.setAudioModeAsync({
+      playsInSilentModeIOS: true,
+      allowsRecordingIOS: false,
+      staysActiveInBackground: false,
+      shouldDuckAndroid: true,
+      playThroughEarpieceAndroid: false,
+    }).catch(() => {});
+  }, []);
 
   // Pre-generate thumbnails in parallel (faster than sequential). Depends only on `items`
   // so we do not re-run the whole pipeline on every thumbnail state update.
@@ -156,32 +194,7 @@ export default function CustomerTestimonials({
               <MaterialCommunityIcons name="close" size={22} color="#FFFFFF" />
             </TouchableOpacity>
             {activeVideoUrl ? (
-              <View style={styles.videoPlayerWrap}>
-                <Video
-                  key={activeVideoUrl}
-                  source={{ uri: activeVideoUrl }}
-                  style={styles.videoPlayer}
-                  useNativeControls
-                  shouldPlay
-                  resizeMode={ResizeMode.CONTAIN}
-                  usePoster={Boolean(videoThumbnails[activeVideoUrl])}
-                  posterSource={
-                    videoThumbnails[activeVideoUrl]
-                      ? { uri: videoThumbnails[activeVideoUrl] }
-                      : undefined
-                  }
-                  progressUpdateIntervalMillis={500}
-                  onPlaybackStatusUpdate={(status) => {
-                    if (status.isLoaded) setModalVideoLoaded(true);
-                  }}
-                  onError={() => setModalVideoLoaded(true)}
-                />
-                {!modalVideoLoaded ? (
-                  <View style={styles.videoLoadingOverlay} pointerEvents="none">
-                    <ActivityIndicator size="large" color="#FFFFFF" />
-                  </View>
-                ) : null}
-              </View>
+              <TestimonialModalVideo key={activeVideoUrl} uri={activeVideoUrl} styles={styles} />
             ) : null}
           </View>
         </View>
