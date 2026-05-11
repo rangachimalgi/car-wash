@@ -16,7 +16,10 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.anonymous.customerapp",
       "infoPlist": {
-        "NSLocationWhenInUseUsageDescription": "We use your location to set the service address."
+        "NSLocationWhenInUseUsageDescription": "We use your location to set the service address.",
+        "NSAppTransportSecurity": {
+          "NSAllowsLocalNetworking": true
+        }
       },
       "config": {
         "googleMaps": {
@@ -25,6 +28,7 @@
       }
     },
     "android": {
+      "usesCleartextTraffic": true,
       "adaptiveIcon": {
         "foregroundImage": "./assets/appicon.png",
         "backgroundColor": "#ffffff"

@@ -25,13 +25,28 @@ const DEFAULT_SLIDES = [
   },
 ];
 
+/** Backend / legacy data used "Slide 1" style labels — hide those in the app so the carousel is image-led. */
+const isGenericSlideLabel = (name) => {
+  if (name == null || String(name).trim() === '') return true;
+  return /^slide\s*\d+$/i.test(String(name).trim());
+};
+
 const normalizeSlides = (slides) => {
   if (!slides || !slides.length) return DEFAULT_SLIDES;
   return slides.map((s, i) => {
     if (s.image && typeof s.image === 'number') return { ...s, id: s.id || `s-${i}` };
+    const fromApi = Boolean(s.url);
+    const rawName = s.name != null && String(s.name).trim() !== '' ? String(s.name).trim() : '';
+    const title =
+      s.title ||
+      (fromApi
+        ? isGenericSlideLabel(rawName)
+          ? null
+          : rawName
+        : rawName || `Slide ${i + 1}`);
     return {
       id: s._id || s.id || `s-${i}`,
-      title: s.name || s.title || `Slide ${i + 1}`,
+      title,
       bullets: s.bullets,
       image: s.url ? { uri: s.url } : s.image,
     };
@@ -70,14 +85,16 @@ export default function SeeTheDifference({ slides = DEFAULT_SLIDES }) {
               <View style={styles.scrim} />
 
               <View style={styles.overlay}>
-                <View style={styles.badge}>
-                  <Text style={styles.badgeTitle}>{slide.title}</Text>
-                  {slide.bullets?.map((b, idx) => (
-                    <Text key={`${slide.id}-b-${idx}`} style={styles.badgeBullet}>
-                      {b}
-                    </Text>
-                  ))}
-                </View>
+                {(slide.title || (slide.bullets && slide.bullets.length > 0)) ? (
+                  <View style={styles.badge}>
+                    {slide.title ? <Text style={styles.badgeTitle}>{slide.title}</Text> : null}
+                    {slide.bullets?.map((b, idx) => (
+                      <Text key={`${slide.id}-b-${idx}`} style={styles.badgeBullet}>
+                        {b}
+                      </Text>
+                    ))}
+                  </View>
+                ) : null}
               </View>
             </View>
           ))}

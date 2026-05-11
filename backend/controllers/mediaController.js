@@ -95,11 +95,15 @@ export const uploadSeeTheDifference = async (req, res) => {
     }
     await Media.deleteMany({ type: 'seeTheDifference' });
 
-    const names = (req.body?.names || '').split(',').map((s) => s.trim()).slice(0, 3);
+    const nameParts = (req.body?.names || '')
+      .split(',')
+      .map((s) => s.trim())
+      .slice(0, 3);
+    while (nameParts.length < 3) nameParts.push('');
     const items = [
-      { type: 'seeTheDifference', url: `/uploads/media/${image1.filename}`, name: names[0] || 'Slide 1', order: 0 },
-      { type: 'seeTheDifference', url: `/uploads/media/${image2.filename}`, name: names[1] || 'Slide 2', order: 1 },
-      { type: 'seeTheDifference', url: `/uploads/media/${image3.filename}`, name: names[2] || 'Slide 3', order: 2 },
+      { type: 'seeTheDifference', url: `/uploads/media/${image1.filename}`, name: nameParts[0] || '', order: 0 },
+      { type: 'seeTheDifference', url: `/uploads/media/${image2.filename}`, name: nameParts[1] || '', order: 1 },
+      { type: 'seeTheDifference', url: `/uploads/media/${image3.filename}`, name: nameParts[2] || '', order: 2 },
     ];
     const created = await Media.insertMany(items);
     res.status(201).json({ success: true, data: created });

@@ -1,36 +1,46 @@
 import axios from 'axios';
 import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import Constants from 'expo-constants';
 
-// API Base URL - Automatically detects platform
-// For Android emulator: uses 'http://10.0.2.2:8000' (special IP for emulator)
-// For iOS simulator: uses 'http://localhost:8000'
-// For physical device: use your computer's IP (e.g., 'http://192.168.1.22:8000')
-
-// Your computer's IP address
-// Find it with: ipconfig getifaddr en0 (Mac) or ipconfig (Windows)
-// Update this if your IP changes!
+// API Base URL — port must match your local API (e.g. `PORT=8000` or `node` on 8000).
+// Backend `server.js` defaults to 5000 if PORT is unset; this app defaults to 8000 for local dev.
+//
+// Optional: set in `.env`:
+//   EXPO_PUBLIC_API_BASE_URL=http://192.168.1.18:8000/api
+//   EXPO_PUBLIC_API_PORT=5000   (if you use the server default instead)
+//
+// Android emulator: set EXPO_PUBLIC_ANDROID_API_HOST=10.0.2.2 (maps host → your machine).
 const COMPUTER_IP = '192.168.1.18';
+const DEV_API_PORT = process.env.EXPO_PUBLIC_API_PORT || '8000';
+const ANDROID_API_HOST = process.env.EXPO_PUBLIC_ANDROID_API_HOST || COMPUTER_IP;
+
+const normalizeApiBase = (raw) => {
+  const u = String(raw || '').trim().replace(/\/$/, '');
+  if (!u) return null;
+  return u.endsWith('/api') ? u : `${u}/api`;
+};
 
 // Determine the correct base URL based on platform
 const getBaseURL = () => {
+  const fromEnv = normalizeApiBase(process.env.EXPO_PUBLIC_API_BASE_URL);
+  if (fromEnv) return fromEnv;
+
   if (!__DEV__) {
-    // Production
     return 'https://car-wash-vbry.onrender.com/api';
   }
 
-  // Development - Platform specific
   if (Platform.OS === 'android') {
-    // Android emulator: use 10.0.2.2, Physical device: use computer's IP
-    // Change to 'http://10.0.2.2:8000/api' if using Android emulator
-    return `http://${COMPUTER_IP}:8000/api`;
-  } else if (Platform.OS === 'ios') {
-    // iOS simulator can use localhost
-    return 'http://localhost:8000/api';
-  } else {
-    // Web or other platforms
-    return 'http://localhost:8000/api';
+    return `http://${ANDROID_API_HOST}:${DEV_API_PORT}/api`;
   }
+  if (Platform.OS === 'ios') {
+    // Simulator: localhost. Physical device: same LAN host as Android (localhost would be the phone).
+    if (!Constants.isDevice) {
+      return `http://localhost:${DEV_API_PORT}/api`;
+    }
+    return `http://${COMPUTER_IP}:${DEV_API_PORT}/api`;
+  }
+  return `http://localhost:${DEV_API_PORT}/api`;
 };
 
 const API_BASE_URL = getBaseURL();
@@ -116,14 +126,14 @@ export const resolveAssetUrl = (path) => {
 };
 
 export const getMedia = async () => {
-  const base = getUploadsBase();
   const { data } = await api.get('/media/public');
   if (!data?.success || !data.data) return { testimonials: [], transformations: [], seeTheDifference: [] };
   const d = data.data;
+  const withResolvedUrl = (m) => ({ ...m, url: m.url ? resolveAssetUrl(m.url) : null });
   return {
-    testimonials: (d.testimonials || []).map((m) => ({ ...m, url: m.url ? base + m.url : null })),
-    transformations: (d.transformations || []).map((m) => ({ ...m, url: m.url ? base + m.url : null })),
-    seeTheDifference: (d.seeTheDifference || []).map((m) => ({ ...m, url: m.url ? base + m.url : null })),
+    testimonials: (d.testimonials || []).map(withResolvedUrl),
+    transformations: (d.transformations || []).map(withResolvedUrl),
+    seeTheDifference: (d.seeTheDifference || []).map(withResolvedUrl),
   };
 };
 

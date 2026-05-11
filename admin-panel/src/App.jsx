@@ -210,6 +210,7 @@ function App() {
   const [transformationMediaForm, setTransformationMediaForm] = useState({ name: '', file: null })
   const [uploadingMedia, setUploadingMedia] = useState(false)
   const [seeDiffFiles, setSeeDiffFiles] = useState({ image1: null, image2: null, image3: null })
+  const [seeDiffCaptions, setSeeDiffCaptions] = useState({ caption1: '', caption2: '', caption3: '' })
   const [uploadingSeeDiff, setUploadingSeeDiff] = useState(false)
 
   // Coupons
@@ -2504,6 +2505,10 @@ function App() {
       formData.append('image1', seeDiffFiles.image1)
       formData.append('image2', seeDiffFiles.image2)
       formData.append('image3', seeDiffFiles.image3)
+      const namesCsv = [seeDiffCaptions.caption1, seeDiffCaptions.caption2, seeDiffCaptions.caption3]
+        .map((s) => (s || '').trim())
+        .join(',')
+      formData.append('names', namesCsv)
       const opts = getFetchOptions()
       const headers = { ...opts.headers }
       delete headers['Content-Type']
@@ -2512,6 +2517,7 @@ function App() {
       if (data.success) {
         setMediaMessage({ type: 'success', text: 'See The Difference images updated' })
         setSeeDiffFiles({ image1: null, image2: null, image3: null })
+        setSeeDiffCaptions({ caption1: '', caption2: '', caption3: '' })
         fetchMedia()
       } else {
         setMediaMessage({ type: 'error', text: data.message || 'Upload failed' })
@@ -4896,7 +4902,39 @@ function App() {
             {/* See The Difference: 3 images */}
             <div className="media-block">
               <h3 className="media-block-title">See The Difference (3 images)</h3>
-              <p className="media-help-text">Upload exactly 3 images (max {MAX_MEDIA_IMAGE_SIZE_MB} MB each). They will replace the current set.</p>
+              <p className="media-help-text">Upload exactly 3 images (max {MAX_MEDIA_IMAGE_SIZE_MB} MB each). They will replace the current set. Optional captions appear on each slide in the app; leave blank for image-only slides.</p>
+              <div className="form-row" style={{ marginBottom: '12px', flexWrap: 'wrap', gap: '8px' }}>
+                <div className="form-group" style={{ minWidth: '160px', flex: '1 1 160px' }}>
+                  <label htmlFor="seeDiffCaption1">Caption 1 (optional)</label>
+                  <input
+                    id="seeDiffCaption1"
+                    type="text"
+                    value={seeDiffCaptions.caption1}
+                    onChange={(e) => setSeeDiffCaptions((c) => ({ ...c, caption1: e.target.value }))}
+                    placeholder="e.g. Before"
+                  />
+                </div>
+                <div className="form-group" style={{ minWidth: '160px', flex: '1 1 160px' }}>
+                  <label htmlFor="seeDiffCaption2">Caption 2 (optional)</label>
+                  <input
+                    id="seeDiffCaption2"
+                    type="text"
+                    value={seeDiffCaptions.caption2}
+                    onChange={(e) => setSeeDiffCaptions((c) => ({ ...c, caption2: e.target.value }))}
+                    placeholder="e.g. Deep foam"
+                  />
+                </div>
+                <div className="form-group" style={{ minWidth: '160px', flex: '1 1 160px' }}>
+                  <label htmlFor="seeDiffCaption3">Caption 3 (optional)</label>
+                  <input
+                    id="seeDiffCaption3"
+                    type="text"
+                    value={seeDiffCaptions.caption3}
+                    onChange={(e) => setSeeDiffCaptions((c) => ({ ...c, caption3: e.target.value }))}
+                    placeholder="e.g. After"
+                  />
+                </div>
+              </div>
               <div className="media-upload-toolbar">
                 <label className="media-file-input-wrap"><span className="media-file-button">Image 1</span><input type="file" accept="image/*" onChange={(e) => {
                   const file = e.target.files?.[0] || null
@@ -4937,7 +4975,7 @@ function App() {
                 {(mediaList.filter((m) => m.type === 'seeTheDifference') || []).sort((a, b) => a.order - b.order).map((m) => (
                   <div key={m._id} className="media-see-diff-card">
                     <img src={UPLOADS_BASE + m.url} alt={m.name} className="media-see-diff-image" />
-                    <span className="media-see-diff-label">{m.name || `Slide ${m.order + 1}`}</span>
+                    <span className="media-see-diff-label">{m.name?.trim() ? m.name : `Image ${m.order + 1}`}</span>
                   </div>
                 ))}
               </div>

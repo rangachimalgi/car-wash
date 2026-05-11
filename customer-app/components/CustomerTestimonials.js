@@ -1,5 +1,15 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Dimensions, Modal } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  Image,
+  Dimensions,
+  Modal,
+  ActivityIndicator,
+} from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Video, ResizeMode } from 'expo-av';
 import * as VideoThumbnails from 'expo-video-thumbnails';
@@ -24,31 +34,41 @@ export default function CustomerTestimonials({
   const styles = useMemo(() => createStyles(theme), [theme]);
   const [activeVideoUrl, setActiveVideoUrl] = useState(null);
   const [videoThumbnails, setVideoThumbnails] = useState({});
+  const [modalVideoLoaded, setModalVideoLoaded] = useState(false);
 
+  useEffect(() => {
+    setModalVideoLoaded(false);
+  }, [activeVideoUrl]);
+
+  // Pre-generate thumbnails in parallel (faster than sequential). Depends only on `items`
+  // so we do not re-run the whole pipeline on every thumbnail state update.
   useEffect(() => {
     let mounted = true;
     const videoUrls = items
       .map((item) => (typeof item?.url === 'string' ? item.url : ''))
-      .filter((url) => isVideoUrl(url) && !videoThumbnails[url]);
+      .filter((url) => isVideoUrl(url));
 
-    if (!videoUrls.length) return () => { mounted = false; };
+    if (!videoUrls.length) return undefined;
 
     (async () => {
-      const generated = [];
-      for (const url of videoUrls) {
-        try {
-          const { uri } = await VideoThumbnails.getThumbnailAsync(url, { time: 1000 });
-          generated.push([url, uri]);
-        } catch (_) {
-          // Keep placeholder when thumbnail generation fails.
-        }
-      }
+      const entries = await Promise.all(
+        videoUrls.map(async (url) => {
+          try {
+            const { uri } = await VideoThumbnails.getThumbnailAsync(url, { time: 500 });
+            return [url, uri];
+          } catch {
+            return null;
+          }
+        })
+      );
 
-      if (!mounted || !generated.length) return;
+      if (!mounted) return;
+      const ok = entries.filter(Boolean);
+      if (!ok.length) return;
       setVideoThumbnails((prev) => {
         const next = { ...prev };
-        generated.forEach(([url, uri]) => {
-          next[url] = uri;
+        ok.forEach(([url, uri]) => {
+          if (!next[url]) next[url] = uri;
         });
         return next;
       });
@@ -57,7 +77,7 @@ export default function CustomerTestimonials({
     return () => {
       mounted = false;
     };
-  }, [items, videoThumbnails]);
+  }, [items]);
 
   return (
     <>
@@ -136,13 +156,32 @@ export default function CustomerTestimonials({
               <MaterialCommunityIcons name="close" size={22} color="#FFFFFF" />
             </TouchableOpacity>
             {activeVideoUrl ? (
-              <Video
-                source={{ uri: activeVideoUrl }}
-                style={styles.videoPlayer}
-                useNativeControls
-                shouldPlay
-                resizeMode={ResizeMode.CONTAIN}
-              />
+              <View style={styles.videoPlayerWrap}>
+                <Video
+                  key={activeVideoUrl}
+                  source={{ uri: activeVideoUrl }}
+                  style={styles.videoPlayer}
+                  useNativeControls
+                  shouldPlay
+                  resizeMode={ResizeMode.CONTAIN}
+                  usePoster={Boolean(videoThumbnails[activeVideoUrl])}
+                  posterSource={
+                    videoThumbnails[activeVideoUrl]
+                      ? { uri: videoThumbnails[activeVideoUrl] }
+                      : undefined
+                  }
+                  progressUpdateIntervalMillis={500}
+                  onPlaybackStatusUpdate={(status) => {
+                    if (status.isLoaded) setModalVideoLoaded(true);
+                  }}
+                  onError={() => setModalVideoLoaded(true)}
+                />
+                {!modalVideoLoaded ? (
+                  <View style={styles.videoLoadingOverlay} pointerEvents="none">
+                    <ActivityIndicator size="large" color="#FFFFFF" />
+                  </View>
+                ) : null}
+              </View>
             ) : null}
           </View>
         </View>
@@ -242,10 +281,20 @@ const createStyles = (theme) =>
       overflow: 'hidden',
       backgroundColor: '#000',
     },
+    videoPlayerWrap: {
+      position: 'relative',
+      width: '100%',
+    },
     videoPlayer: {
       width: '100%',
       height: 360,
       backgroundColor: '#000',
+    },
+    videoLoadingOverlay: {
+      ...StyleSheet.absoluteFillObject,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: 'rgba(0,0,0,0.35)',
     },
     videoCloseButton: {
       position: 'absolute',
