@@ -31,7 +31,9 @@ export default function CartScreen({ navigation, route }) {
   const styles = useMemo(() => createStyles(theme), [theme]);
 
   const getCurrentItem = () => {
-    return cartItems.length > 0 ? cartItems[0] : null;
+    if (!cartItems.length) return null;
+    const wash = cartItems.find((i) => i.packageType !== 'Membership');
+    return wash || cartItems[0];
   };
 
   const currentItem = getCurrentItem();
@@ -165,6 +167,36 @@ export default function CartScreen({ navigation, route }) {
     }, [loadAddressAndVehicle])
   );
 
+  // Woosh Black can add/remove membership in AsyncStorage from Car Wash; keep cart state in sync on focus.
+  useFocusEffect(
+    useCallback(() => {
+      let cancelled = false;
+      (async () => {
+        try {
+          const raw = await AsyncStorage.getItem('cartItems');
+          if (cancelled) return;
+          let list = [];
+          if (raw) {
+            const stored = JSON.parse(raw);
+            list = Array.isArray(stored) ? stored : [];
+          }
+          const memInStore = list.find((i) => i?.packageType === 'Membership');
+          setCartItems((prev) => {
+            const hasMem = prev.some((i) => i.packageType === 'Membership');
+            if (memInStore && !hasMem) return [...prev, memInStore];
+            if (!memInStore && hasMem) return prev.filter((i) => i.packageType !== 'Membership');
+            return prev;
+          });
+        } catch (_) {
+          // ignore
+        }
+      })();
+      return () => {
+        cancelled = true;
+      };
+    }, [])
+  );
+
   // Reload vehicle when service category changes (to filter correctly)
   // Use a ref to track if we've already loaded for this category
   const lastCategoryRef = React.useRef(null);
@@ -261,8 +293,16 @@ export default function CartScreen({ navigation, route }) {
   useEffect(() => {
     if (route?.params?.addItem) {
       const newItem = route.params.addItem;
-      setCartItems(prevItems => {
-        const existingIndex = prevItems.findIndex(item => item.id === newItem.id);
+      setCartItems((prevItems) => {
+        if (newItem?.packageType === 'Membership') {
+          const exists = prevItems.some((i) => i.packageType === 'Membership');
+          if (exists) {
+            Alert.alert('Woosh Black', 'Membership is already in your cart.');
+            return prevItems;
+          }
+          return [...prevItems, newItem];
+        }
+        const existingIndex = prevItems.findIndex((item) => item.id === newItem.id);
         if (existingIndex >= 0) {
           const updated = [...prevItems];
           updated[existingIndex].quantity += 1;
@@ -373,6 +413,7 @@ export default function CartScreen({ navigation, route }) {
   };
 
   const isScheduleComplete = (item) => {
+    if (item?.packageType === 'Membership') return true;
     const type = item?.packageType || 'OneTime';
     if (type === 'OneTime') {
       return Boolean(item?.selectedDate && item?.selectedTimeSlot);
@@ -507,7 +548,10 @@ export default function CartScreen({ navigation, route }) {
   const subtotal = cartItems.reduce((sum, item) => sum + Number(item.price || 0) * Number(item.quantity || 1), 0);
   const tax = subtotal * 0.18;
   const total = subtotal + tax;
-  const duration = serviceDetails?.duration || '23 mins';
+  const duration =
+    cartItems.length > 0 && cartItems.every((i) => i.packageType === 'Membership')
+      ? 'Membership'
+      : serviceDetails?.duration || '23 mins';
 
   if (!cartLoaded) {
     return (
@@ -615,21 +659,59 @@ export default function CartScreen({ navigation, route }) {
               );
             })()}
 
+            {cartItems.filter((i) => i.packageType === 'Membership').map((mem) => (
+              <View key={mem.id} style={styles.membershipCartRow}>
+                <Image
+                  source={require('../assets/appicon.png')}
+                  style={styles.membershipCartImage}
+                  resizeMode="contain"
+                  accessibilityLabel="Woosh Black"
+                />
+                <View style={styles.membershipCartBody}>
+                  <Text style={styles.membershipCartTitle} numberOfLines={2}>
+                    {mem.title || mem.serviceName || 'Woosh Black'}
+                  </Text>
+                  <Text style={styles.membershipCartSub}>Membership plan</Text>
+                </View>
+                <View style={styles.membershipCartRight}>
+                  <Text style={styles.membershipCartPrice}>₹{Number(mem.price || 0) * Number(mem.quantity || 1)}</Text>
+                  <TouchableOpacity
+                    style={styles.membershipRemoveTouch}
+                    onPress={() => removeItem(mem.id)}
+                    accessibilityRole="button"
+                    accessibilityLabel="Remove membership from cart"
+                  >
+                    <MaterialCommunityIcons name="trash-can-outline" size={22} color="#b91c1c" />
+                  </TouchableOpacity>
+                </View>
+              </View>
+            ))}
+
             {/* Service Items Section */}
-            {currentItem && (
+            {currentItem && currentItem.packageType !== 'Membership' && (
               <View style={styles.serviceItemsSection}>
                 <View style={styles.serviceItemsHeader}>
                   <Text style={styles.serviceItemsTitle}>Service Items</Text>
-                  <TouchableOpacity onPress={() => toggleServiceExpanded(currentItem.id)}>
-                    <View style={styles.collapseButton}>
-                      <Text style={styles.collapseText}>Collapse</Text>
-                      <MaterialCommunityIcons 
-                        name={expandedServiceId === currentItem.id ? 'chevron-down' : 'chevron-up'} 
-                        size={18} 
-                        color="#007AFF" 
-                      />
-                    </View>
-                  </TouchableOpacity>
+                  <View style={styles.serviceItemsHeaderActions}>
+                    <TouchableOpacity
+                      style={styles.serviceRemoveTouch}
+                      onPress={() => removeItem(currentItem.id)}
+                      accessibilityRole="button"
+                      accessibilityLabel="Remove service from cart"
+                    >
+                      <MaterialCommunityIcons name="trash-can-outline" size={22} color="#b91c1c" />
+                    </TouchableOpacity>
+                    <TouchableOpacity onPress={() => toggleServiceExpanded(currentItem.id)}>
+                      <View style={styles.collapseButton}>
+                        <Text style={styles.collapseText}>Collapse</Text>
+                        <MaterialCommunityIcons 
+                          name={expandedServiceId === currentItem.id ? 'chevron-down' : 'chevron-up'} 
+                          size={18} 
+                          color="#007AFF" 
+                        />
+                      </View>
+                    </TouchableOpacity>
+                  </View>
                 </View>
                 
                 {expandedServiceId !== currentItem.id && (
@@ -716,7 +798,9 @@ export default function CartScreen({ navigation, route }) {
               }
             }}
           >
-            <Text style={styles.selectSlotText}>Select Slot</Text>
+            <Text style={styles.selectSlotText}>
+              {cartItems.every((i) => i.packageType === 'Membership') ? 'Checkout' : 'Select Slot'}
+            </Text>
             <MaterialCommunityIcons name="chevron-right" size={20} color="#FFFFFF" />
           </TouchableOpacity>
         </View>
@@ -885,6 +969,51 @@ const createStyles = theme => StyleSheet.create({
     fontWeight: '700',
     color: '#007AFF',
   },
+  membershipCartRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    marginHorizontal: 16,
+    marginTop: 12,
+    backgroundColor: '#fafafa',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#E5E5E5',
+    gap: 12,
+  },
+  membershipCartImage: {
+    width: 44,
+    height: 44,
+    borderRadius: 8,
+  },
+  membershipCartBody: {
+    flex: 1,
+    minWidth: 0,
+  },
+  membershipCartTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#000000',
+  },
+  membershipCartSub: {
+    marginTop: 2,
+    fontSize: 12,
+    fontWeight: '500',
+    color: theme.textSecondary,
+  },
+  membershipCartRight: {
+    alignItems: 'flex-end',
+    gap: 6,
+  },
+  membershipCartPrice: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#000000',
+  },
+  membershipRemoveTouch: {
+    padding: 4,
+  },
   vehicleHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -919,6 +1048,14 @@ const createStyles = theme => StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 12,
+  },
+  serviceItemsHeaderActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  serviceRemoveTouch: {
+    padding: 4,
   },
   serviceItemsTitle: {
     fontSize: 16,

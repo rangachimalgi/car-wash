@@ -278,6 +278,7 @@ export default function SlotSelectionScreen({ navigation, route }) {
             await AsyncStorage.setItem('cartItems', JSON.stringify(next));
 
             const isScheduleComplete = (item) => {
+              if (item?.packageType === 'Membership') return true;
               const packageType = item?.packageType || 'OneTime';
               if (packageType === 'OneTime') {
                 return Boolean(item?.selectedDate && item?.selectedTimeSlot);
@@ -345,6 +346,7 @@ export default function SlotSelectionScreen({ navigation, route }) {
             await AsyncStorage.setItem('cartItems', JSON.stringify(next));
 
             const isScheduleComplete = (item) => {
+              if (item?.packageType === 'Membership') return true;
               const packageType = item?.packageType || 'OneTime';
               if (packageType === 'OneTime') {
                 return Boolean(item?.selectedDate && item?.selectedTimeSlot);

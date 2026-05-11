@@ -15,20 +15,30 @@ const { width } = Dimensions.get('window');
 const LIGHT_BLUE = '#85E4FC';
 
 export default function CheckoutScreen({ navigation, route }) {
-  const cartItems = route?.params?.cartItems || [];
+  const [checkoutCartItems, setCheckoutCartItems] = useState(() => route?.params?.cartItems || []);
+
   // Convert ISO string back to Date object (it was serialized for navigation)
   const selectedDateParam = route?.params?.selectedDate;
   const selectedTimeSlotParam = route?.params?.selectedTimeSlot || null;
-  const slotItem = cartItems.find(item => item.selectedDate && item.selectedTimeSlot) || null;
+  const slotItem =
+    checkoutCartItems.find((item) => item.selectedDate && item.selectedTimeSlot) || null;
   const selectedDate = selectedDateParam
     ? new Date(selectedDateParam)
     : slotItem?.selectedDate
       ? new Date(slotItem.selectedDate)
       : null;
   const selectedTimeSlot = selectedTimeSlotParam || slotItem?.selectedTimeSlot || null;
-  const subtotal = route?.params?.subtotal || 0;
-  const tax = route?.params?.tax || 0;
-  const total = route?.params?.total || 0;
+
+  const subtotal = useMemo(
+    () =>
+      checkoutCartItems.reduce(
+        (sum, item) => sum + Number(item.price || 0) * Number(item.quantity || 1),
+        0
+      ),
+    [checkoutCartItems]
+  );
+  const tax = useMemo(() => subtotal * 0.18, [subtotal]);
+  const total = useMemo(() => subtotal + tax, [subtotal, tax]);
 
   const [couponCode, setCouponCode] = useState('');
   const [appliedCoupon, setAppliedCoupon] = useState(null);
@@ -157,6 +167,9 @@ export default function CheckoutScreen({ navigation, route }) {
 
   const getCheckoutItemTitle = (item) => {
     const packageType = item?.packageType || 'OneTime';
+    if (packageType === 'Membership') {
+      return item?.serviceName || item?.title || 'Woosh Black';
+    }
     if (packageType !== 'OneTime') {
       if (item?.serviceName) return item.serviceName;
       if (typeof item?.title === 'string' && item.title.includes(' - ')) {
@@ -196,12 +209,32 @@ export default function CheckoutScreen({ navigation, route }) {
     setDiscount(0);
   };
 
+  const removeCheckoutItem = useCallback(
+    (id) => {
+      setCheckoutCartItems((prev) => {
+        const next = prev.filter((i) => i.id !== id);
+        AsyncStorage.setItem('cartItems', JSON.stringify(next)).catch(() => {});
+        if (next.length === 0) {
+          setTimeout(() => navigation.goBack(), 0);
+        }
+        return next;
+      });
+      setAppliedCoupon(null);
+      setDiscount(0);
+    },
+    [navigation]
+  );
+
   const baseTotalAfterDiscount = total - discount;
   const walletUsable = useWallet ? Math.min(walletBalance, baseTotalAfterDiscount) : 0;
   const finalTotal = baseTotalAfterDiscount - walletUsable;
-  const isPackageCheckout = cartItems.some((item) => (item?.packageType || 'OneTime') !== 'OneTime');
+  const isPackageCheckout = checkoutCartItems.some((item) => {
+    const t = item?.packageType || 'OneTime';
+    return t !== 'OneTime' && t !== 'Membership';
+  });
 
   const isScheduleComplete = (item) => {
+    if (item?.packageType === 'Membership') return true;
     const packageType = item?.packageType || 'OneTime';
     if (packageType === 'OneTime') {
       return Boolean(item?.selectedDate && item?.selectedTimeSlot);
@@ -213,6 +246,8 @@ export default function CheckoutScreen({ navigation, route }) {
   };
 
   const handlePayNow = async () => {
+    if (checkoutCartItems.length === 0) return;
+
     // Validate address and vehicle before proceeding
     if (!address || !address.address || address.address.trim() === '') {
       Alert.alert(
@@ -244,7 +279,7 @@ export default function CheckoutScreen({ navigation, route }) {
       return;
     }
 
-    const incomplete = cartItems.find(i => !isScheduleComplete(i));
+    const incomplete = checkoutCartItems.find((i) => !isScheduleComplete(i));
     if (incomplete) {
       Alert.alert('Select slot(s) required', 'Please select the required slot(s) for all items before placing the order.');
       navigation.navigate('Cart');
@@ -252,7 +287,7 @@ export default function CheckoutScreen({ navigation, route }) {
     }
 
     if (isPackageCheckout) {
-      const primaryItem = cartItems[0];
+      const primaryItem = checkoutCartItems[0];
       const packageName =
         primaryItem?.serviceName ||
         (typeof primaryItem?.title === 'string' ? primaryItem.title.split(' - ')[0] : '') ||
@@ -261,7 +296,7 @@ export default function CheckoutScreen({ navigation, route }) {
         amount: `₹${finalTotal.toFixed(2)}`,
         serviceName: packageName,
         fromCheckout: true,
-        cartItems,
+        cartItems: checkoutCartItems,
         subtotal,
         tax,
         total,
@@ -272,7 +307,17 @@ export default function CheckoutScreen({ navigation, route }) {
     }
 
     try {
-      const itemsPayload = cartItems.map((item) => {
+      const itemsPayload = checkoutCartItems.map((item) => {
+        if (item.packageType === 'Membership') {
+          if (!item.serviceId) {
+            throw new Error('Membership product is not configured');
+          }
+          return {
+            serviceId: item.serviceId,
+            packageType: 'Membership',
+            packageTimes: 1,
+          };
+        }
         const addOnIds = (item.addOns || []).map(addOn => addOn?._id || addOn).filter(Boolean);
         if (!item.serviceId) {
           throw new Error('Service ID missing from cart item');
@@ -446,10 +491,14 @@ export default function CheckoutScreen({ navigation, route }) {
         <View style={styles.itemsSection}>
           <Text style={styles.sectionTitle}>Items</Text>
           <View style={styles.itemsContainer}>
-            {cartItems.map((item) => (
+            {checkoutCartItems.map((item) => (
               <View key={item.id} style={styles.itemRow}>
-                <Image 
-                  source={{ uri: item.image }} 
+                <Image
+                  source={
+                    item.packageType === 'Membership'
+                      ? require('../assets/appicon.png')
+                      : { uri: item.image }
+                  }
                   style={styles.itemImage}
                   resizeMode="cover"
                 />
@@ -457,7 +506,17 @@ export default function CheckoutScreen({ navigation, route }) {
                   <Text style={styles.itemTitle}>{getCheckoutItemTitle(item)}</Text>
                   <Text style={styles.itemQuantity}>Quantity: {item.quantity}</Text>
                 </View>
-                <Text style={styles.itemPrice}>₹{item.price * item.quantity}</Text>
+                <View style={styles.itemRowRight}>
+                  <Text style={styles.itemPrice}>₹{item.price * item.quantity}</Text>
+                  <TouchableOpacity
+                    style={styles.checkoutRemoveTouch}
+                    onPress={() => removeCheckoutItem(item.id)}
+                    accessibilityRole="button"
+                    accessibilityLabel="Remove item from order"
+                  >
+                    <MaterialCommunityIcons name="trash-can-outline" size={22} color="#b91c1c" />
+                  </TouchableOpacity>
+                </View>
               </View>
             ))}
           </View>
@@ -729,6 +788,14 @@ const createStyles = theme => StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#0B0B0B',
+  },
+  itemRowRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  checkoutRemoveTouch: {
+    padding: 4,
   },
   couponSection: {
     marginTop: 24,

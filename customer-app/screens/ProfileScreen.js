@@ -8,6 +8,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getVehicleKeys } from '../services/addressStorage';
 import { getVehicles } from '../services/vehicleApi';
 import { getWallet, getReferralInfo } from '../services/walletApi';
+import { getMyMembership } from '../services/membershipApi';
 import { useTheme } from '../theme/ThemeContext';
 import { useFocusEffect } from '@react-navigation/native';
 import SavedVehiclesModal from '../components/SavedVehiclesModal';
@@ -36,6 +37,7 @@ export default function ProfileScreen({ navigation }) {
     perReferralRewardReferrer: 100,
     perReferralRewardReferred: 100,
   });
+  const [membershipInfo, setMembershipInfo] = useState(null);
 
   useEffect(() => {
     const loadProfile = async () => {
@@ -52,6 +54,28 @@ export default function ProfileScreen({ navigation }) {
           if (wallet.walletBalance && wallet.walletBalance > 0) {
             walletBalance = `₹${wallet.walletBalance}`;
           }
+          try {
+            const token = await AsyncStorage.getItem('authToken');
+            if (token) {
+              const mem = await getMyMembership();
+              if (mem?.success && mem.data?.active && mem.data?.membership) {
+                const m = mem.data.membership;
+                setMembershipInfo({
+                  planLabel: m.planLabel || 'Woosh Black',
+                  discountPercent: Number(m.discountPercent) || 0,
+                  endsAt: m.endsAt,
+                });
+              } else {
+                setMembershipInfo(null);
+              }
+            } else {
+              setMembershipInfo(null);
+            }
+          } catch {
+            setMembershipInfo(null);
+          }
+        } else {
+          setMembershipInfo(null);
         }
 
         setUserData(prev => ({
@@ -125,6 +149,26 @@ export default function ProfileScreen({ navigation }) {
               perReferralRewardReferrer: referral.perReferralRewardReferrer ?? prev.perReferralRewardReferrer,
               perReferralRewardReferred: referral.perReferralRewardReferred ?? prev.perReferralRewardReferred,
             }));
+          }
+          try {
+            const token = await AsyncStorage.getItem('authToken');
+            if (token) {
+              const mem = await getMyMembership();
+              if (mem?.success && mem.data?.active && mem.data?.membership) {
+                const m = mem.data.membership;
+                setMembershipInfo({
+                  planLabel: m.planLabel || 'Woosh Black',
+                  discountPercent: Number(m.discountPercent) || 0,
+                  endsAt: m.endsAt,
+                });
+              } else {
+                setMembershipInfo(null);
+              }
+            } else {
+              setMembershipInfo(null);
+            }
+          } catch {
+            setMembershipInfo(null);
           }
         } catch (error) {
           console.warn('Failed to refresh vehicle:', error);
@@ -218,6 +262,40 @@ export default function ProfileScreen({ navigation }) {
             </View>
           </View>
         )}
+
+        {membershipInfo ? (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <MaterialCommunityIcons name="crown-outline" size={24} color={theme.accent} />
+              <Text style={styles.sectionTitle}>Membership</Text>
+            </View>
+            <View style={styles.membershipCard}>
+              <Text style={styles.membershipTitle}>Active {membershipInfo.planLabel}</Text>
+              {membershipInfo.discountPercent > 0 ? (
+                <Text style={styles.membershipLine}>
+                  {membershipInfo.discountPercent}% off car, bike and auto washes while your plan is active.
+                </Text>
+              ) : (
+                <Text style={styles.membershipLine}>Your member benefits apply at checkout on wash services.</Text>
+              )}
+              {membershipInfo.discountPercent > 0 ? (
+                <Text style={styles.membershipPriceHint}>
+                  Woosh Black discount {membershipInfo.discountPercent}%
+                </Text>
+              ) : null}
+              {membershipInfo.endsAt ? (
+                <Text style={styles.membershipSub}>
+                  Valid through{' '}
+                  {new Date(membershipInfo.endsAt).toLocaleDateString('en-IN', {
+                    day: 'numeric',
+                    month: 'short',
+                    year: 'numeric',
+                  })}
+                </Text>
+              ) : null}
+            </View>
+          </View>
+        ) : null}
 
         {/* Refer & Earn Section */}
         <View style={styles.section}>
@@ -820,6 +898,36 @@ const createStyles = theme => StyleSheet.create({
     padding: 16,
     borderWidth: 1,
     borderColor: theme.cardBorder,
+  },
+  membershipCard: {
+    backgroundColor: theme.cardBackground,
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: theme.cardBorder,
+  },
+  membershipTitle: {
+    fontSize: 17,
+    fontWeight: '800',
+    color: theme.textPrimary,
+    marginBottom: 8,
+  },
+  membershipLine: {
+    fontSize: 14,
+    lineHeight: 20,
+    color: theme.textSecondary,
+    marginBottom: 8,
+  },
+  membershipPriceHint: {
+    fontSize: 13,
+    lineHeight: 19,
+    color: theme.textSecondary,
+    marginBottom: 8,
+  },
+  membershipSub: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: theme.textPrimary,
   },
   referralSubtitle: {
     fontSize: 13,

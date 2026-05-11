@@ -1,24 +1,160 @@
-import React, { useMemo } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
+import React, { useMemo, useEffect, useState, useCallback } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Image, Alert, ActivityIndicator } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useFocusEffect } from '@react-navigation/native';
 import { useTheme } from '../theme/ThemeContext';
+import { getMembershipPlans, getMyMembership } from '../services/membershipApi';
 
 const BLACK = '#0a0a0a';
 const GREY = '#6b7280';
 
+const DEFAULT_PLAN = {
+  durationMonths: 12,
+  price: 499,
+  mrp: 1200,
+  discountPercent: 40,
+};
+
 /**
- * Woosh Black membership promo card (UI only).
- * White top, black footer, accent blue (matches app theme).
+ * Woosh Black membership card — loads plan from API, merges into cart (AsyncStorage) so the user stays on the screen.
  */
-export default function WooshBlackCard({
-  durationMonths = 12,
-  price = 499,
-  originalPrice = 1200,
-  savingsPercent = 40,
-  onPressAdd,
-}) {
+export default function WooshBlackCard({ navigation }) {
   const { theme } = useTheme();
   const styles = useMemo(() => createStyles(theme.accent), [theme.accent]);
+  const [plan, setPlan] = useState(null);
+  const [loadingPlan, setLoadingPlan] = useState(true);
+  const [adding, setAdding] = useState(false);
+  const [membershipInCart, setMembershipInCart] = useState(false);
+
+  const refreshMembershipInCart = useCallback(async () => {
+    try {
+      const raw = await AsyncStorage.getItem('cartItems');
+      const parsed = raw ? JSON.parse(raw) : [];
+      const list = Array.isArray(parsed) ? parsed : [];
+      setMembershipInCart(list.some((i) => i?.packageType === 'Membership'));
+    } catch (_) {
+      setMembershipInCart(false);
+    }
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      refreshMembershipInCart();
+    }, [refreshMembershipInCart])
+  );
+
+  useEffect(() => {
+    refreshMembershipInCart();
+  }, [refreshMembershipInCart]);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await getMembershipPlans();
+        if (cancelled) return;
+        const list = res?.data || [];
+        const row = list.find((p) => p.planId === 'woosh_black') || list[0];
+        if (row) {
+          setPlan(row);
+        } else {
+          setPlan(null);
+        }
+      } catch (e) {
+        if (!cancelled) setPlan(null);
+      } finally {
+        if (!cancelled) setLoadingPlan(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const durationMonths = plan?.durationMonths ?? DEFAULT_PLAN.durationMonths;
+  const price = plan?.price ?? DEFAULT_PLAN.price;
+  const originalPrice = plan?.mrp ?? DEFAULT_PLAN.mrp;
+  const savingsPercent = plan?.discountPercent ?? DEFAULT_PLAN.discountPercent;
+
+  const handleAdd = useCallback(async () => {
+    try {
+      setAdding(true);
+      const token = await AsyncStorage.getItem('authToken');
+      if (!token) {
+        Alert.alert('Sign in required', 'Please log in to add Woosh Black to your cart.', [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Log in', onPress: () => navigation.navigate('Login') },
+        ]);
+        return;
+      }
+      if (!plan?.serviceId) {
+        Alert.alert(
+          'Unavailable',
+          'Woosh Black is not set up on the server yet. Ask an admin to run the membership seed script.',
+        );
+        return;
+      }
+      try {
+        const me = await getMyMembership();
+        if (me?.success && me.data?.active) {
+          Alert.alert('Woosh Black', 'You already have an active membership.');
+          return;
+        }
+      } catch (_) {
+        // ignore 401 etc.; cart + order will still enforce auth
+      }
+
+      const newItem = {
+        id: 'membership_woosh_black',
+        serviceId: plan.serviceId,
+        serviceName: plan.name || 'Woosh Black',
+        title: `${plan.name || 'Woosh Black'} – ${plan.durationMonths || 12} months`,
+        packageType: 'Membership',
+        packageTimes: 1,
+        planId: plan.planId || 'woosh_black',
+        price: Number(plan.price) || 0,
+        quantity: 1,
+        addOns: [],
+      };
+
+      const raw = await AsyncStorage.getItem('cartItems');
+      let list = [];
+      try {
+        const parsed = raw ? JSON.parse(raw) : [];
+        list = Array.isArray(parsed) ? parsed : [];
+      } catch (_) {
+        list = [];
+      }
+      if (list.some((i) => i.packageType === 'Membership')) {
+        setMembershipInCart(true);
+        return;
+      }
+      await AsyncStorage.setItem('cartItems', JSON.stringify([...list, newItem]));
+      setMembershipInCart(true);
+    } finally {
+      setAdding(false);
+    }
+  }, [navigation, plan]);
+
+  const handleRemove = useCallback(async () => {
+    try {
+      setAdding(true);
+      const raw = await AsyncStorage.getItem('cartItems');
+      let list = [];
+      try {
+        const parsed = raw ? JSON.parse(raw) : [];
+        list = Array.isArray(parsed) ? parsed : [];
+      } catch (_) {
+        list = [];
+      }
+      const next = list.filter((i) => i?.packageType !== 'Membership');
+      await AsyncStorage.setItem('cartItems', JSON.stringify(next));
+      setMembershipInCart(false);
+    } finally {
+      setAdding(false);
+    }
+  }, []);
 
   return (
     <View style={styles.outer}>
@@ -50,13 +186,23 @@ export default function WooshBlackCard({
               <Text style={styles.priceStrike}>₹{originalPrice}</Text>
             </View>
             <TouchableOpacity
-              style={styles.addButton}
+              style={[
+                membershipInCart ? styles.removeButton : styles.addButton,
+                (loadingPlan || adding) && styles.addButtonDisabled,
+              ]}
               activeOpacity={0.85}
-              onPress={onPressAdd}
+              onPress={membershipInCart ? handleRemove : handleAdd}
+              disabled={loadingPlan || adding}
               accessibilityRole="button"
-              accessibilityLabel="Add Woosh Black"
+              accessibilityLabel={membershipInCart ? 'Remove Woosh Black from cart' : 'Add Woosh Black to cart'}
             >
-              <Text style={styles.addButtonText}>Add</Text>
+              {adding ? (
+                <ActivityIndicator size="small" color={membershipInCart ? '#b91c1c' : BLACK} />
+              ) : (
+                <Text style={membershipInCart ? styles.removeButtonText : styles.addButtonText}>
+                  {membershipInCart ? 'Remove' : 'Add'}
+                </Text>
+              )}
             </TouchableOpacity>
           </View>
         </View>
@@ -171,10 +317,29 @@ function createStyles(accent) {
     alignItems: 'center',
     justifyContent: 'center',
   },
+  addButtonDisabled: {
+    opacity: 0.65,
+  },
   addButtonText: {
     fontSize: 13,
     fontWeight: '800',
     color: BLACK,
+  },
+  removeButton: {
+    backgroundColor: '#fff',
+    borderWidth: 1.5,
+    borderColor: '#b91c1c',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 7,
+    minWidth: 58,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  removeButtonText: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: '#b91c1c',
   },
   bottomSection: {
     backgroundColor: BLACK,

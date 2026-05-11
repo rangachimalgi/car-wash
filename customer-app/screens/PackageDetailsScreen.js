@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import { Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -6,6 +6,10 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import BackHeader from '../components/BackHeader';
 import { useTheme } from '../theme/ThemeContext';
 import { getPackagePricing } from '../services/packagePricingApi';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useFocusEffect } from '@react-navigation/native';
+import { getMyMembership } from '../services/membershipApi';
+import { applyWooshMembershipDiscount } from '../utils/membershipPricing';
 
 const DAILY_CLEANING_OPTIONS = ['Daily (Sun - Sat)', 'Alternate days (~15 days / month)'];
 const TIME_SLOTS = ['7:00 AM - 8:00 AM', '8:00 AM - 9:00 AM', '10:00 AM - 11:00 AM'];
@@ -123,7 +127,35 @@ export default function PackageDetailsScreen({ navigation, route }) {
   const [pricingConfig, setPricingConfig] = useState(null);
   const [pricingMessage, setPricingMessage] = useState('');
   const [loadingPricing, setLoadingPricing] = useState(true);
-  
+  const [membershipWashDiscountPercent, setMembershipWashDiscountPercent] = useState(0);
+
+  useFocusEffect(
+    useCallback(() => {
+      let cancelled = false;
+      (async () => {
+        try {
+          const token = await AsyncStorage.getItem('authToken');
+          if (!token) {
+            if (!cancelled) setMembershipWashDiscountPercent(0);
+            return;
+          }
+          const res = await getMyMembership();
+          if (cancelled) return;
+          const pct =
+            res?.success && res.data?.active
+              ? Number(res.data.membership?.discountPercent || 0)
+              : 0;
+          setMembershipWashDiscountPercent(Math.min(100, Math.max(0, pct)));
+        } catch {
+          if (!cancelled) setMembershipWashDiscountPercent(0);
+        }
+      })();
+      return () => {
+        cancelled = true;
+      };
+    }, [])
+  );
+
   useEffect(() => {
     let cancelled = false;
     const loadPricing = async () => {
@@ -209,6 +241,10 @@ export default function PackageDetailsScreen({ navigation, route }) {
   const selectedDailyModeKey = dailyMode.startsWith('Daily') ? 'daily' : 'alternate';
   const pricingKey = `i${selectedInteriorCount}_e${selectedExteriorCount}_${selectedDailyModeKey}`;
   const resolvedPrice = Number(pricingConfig?.pricingMatrix?.[pricingKey] || 0);
+  const resolvedPriceMember = applyWooshMembershipDiscount(
+    Math.round(resolvedPrice),
+    membershipWashDiscountPercent
+  );
 
   const canContinue =
     interiorDates.length >= 1 &&
@@ -326,7 +362,21 @@ export default function PackageDetailsScreen({ navigation, route }) {
       <View style={styles.footer}>
         <View style={styles.priceWrap}>
           <Text style={styles.priceLabel}>Package Price</Text>
-          <Text style={styles.priceValue}>{resolvedPrice > 0 ? `₹${Math.round(resolvedPrice)}` : '—'}</Text>
+          {resolvedPrice > 0 ? (
+            membershipWashDiscountPercent > 0 ? (
+              <View>
+                <Text style={styles.priceValueStrike}>₹{Math.round(resolvedPrice)}</Text>
+                <Text style={styles.priceValue}>₹{resolvedPriceMember}</Text>
+                <Text style={styles.memberHint}>
+                  Woosh Black discount {membershipWashDiscountPercent}%
+                </Text>
+              </View>
+            ) : (
+              <Text style={styles.priceValue}>₹{Math.round(resolvedPrice)}</Text>
+            )
+          ) : (
+            <Text style={styles.priceValue}>—</Text>
+          )}
         </View>
         <TouchableOpacity
           style={[styles.continueButton, !canContinue && styles.continueButtonDisabled]}
@@ -339,8 +389,8 @@ export default function PackageDetailsScreen({ navigation, route }) {
               serviceName,
               title: `${serviceName} - Custom Monthly Package`,
               image: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=300&h=200&fit=crop&auto=format',
-              basePrice: Math.round(resolvedPrice),
-              price: Math.round(resolvedPrice),
+              basePrice: resolvedPriceMember,
+              price: resolvedPriceMember,
               quantity: 1,
               addOns: selectedAddOns,
               packageType: 'Monthly',
@@ -357,12 +407,12 @@ export default function PackageDetailsScreen({ navigation, route }) {
                 exteriorDates,
                 dailyMode,
                 pricingKey,
-                packagePrice: resolvedPrice,
+                packagePrice: resolvedPriceMember,
                 pricingVersion: pricingConfig?.updatedAt || null,
               },
             };
 
-            const subtotal = Number(resolvedPrice || 0);
+            const subtotal = Number(resolvedPriceMember || 0);
             const tax = subtotal * 0.18;
             const total = subtotal + tax;
 
@@ -598,6 +648,19 @@ const createStyles = (theme) => StyleSheet.create({
     color: theme.textPrimary,
     fontWeight: '900',
     letterSpacing: -0.3,
+  },
+  priceValueStrike: {
+    marginTop: 2,
+    fontSize: 16,
+    color: theme.textSecondary,
+    fontWeight: '600',
+    textDecorationLine: 'line-through',
+  },
+  memberHint: {
+    marginTop: 4,
+    fontSize: 12,
+    fontWeight: '700',
+    color: theme.accent,
   },
   continueButton: {
     height: 50,

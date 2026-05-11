@@ -10,7 +10,7 @@ const serviceSchema = new mongoose.Schema({
     type: String,
     required: [
       function () {
-        return this.category !== 'AddOn' && this.category !== 'Coverage';
+        return this.category !== 'AddOn' && this.category !== 'Coverage' && this.category !== 'Membership';
       },
       'Service description is required',
     ],
@@ -20,7 +20,7 @@ const serviceSchema = new mongoose.Schema({
   category: {
     type: String,
     required: [true, 'Service category is required'],
-    enum: ['CarWash', 'BikeWash', 'AutoWash', 'AddOn', 'Coverage'],
+    enum: ['CarWash', 'BikeWash', 'AutoWash', 'AddOn', 'Coverage', 'Membership'],
     index: true,
   },
   basePrice: {
@@ -32,7 +32,7 @@ const serviceSchema = new mongoose.Schema({
     type: String,
     required: [
       function () {
-        return this.category !== 'AddOn' && this.category !== 'Coverage';
+        return this.category !== 'AddOn' && this.category !== 'Coverage' && this.category !== 'Membership';
       },
       'Duration is required',
     ],
@@ -60,6 +60,23 @@ const serviceSchema = new mongoose.Schema({
     type: Boolean,
     default: true,
     index: true,
+  },
+  /** For Membership category: strikethrough / display MRP */
+  listPrice: {
+    type: Number,
+    min: 0,
+    default: 0,
+  },
+  membershipDurationMonths: {
+    type: Number,
+    min: 1,
+    default: 12,
+  },
+  membershipDiscountPercent: {
+    type: Number,
+    min: 0,
+    max: 100,
+    default: 0,
   },
   /** Display order for wash services (CarWash / BikeWash / AutoWash). Lower = earlier in lists. */
   sortOrder: {

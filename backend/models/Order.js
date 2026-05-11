@@ -17,7 +17,7 @@ const orderItemSchema = new mongoose.Schema({
   }],
   packageType: {
     type: String,
-    enum: ['OneTime', 'Monthly', 'Quarterly', 'Yearly'],
+    enum: ['OneTime', 'Monthly', 'Quarterly', 'Yearly', 'Membership'],
     default: 'OneTime',
   },
   packageTimes: {

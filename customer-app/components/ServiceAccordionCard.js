@@ -4,6 +4,10 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { resolveAssetUrl } from '../config/api';
 import { useTheme } from '../theme/ThemeContext';
 import AddOnServicesList from './AddOnServicesList';
+import {
+  applyWooshMembershipDiscount,
+  scaleLineItemsToDiscountedGross,
+} from '../utils/membershipPricing';
 
 function toTitleCase(value) {
   const s = String(value || '').trim();
@@ -50,6 +54,7 @@ export default function ServiceAccordionCard({
   hideOneTimeWash = false,
   hideAddServices = false,
   bookingServiceId,
+  membershipDiscountPercent = 0,
 }) {
   const resolvedServiceId = bookingServiceId || service?._id || serviceSummary?._id;
   const [imageError, setImageError] = useState(false);
@@ -109,19 +114,28 @@ export default function ServiceAccordionCard({
 
   const addOnsTotal = calculateAddOnsTotal();
 
+  const memberPct = Math.min(100, Math.max(0, Number(membershipDiscountPercent) || 0));
+
   const handleBookOneTime = () => {
     if (!resolvedServiceId) return;
     const addOns = resolveSelectedAddOnsDetails();
+    const gross = Math.round(oneTimePrice + addOns.reduce((t, a) => t + (Number(a.price) || 0), 0));
+    const scaled = scaleLineItemsToDiscountedGross({
+      basePrice: oneTimePrice,
+      addOns,
+      grossBeforeDiscount: gross,
+      discountPercent: memberPct,
+    });
     const item = {
       id: `oneTime_${Date.now()}`,
       serviceId: resolvedServiceId,
       serviceName: service?.name || serviceSummary?.name,
       title: `${service?.name || serviceSummary?.name} - 1 Time Wash`,
       image: imageUri,
-      basePrice: Math.round(oneTimePrice),
-      price: Math.round(oneTimePrice + addOns.reduce((t, a) => t + (Number(a.price) || 0), 0)),
+      basePrice: scaled.basePrice,
+      price: scaled.price,
       quantity: 1,
-      addOns,
+      addOns: scaled.addOns,
       packageType: 'OneTime',
     };
     navigation?.navigate('Cart', { addItem: item });
@@ -140,16 +154,23 @@ export default function ServiceAccordionCard({
     if (!resolvedServiceId) return;
     const addOns = resolveSelectedAddOnsDetails();
     const addOnsTotalForPackage = addOns.reduce((t, a) => t + (Number(a.price) || 0), 0) * pkg.times;
+    const pkgP = Math.round(Number(pkg.price || 0));
+    const gross = Math.round(pkgP + addOnsTotalForPackage);
+    const discounted = applyWooshMembershipDiscount(gross, memberPct);
+    const factor = gross > 0 ? discounted / gross : 1;
     const item = {
       id: `pkg_${pkg.id}_${Date.now()}`,
       serviceId: resolvedServiceId,
       serviceName: service?.name || serviceSummary?.name,
       title: `${service?.name || serviceSummary?.name} - Monthly (${pkg.times}x/month)`,
       image: imageUri,
-      basePrice: Math.round(Number(pkg.price || 0)),
-      price: Math.round(Number(pkg.price || 0) + addOnsTotalForPackage),
+      basePrice: Math.round(pkgP * factor),
+      price: discounted,
       quantity: 1,
-      addOns,
+      addOns: addOns.map((a) => ({
+        ...a,
+        price: Math.round((Number(a.price) || 0) * factor),
+      })),
       packageType: 'Monthly',
       packageTimes: pkg.times,
     };
@@ -224,8 +245,21 @@ export default function ServiceAccordionCard({
               <View style={styles.priceSection}>
                 <Text style={styles.cardPriceLine} numberOfLines={1}>
                   <Text style={styles.cardPricePrefix}>Starting </Text>
-                  <Text style={styles.cardPriceValue}>₹{Math.round(oneTimePrice)}</Text>
+                  {memberPct > 0 ? (
+                    <>
+                      <Text style={styles.cardPriceStrike}>₹{Math.round(oneTimePrice)}</Text>
+                      <Text style={styles.cardPriceValue}>
+                        {' '}
+                        ₹{applyWooshMembershipDiscount(Math.round(oneTimePrice), memberPct)}
+                      </Text>
+                    </>
+                  ) : (
+                    <Text style={styles.cardPriceValue}>₹{Math.round(oneTimePrice)}</Text>
+                  )}
                 </Text>
+                {memberPct > 0 ? (
+                  <Text style={styles.memberPriceHint}>Woosh Black discount {memberPct}%</Text>
+                ) : null}
               </View>
             </View>
           </>
@@ -275,11 +309,26 @@ export default function ServiceAccordionCard({
             <View style={styles.dividerLine} />
           </View>
 
+          {memberPct > 0 ? (
+            <Text style={styles.memberDiscountCaption}>Woosh Black discount {memberPct}%</Text>
+          ) : null}
+
           {!hideOneTimeWash ? (
             <View style={styles.oneTimeCard}>
               <View style={styles.oneTimeContent}>
                 <Text style={styles.oneTimeLabel}>1-Time Wash</Text>
-                <Text style={styles.oneTimePrice}>₹{Math.round(oneTimePrice + addOnsTotal)}</Text>
+                {memberPct > 0 ? (
+                  <View>
+                    <Text style={styles.oneTimePriceStrike}>
+                      ₹{Math.round(oneTimePrice + addOnsTotal)}
+                    </Text>
+                    <Text style={styles.oneTimePrice}>
+                      ₹{applyWooshMembershipDiscount(Math.round(oneTimePrice + addOnsTotal), memberPct)}
+                    </Text>
+                  </View>
+                ) : (
+                  <Text style={styles.oneTimePrice}>₹{Math.round(oneTimePrice + addOnsTotal)}</Text>
+                )}
               </View>
               <TouchableOpacity style={styles.bookButtonPrimary} onPress={handleBookOneTime} activeOpacity={0.85}>
                 <Text style={styles.bookTextPrimary}>Book</Text>
@@ -313,11 +362,22 @@ export default function ServiceAccordionCard({
                 const addOnsForPackage = addOnsTotal * pkg.times;
                 const totalWithAddOns = pkg.price + addOnsForPackage;
                 const perWashWithAddOns = (pkg.price + addOnsForPackage) / pkg.times;
+                const discTotal = applyWooshMembershipDiscount(Math.round(totalWithAddOns), memberPct);
+                const discPerWash = memberPct > 0 ? discTotal / pkg.times : perWashWithAddOns;
                 return (
                   <View key={pkg.id} style={styles.monthlyCard}>
                     <View style={styles.monthlyContent}>
                       <Text style={styles.monthlyTimes}>{pkg.times}x Wash/Month</Text>
-                      <Text style={styles.monthlyTotalPrice}>₹{Math.round(totalWithAddOns)} • ₹{Math.round(perWashWithAddOns)}/wash</Text>
+                      {memberPct > 0 ? (
+                        <Text style={styles.monthlyTotalPrice}>
+                          <Text style={styles.oneTimePriceStrike}>₹{Math.round(totalWithAddOns)} • </Text>
+                          ₹{Math.round(discTotal)} • ₹{Math.round(discPerWash)}/wash
+                        </Text>
+                      ) : (
+                        <Text style={styles.monthlyTotalPrice}>
+                          ₹{Math.round(totalWithAddOns)} • ₹{Math.round(perWashWithAddOns)}/wash
+                        </Text>
+                      )}
                     </View>
                     <TouchableOpacity style={styles.bookButtonSecondary} onPress={() => handleBookMonthlyStandard(pkg)} activeOpacity={0.85}>
                       <Text style={styles.bookTextSecondary}>Book</Text>
@@ -486,6 +546,25 @@ const createStyles = (theme) =>
       fontWeight: '900',
       color: '#0B0B0B',
     },
+    cardPriceStrike: {
+      fontSize: 15,
+      fontWeight: '700',
+      color: '#555555',
+      textDecorationLine: 'line-through',
+    },
+    memberPriceHint: {
+      marginTop: 4,
+      fontSize: 11,
+      fontWeight: '700',
+      color: '#0B0B0B',
+      textAlign: 'right',
+    },
+    memberDiscountCaption: {
+      fontSize: 11,
+      fontWeight: '700',
+      color: theme.textSecondary,
+      marginBottom: 10,
+    },
 
     // Expanded section (enhanced design)
     expandedArea: {
@@ -603,6 +682,13 @@ const createStyles = (theme) =>
       fontWeight: '900',
       color: theme.textPrimary,
       letterSpacing: -0.3,
+    },
+    oneTimePriceStrike: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: theme.textSecondary,
+      textDecorationLine: 'line-through',
+      marginBottom: 2,
     },
     bookButtonPrimary: {
       backgroundColor: '#000000',

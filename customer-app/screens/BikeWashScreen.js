@@ -1,16 +1,20 @@
-import React, { useMemo, useState, useEffect, useRef } from 'react';
+import React, { useMemo, useState, useEffect, useRef, useCallback } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Alert, RefreshControl, Dimensions } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import BackHeader from '../components/BackHeader';
+import WooshBlackCard from '../components/WooshBlackCard';
 import ServiceAccordionCard from '../components/ServiceAccordionCard';
 import ServiceDetailsBottomSheet from '../components/ServiceDetailsBottomSheet';
 import AddOnServicesList from '../components/AddOnServicesList';
 import PricingPackages, { AddToCartButton } from '../components/PricingPackages';
 import ServiceCoverage from '../components/ServiceCoverage';
 import { resolveAssetUrl } from '../config/api';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useFocusEffect } from '@react-navigation/native';
 import { getServiceById, getServicesByCategory } from '../services/serviceApi';
+import { getMyMembership } from '../services/membershipApi';
 import { useTheme } from '../theme/ThemeContext';
 
 const { height } = Dimensions.get('window');
@@ -40,6 +44,34 @@ export default function BikeWashScreen({ navigation }) {
   const bottomSheetRef = useRef(null);
   const { theme, isLightMode } = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
+  const [membershipWashDiscountPercent, setMembershipWashDiscountPercent] = useState(0);
+
+  useFocusEffect(
+    useCallback(() => {
+      let cancelled = false;
+      (async () => {
+        try {
+          const token = await AsyncStorage.getItem('authToken');
+          if (!token) {
+            if (!cancelled) setMembershipWashDiscountPercent(0);
+            return;
+          }
+          const res = await getMyMembership();
+          if (cancelled) return;
+          const pct =
+            res?.success && res.data?.active
+              ? Number(res.data.membership?.discountPercent || 0)
+              : 0;
+          setMembershipWashDiscountPercent(Math.min(100, Math.max(0, pct)));
+        } catch {
+          if (!cancelled) setMembershipWashDiscountPercent(0);
+        }
+      })();
+      return () => {
+        cancelled = true;
+      };
+    }, [])
+  );
 
   useEffect(() => {
     fetchServices();
@@ -242,8 +274,8 @@ export default function BikeWashScreen({ navigation }) {
         }
       >
         <View style={styles.content}>
-          {/* <Text style={styles.browseTitle}>browse woosh!</Text> */}
-          
+          <WooshBlackCard navigation={navigation} />
+
           {services.length === 0 ? (
             <View style={styles.emptyContainer}>
               <MaterialCommunityIcons name="motorbike" size={64} color={theme.textSecondary} />
@@ -265,6 +297,7 @@ export default function BikeWashScreen({ navigation }) {
                   navigation={navigation}
                   fallbackImageSource={FALLBACK_BIKE_IMAGE}
                   fallbackAddOns={FALLBACK_ADD_ONS}
+                  membershipDiscountPercent={membershipWashDiscountPercent}
                 />
               </View>
             ))
@@ -307,6 +340,7 @@ export default function BikeWashScreen({ navigation }) {
                   addOnServices={getSheetAddOns()}
                   navigation={navigation}
                   action="add_to_cart"
+                  membershipDiscountPercent={membershipWashDiscountPercent}
                 />
               </View>
             }

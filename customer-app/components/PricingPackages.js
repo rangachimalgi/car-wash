@@ -2,6 +2,10 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTheme } from '../theme/ThemeContext';
+import {
+  applyWooshMembershipDiscount,
+  scaleLineItemsToDiscountedGross,
+} from '../utils/membershipPricing';
 
 // Details screen palette tweaks (lighter blue)
 const LIGHT_BLUE = '#85E4FC';
@@ -258,9 +262,11 @@ export function AddToCartButton({
   navigation,
   onSelectSlot,
   action = 'select_slot', // 'select_slot' | 'add_to_cart'
+  membershipDiscountPercent = 0,
 }) {
   const { theme } = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
+  const memberPct = Math.min(100, Math.max(0, Number(membershipDiscountPercent) || 0));
 
   // Use totalPrice if provided, otherwise calculate from base price
   const displayPrice = totalPrice !== undefined ? totalPrice : (() => {
@@ -273,6 +279,8 @@ export function AddToCartButton({
     return oneTimePrice;
   })();
 
+  const displayPriceMember = applyWooshMembershipDiscount(Math.round(displayPrice), memberPct);
+
   const handlePress = () => {
     if (!selectedPackage) return;
 
@@ -281,31 +289,59 @@ export function AddToCartButton({
     }).filter(Boolean);
 
     const item = selectedPackage === 'oneTime'
-      ? {
-          id: `oneTime_${Date.now()}`,
-          serviceId,
-          serviceName: serviceTitle,
-          title: `${serviceTitle} - 1 Time Wash`,
-          image: serviceImage || 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=300&h=200&fit=crop&auto=format',
-          basePrice: Math.round(oneTimePrice),
-          price: Math.round(displayPrice),
-          quantity: 1,
-          addOns: selectedAddOnsDetails,
-          packageType: 'OneTime',
-        }
-      : {
-          id: `pkg_${selectedPackage.id}_${Date.now()}`,
-          serviceId,
-          serviceName: serviceTitle,
-          title: `${serviceTitle} - ${selectedPackage.type} (${selectedPackage.times}x/month)`,
-          image: serviceImage || 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=300&h=200&fit=crop&auto=format',
-          basePrice: Math.round(selectedPackage.price || displayPrice),
-          price: Math.round(selectedPackage.price || displayPrice),
-          quantity: 1,
-          addOns: selectedAddOnsDetails,
-          packageType: selectedPackage.type,
-          packageTimes: selectedPackage.times,
-        };
+      ? (() => {
+          const gross = Math.round(
+            oneTimePrice +
+              selectedAddOnsDetails.reduce((t, a) => t + (Number(a.price) || 0), 0)
+          );
+          const scaled = scaleLineItemsToDiscountedGross({
+            basePrice: oneTimePrice,
+            addOns: selectedAddOnsDetails,
+            grossBeforeDiscount: gross,
+            discountPercent: memberPct,
+          });
+          return {
+            id: `oneTime_${Date.now()}`,
+            serviceId,
+            serviceName: serviceTitle,
+            title: `${serviceTitle} - 1 Time Wash`,
+            image:
+              serviceImage ||
+              'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=300&h=200&fit=crop&auto=format',
+            basePrice: scaled.basePrice,
+            price: scaled.price,
+            quantity: 1,
+            addOns: scaled.addOns,
+            packageType: 'OneTime',
+          };
+        })()
+      : (() => {
+          const pkgP = Math.round(Number(selectedPackage.price || 0));
+          const addSum =
+            selectedAddOnsDetails.reduce((t, a) => t + (Number(a.price) || 0), 0) *
+            Number(selectedPackage.times || 1);
+          const gross = Math.round(pkgP + addSum);
+          const discounted = applyWooshMembershipDiscount(gross, memberPct);
+          const factor = gross > 0 ? discounted / gross : 1;
+          return {
+            id: `pkg_${selectedPackage.id}_${Date.now()}`,
+            serviceId,
+            serviceName: serviceTitle,
+            title: `${serviceTitle} - ${selectedPackage.type} (${selectedPackage.times}x/month)`,
+            image:
+              serviceImage ||
+              'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=300&h=200&fit=crop&auto=format',
+            basePrice: Math.round(pkgP * factor),
+            price: discounted,
+            quantity: 1,
+            addOns: selectedAddOnsDetails.map((a) => ({
+              ...a,
+              price: Math.round((Number(a.price) || 0) * factor),
+            })),
+            packageType: selectedPackage.type,
+            packageTimes: selectedPackage.times,
+          };
+        })();
 
     if (action === 'add_to_cart') {
       if (navigation) {
@@ -327,7 +363,15 @@ export function AddToCartButton({
   return (
     <View style={styles.addToCartContainer}>
       <View style={styles.addToCartLeft}>
-        <Text style={styles.addToCartPrice}>₹{Math.round(displayPrice)}</Text>
+        {memberPct > 0 ? (
+          <View>
+            <Text style={styles.addToCartPriceStrike}>₹{Math.round(displayPrice)}</Text>
+            <Text style={styles.addToCartPrice}>₹{displayPriceMember}</Text>
+            <Text style={styles.addToCartMemberCaption}>Woosh Black discount {memberPct}%</Text>
+          </View>
+        ) : (
+          <Text style={styles.addToCartPrice}>₹{Math.round(displayPrice)}</Text>
+        )}
         <Text style={styles.addToCartDuration}>{duration || '50 mins'}</Text>
       </View>
       <TouchableOpacity 
@@ -496,6 +540,19 @@ const createStyles = theme => StyleSheet.create({
     fontWeight: 'bold',
     color: '#0B0B0B',
     marginBottom: 4,
+  },
+  addToCartPriceStrike: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: theme.textSecondary,
+    textDecorationLine: 'line-through',
+    marginBottom: 2,
+  },
+  addToCartMemberCaption: {
+    marginTop: 4,
+    fontSize: 11,
+    fontWeight: '700',
+    color: theme.textSecondary,
   },
   addToCartDuration: {
     fontSize: 14,

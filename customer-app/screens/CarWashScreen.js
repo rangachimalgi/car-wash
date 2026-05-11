@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect, useRef } from 'react';
+import React, { useMemo, useState, useEffect, useRef, useCallback } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Alert, RefreshControl, Dimensions } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -11,7 +11,10 @@ import PricingPackages, { AddToCartButton } from '../components/PricingPackages'
 import ServiceCoverage from '../components/ServiceCoverage';
 import WooshBlackCard from '../components/WooshBlackCard';
 import { resolveAssetUrl } from '../config/api';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useFocusEffect } from '@react-navigation/native';
 import { getServiceById, getServicesByCategory } from '../services/serviceApi';
+import { getMyMembership } from '../services/membershipApi';
 import { useTheme } from '../theme/ThemeContext';
 
 const { height } = Dimensions.get('window');
@@ -55,6 +58,34 @@ export default function CarWashScreen({ navigation, route }) {
   const bottomSheetRef = useRef(null);
   const { theme, isLightMode } = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
+  const [membershipWashDiscountPercent, setMembershipWashDiscountPercent] = useState(0);
+
+  useFocusEffect(
+    useCallback(() => {
+      let cancelled = false;
+      (async () => {
+        try {
+          const token = await AsyncStorage.getItem('authToken');
+          if (!token) {
+            if (!cancelled) setMembershipWashDiscountPercent(0);
+            return;
+          }
+          const res = await getMyMembership();
+          if (cancelled) return;
+          const pct =
+            res?.success && res.data?.active
+              ? Number(res.data.membership?.discountPercent || 0)
+              : 0;
+          setMembershipWashDiscountPercent(Math.min(100, Math.max(0, pct)));
+        } catch {
+          if (!cancelled) setMembershipWashDiscountPercent(0);
+        }
+      })();
+      return () => {
+        cancelled = true;
+      };
+    }, [])
+  );
 
   useEffect(() => {
     fetchServices();
@@ -257,12 +288,8 @@ export default function CarWashScreen({ navigation, route }) {
         }
       >
         <View style={styles.content}>
-          {screenCategory === 'CarWash' && (
-            <WooshBlackCard
-              onPressAdd={() =>
-                Alert.alert('Woosh Black', 'Membership coming soon — UI preview only.', [{ text: 'OK' }])
-              }
-            />
+          {(screenCategory === 'CarWash' || screenCategory === 'AutoWash') && (
+            <WooshBlackCard navigation={navigation} />
           )}
 
           {services.length === 0 ? (
@@ -286,6 +313,7 @@ export default function CarWashScreen({ navigation, route }) {
                   navigation={navigation}
                   fallbackImageSource={fallbackServiceImage}
                   fallbackAddOns={FALLBACK_ADD_ONS}
+                  membershipDiscountPercent={membershipWashDiscountPercent}
                 />
               </View>
             ))
@@ -328,6 +356,7 @@ export default function CarWashScreen({ navigation, route }) {
                   addOnServices={getSheetAddOns()}
                   navigation={navigation}
                   action="add_to_cart"
+                  membershipDiscountPercent={membershipWashDiscountPercent}
                 />
               </View>
             }

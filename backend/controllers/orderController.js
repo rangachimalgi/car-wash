@@ -2,11 +2,13 @@ import Order from '../models/Order.js';
 import Service from '../models/Service.js';
 import Employee from '../models/Employee.js';
 import User from '../models/User.js';
+import Membership from '../models/Membership.js';
 import Referral from '../models/Referral.js';
 import Coupon from '../models/Coupon.js';
 import { computeCouponDiscount } from './couponController.js';
 import { recordIncentiveForCompletedOrder } from '../services/employeeIncentiveService.js';
 import EmployeeUpsellEvent from '../models/EmployeeUpsellEvent.js';
+import { activateMembershipFromOrder } from '../services/membershipService.js';
 
 const TAX_RATE = 0.18;
 
@@ -46,6 +48,22 @@ const getPackagePrice = (service, packageType, packageTimes) => {
   const match = packages.find(pkg => Number(pkg.times) === Number(packageTimes));
   return match?.price ?? service.basePrice * Number(packageTimes || 1);
 };
+
+/** Active Woosh membership wash discount on (unitPrice + addOnsTotal) line. */
+function applyMembershipWashLineDiscount(unitPrice, addOnsTotal, discountPercent) {
+  const pct = Math.min(100, Math.max(0, Number(discountPercent) || 0));
+  const u = Number(unitPrice) || 0;
+  const a = Number(addOnsTotal) || 0;
+  const gross = u + a;
+  if (!pct || gross <= 0) {
+    return { unitPrice: u, addOnsTotal: a, lineTotal: gross };
+  }
+  const lineTotal = Math.round(gross * (1 - pct / 100));
+  const factor = gross > 0 ? lineTotal / gross : 1;
+  const unitPrice2 = Math.round(u * factor);
+  const addOnsTotal2 = lineTotal - unitPrice2;
+  return { unitPrice: unitPrice2, addOnsTotal: addOnsTotal2, lineTotal };
+}
 
 /**
  * Auto-generate slot dates for package orders
@@ -136,14 +154,62 @@ export const createOrder = async (req, res) => {
       });
     }
 
+    const nowMem = new Date();
+    let membershipWashDiscountPercent = 0;
+    try {
+      const activeMem = await Membership.findOne({
+        user: userId,
+        status: 'active',
+        endsAt: { $gt: nowMem },
+      })
+        .sort({ endsAt: -1 })
+        .select('discountPercent')
+        .lean();
+      membershipWashDiscountPercent = Math.min(
+        100,
+        Math.max(0, Number(activeMem?.discountPercent || 0))
+      );
+    } catch (memErr) {
+      console.warn('Membership discount lookup failed:', memErr?.message || memErr);
+    }
+
     const hydratedItems = await Promise.all(items.map(async (item) => {
       if (!item.serviceId && !item.service) {
         throw new Error('Service ID is required');
       }
 
-      const service = await Service.findById(item.serviceId || item.service).select('basePrice packages');
+      const service = await Service.findById(item.serviceId || item.service).select(
+        'basePrice packages category name listPrice membershipDurationMonths membershipDiscountPercent'
+      );
       if (!service) {
         throw new Error('Service not found');
+      }
+
+      const reqPackageType = item.packageType || 'OneTime';
+      if (reqPackageType === 'Membership' && service.category !== 'Membership') {
+        throw new Error('Invalid membership product');
+      }
+
+      if (service.category === 'Membership') {
+        const addOnIdsMembership = item.addOnIds || item.addOns || [];
+        if (addOnIdsMembership.length) {
+          throw new Error('Membership orders cannot include add-ons');
+        }
+        const unitPrice = Number(service.basePrice || 0);
+        if (!Number.isFinite(unitPrice) || unitPrice < 0) {
+          throw new Error('Invalid membership price');
+        }
+        const displayName = String(service.name || item.serviceName || item.title || 'Woosh Black').trim();
+        return {
+          service: service._id,
+          serviceName: displayName,
+          addOns: [],
+          packageType: 'Membership',
+          packageTimes: 1,
+          unitPrice,
+          addOnsTotal: 0,
+          lineTotal: unitPrice,
+        };
       }
 
       const addOnIds = item.addOnIds || item.addOns || [];
@@ -160,7 +226,11 @@ export const createOrder = async (req, res) => {
         ? customPackagePrice
         : getPackagePrice(service, packageType, packageTimes);
       const addOnsTotal = addOns.reduce((sum, addOn) => sum + (addOn.basePrice || 0), 0);
-      const lineTotal = unitPrice + addOnsTotal;
+      const {
+        unitPrice: discUnit,
+        addOnsTotal: discAddons,
+        lineTotal: discLine,
+      } = applyMembershipWashLineDiscount(unitPrice, addOnsTotal, membershipWashDiscountPercent);
       const resolvedServiceName = String(item.serviceName || item.title || '').trim() || '';
 
       // Handle OneTime vs Package orders
@@ -183,9 +253,9 @@ export const createOrder = async (req, res) => {
           packageTimes: 1,
           scheduledDate,
           scheduledTimeSlot: item.scheduledTimeSlot?.time || item.scheduledTimeSlot,
-          unitPrice,
-          addOnsTotal,
-          lineTotal,
+          unitPrice: discUnit,
+          addOnsTotal: discAddons,
+          lineTotal: discLine,
         };
       } else {
         // Package: requires scheduledSlots array
@@ -243,7 +313,7 @@ export const createOrder = async (req, res) => {
                 : [],
               dailyMode: customPackage.dailyMode || '',
               pricingKey: customPackage.pricingKey || '',
-              packagePrice: hasCustomPackagePrice ? customPackagePrice : unitPrice,
+              packagePrice: discUnit,
               pricingVersion: customPackage.pricingVersion ? new Date(customPackage.pricingVersion) : undefined,
             }
           : undefined;
@@ -256,9 +326,9 @@ export const createOrder = async (req, res) => {
           packageTimes,
           scheduledSlots,
           customPackage: normalizedCustomPackage,
-          unitPrice,
-          addOnsTotal,
-          lineTotal,
+          unitPrice: discUnit,
+          addOnsTotal: discAddons,
+          lineTotal: discLine,
         };
       }
     }));
@@ -316,12 +386,15 @@ export const createOrder = async (req, res) => {
 
     const netAmount = Number((totalAmount - walletUsed).toFixed(2));
 
+    const hasWash = hydratedItems.some((line) => line.packageType !== 'Membership');
+    const membershipOnly = hydratedItems.length > 0 && !hasWash;
+
     const normalizedEmployeeIds = Array.isArray(employeeIds)
       ? employeeIds.filter(Boolean)
       : [];
 
-    let assignmentIds = normalizedEmployeeIds;
-    if (assignmentIds.length === 0) {
+    let assignmentIds = membershipOnly ? [] : normalizedEmployeeIds;
+    if (!membershipOnly && assignmentIds.length === 0) {
       const employees = await Employee.find({ isActive: true })
         .sort({ employeeId: 1 })
         .select('employeeId');
@@ -359,8 +432,9 @@ export const createOrder = async (req, res) => {
         latitude: typeof customer?.latitude === 'number' ? customer.latitude : undefined,
         longitude: typeof customer?.longitude === 'number' ? customer.longitude : undefined,
       },
-      assignmentStatus: assignments.length > 0 ? 'pending' : 'declined',
-      assignments,
+      ...(membershipOnly ? { status: 'Paid' } : {}),
+      assignmentStatus: membershipOnly ? 'completed' : (assignments.length > 0 ? 'pending' : 'declined'),
+      assignments: membershipOnly ? [] : assignments,
       startOtp: startCode,
       startOtpExpiresAt: startCodeExpiresAt,
     });
@@ -398,11 +472,29 @@ export const createOrder = async (req, res) => {
       }
     }
 
-    // Notify assigned employees of new job (push notifications)
-    const summary = order.items?.[0]?.scheduledTimeSlot
-      ? `New job – ${order.items[0].scheduledTimeSlot}`
-      : 'You have a new job to review.';
-    notifyEmployeesNewJob(normalizedEmployeeIds, summary).catch(() => {});
+    for (const line of order.items) {
+      if (line.packageType !== 'Membership') continue;
+      const svc = await Service.findById(line.service).select(
+        'membershipDurationMonths membershipDiscountPercent'
+      );
+      await activateMembershipFromOrder({
+        userId,
+        sourceOrderId: order._id,
+        planId: 'woosh_black',
+        durationMonths: svc?.membershipDurationMonths || 12,
+        discountPercent: svc?.membershipDiscountPercent || 0,
+        serviceId: line.service,
+      });
+    }
+
+    if (hasWash) {
+      const summary = order.items?.find((i) => i.packageType === 'OneTime')?.scheduledTimeSlot
+        ? `New job – ${order.items.find((i) => i.packageType === 'OneTime').scheduledTimeSlot}`
+        : order.items?.find((i) => i.scheduledSlots?.length)?.scheduledSlots?.[0]?.scheduledTimeSlot
+          ? `New job – ${order.items.find((i) => i.scheduledSlots?.length).scheduledSlots[0].scheduledTimeSlot}`
+          : 'You have a new job to review.';
+      notifyEmployeesNewJob(assignmentIds, summary).catch(() => {});
+    }
 
     res.status(201).json({
       success: true,
