@@ -2,22 +2,33 @@ import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
+import { isR2Configured } from '../services/r2Upload.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const uploadsDir = path.join(path.dirname(__dirname), 'uploads', 'media');
 
-fs.mkdirSync(uploadsDir, { recursive: true });
+const useR2 = isR2Configured();
 
-const storage = multer.diskStorage({
+if (!useR2) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+}
+
+const filenameFromOriginal = (file) => {
+  const ext = path.extname(file.originalname) || path.extname(file.mimetype) || '.bin';
+  const base = path.basename(file.originalname, ext).replace(/\s+/g, '-').slice(0, 40);
+  return `${base}-${Date.now()}${ext}`;
+};
+
+const diskStorage = multer.diskStorage({
   destination: (req, file, cb) => {
     cb(null, uploadsDir);
   },
   filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname) || path.extname(file.mimetype) || '.bin';
-    const base = path.basename(file.originalname, ext).replace(/\s+/g, '-').slice(0, 40);
-    cb(null, `${base}-${Date.now()}${ext}`);
+    cb(null, filenameFromOriginal(file));
   },
 });
+
+const storage = useR2 ? multer.memoryStorage() : diskStorage;
 
 const allowedVideo = /^video\/(mp4|webm|quicktime)$/i;
 const allowedImage = /^image\/(jpeg|jpg|png|webp|gif)$/i;
