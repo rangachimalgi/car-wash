@@ -71,14 +71,31 @@ export function publicUrlToR2Key(url) {
  */
 export async function uploadObjectToR2({ key, body, contentType }) {
   const bucket = process.env.R2_BUCKET.trim();
-  await getS3Client().send(
-    new PutObjectCommand({
-      Bucket: bucket,
-      Key: key.replace(/^\//, ''),
-      Body: body,
-      ContentType: contentType || 'application/octet-stream',
-    })
-  );
+  const normalizedKey = key.replace(/^\//, '');
+  try {
+    await getS3Client().send(
+      new PutObjectCommand({
+        Bucket: bucket,
+        Key: normalizedKey,
+        Body: body,
+        ContentType: contentType || 'application/octet-stream',
+      })
+    );
+  } catch (err) {
+    const e = new Error(err?.message || 'R2 PutObject failed');
+    e.name = err?.name || err?.Code || err?.code || 'R2UploadError';
+    e.code = err?.Code || err?.code || err?.name || 'R2UploadError';
+    e.details = {
+      bucket,
+      key: normalizedKey,
+      endpoint: getEndpoint(),
+      httpStatusCode: err?.$metadata?.httpStatusCode || null,
+      requestId: err?.$metadata?.requestId || null,
+      extendedRequestId: err?.$metadata?.extendedRequestId || null,
+      cfId: err?.$metadata?.cfId || null,
+    };
+    throw e;
+  }
   return buildPublicObjectUrl(key);
 }
 

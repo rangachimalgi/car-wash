@@ -125,6 +125,7 @@ export const uploadMedia = async (req, res) => {
       success: false,
       message: `Error uploading media (${providerCode})`,
       error: providerMessage,
+      details: error?.details || undefined,
     });
   }
 };
