@@ -8,6 +8,17 @@ import RevenueDashboard from './RevenueDashboard'
 // - Production build (npm run build) without either uses the same backend as the customer app (Render)
 const API_BASE_URL = (typeof window !== 'undefined' && window.__API_BASE_URL__) || import.meta.env.VITE_API_URL || (import.meta.env.PROD ? 'https://car-wash-vbry.onrender.com/api' : 'http://localhost:8000/api')
 const UPLOADS_BASE = API_BASE_URL.replace(/\/api\/?$/, '')
+
+/** R2 and other CDNs store full https URLs; legacy media uses `/uploads/...` relative to the API host. */
+function resolveUploadOrAbsoluteUrl(path) {
+  if (path == null || path === '') return ''
+  const s = String(path).trim()
+  if (!s) return ''
+  if (/^https?:\/\//i.test(s)) return s
+  const base = UPLOADS_BASE.replace(/\/$/, '')
+  const p = s.startsWith('/') ? s : `/${s}`
+  return `${base}${p}`
+}
 const MAX_MEDIA_VIDEO_SIZE_MB = 25
 const MAX_MEDIA_IMAGE_SIZE_MB = 10
 const MAX_MEDIA_VIDEO_SIZE_BYTES = MAX_MEDIA_VIDEO_SIZE_MB * 1024 * 1024
@@ -4833,9 +4844,9 @@ function App() {
                 {(mediaList.filter((m) => m.type === 'testimonials') || []).map((m) => (
                   <div key={m._id} className="media-item-card">
                     {m.url.match(/\.(mp4|webm|mov)$/i) ? (
-                      <video src={UPLOADS_BASE + m.url} controls className="media-item-preview" />
+                      <video src={resolveUploadOrAbsoluteUrl(m.url)} controls className="media-item-preview" />
                     ) : (
-                      <img src={UPLOADS_BASE + m.url} alt="" className="media-item-preview" />
+                      <img src={resolveUploadOrAbsoluteUrl(m.url)} alt="" className="media-item-preview" />
                     )}
                     <span className="media-item-name">{m.name || 'Video'}</span>
                     <button type="button" className="secondary-button media-delete-button" onClick={() => deleteMediaItem(m._id)}>Delete</button>
@@ -4888,9 +4899,9 @@ function App() {
                 {(mediaList.filter((m) => m.type === 'transformations') || []).map((m) => (
                   <div key={m._id} className="media-item-card">
                     {m.url.match(/\.(mp4|webm|mov)$/i) ? (
-                      <video src={UPLOADS_BASE + m.url} controls className="media-item-preview" />
+                      <video src={resolveUploadOrAbsoluteUrl(m.url)} controls className="media-item-preview" />
                     ) : (
-                      <img src={UPLOADS_BASE + m.url} alt="" className="media-item-preview" />
+                      <img src={resolveUploadOrAbsoluteUrl(m.url)} alt="" className="media-item-preview" />
                     )}
                     <span className="media-item-name">{m.name || 'Video'}</span>
                     <button type="button" className="secondary-button media-delete-button" onClick={() => deleteMediaItem(m._id)}>Delete</button>
@@ -4974,7 +4985,7 @@ function App() {
               <div className="media-see-diff-grid">
                 {(mediaList.filter((m) => m.type === 'seeTheDifference') || []).sort((a, b) => a.order - b.order).map((m) => (
                   <div key={m._id} className="media-see-diff-card">
-                    <img src={UPLOADS_BASE + m.url} alt={m.name} className="media-see-diff-image" />
+                    <img src={resolveUploadOrAbsoluteUrl(m.url)} alt={m.name} className="media-see-diff-image" />
                     <span className="media-see-diff-label">{m.name?.trim() ? m.name : `Image ${m.order + 1}`}</span>
                   </div>
                 ))}
