@@ -7,14 +7,21 @@ import { fileURLToPath } from 'url';
 import cors from 'cors';
 import connectDB from './config/db.js';
 import { startKeepAlive } from './keepAlive.js';
-import { isR2Configured } from './services/r2Upload.js';
+import { getMissingR2EnvKeys, isR2Configured } from './services/r2Upload.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // Connect to database
 connectDB();
 
-console.log(isR2Configured() ? '📦 Media uploads: Cloudflare R2' : '📁 Media uploads: local disk (set all R2_* in .env for R2)');
+if (isR2Configured()) {
+  console.log('📦 Media uploads: Cloudflare R2');
+} else {
+  const missing = getMissingR2EnvKeys();
+  console.log(
+    `📁 Media uploads: local disk (missing R2 env: ${missing.join(', ') || 'unknown'})`
+  );
+}
 
 const app = express();
 

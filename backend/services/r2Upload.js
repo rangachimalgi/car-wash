@@ -3,14 +3,20 @@ import crypto from 'crypto';
 
 let s3Client = null;
 
+const REQUIRED_R2_ENV_KEYS = [
+  'R2_ACCOUNT_ID',
+  'R2_ACCESS_KEY_ID',
+  'R2_SECRET_ACCESS_KEY',
+  'R2_BUCKET',
+  'R2_PUBLIC_BASE_URL',
+];
+
+export function getMissingR2EnvKeys() {
+  return REQUIRED_R2_ENV_KEYS.filter((key) => !process.env[key]?.trim());
+}
+
 export function isR2Configured() {
-  return Boolean(
-    process.env.R2_ACCOUNT_ID?.trim() &&
-      process.env.R2_ACCESS_KEY_ID?.trim() &&
-      process.env.R2_SECRET_ACCESS_KEY?.trim() &&
-      process.env.R2_BUCKET?.trim() &&
-      process.env.R2_PUBLIC_BASE_URL?.trim()
-  );
+  return getMissingR2EnvKeys().length === 0;
 }
 
 function getEndpoint() {
