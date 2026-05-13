@@ -117,8 +117,19 @@ export const getUploadsBase = () => API_BASE_URL.replace(/\/api\/?$/, '');
  */
 export const resolveAssetUrl = (path) => {
   if (path == null || path === '') return '';
-  const s = String(path).trim();
+  let s = String(path).trim();
   if (!s) return '';
+
+  // Undo accidental glue: https://api…comhttps://cdn…/file (e.g. old admin concat)
+  for (let i = 0; i < 4; i++) {
+    const m = s.match(/^(https?:\/\/[^/]+)(?=https:\/\/)/i);
+    if (!m) break;
+    s = s.slice(m[1].length);
+  }
+
+  if (/^https\/\//i.test(s)) s = `https://${s.slice('https//'.length)}`;
+  if (/^http\/\//i.test(s)) s = `http://${s.slice('http//'.length)}`;
+
   if (/^https?:\/\//i.test(s)) return s;
   const base = getUploadsBase().replace(/\/$/, '');
   const p = s.startsWith('/') ? s : `/${s}`;

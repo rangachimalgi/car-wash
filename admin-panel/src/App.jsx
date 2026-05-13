@@ -12,9 +12,22 @@ const UPLOADS_BASE = API_BASE_URL.replace(/\/api\/?$/, '')
 /** R2 and other CDNs store full https URLs; legacy media uses `/uploads/...` relative to the API host. */
 function resolveUploadOrAbsoluteUrl(path) {
   if (path == null || path === '') return ''
-  const s = String(path).trim()
+  let s = String(path).trim()
   if (!s) return ''
+
+  // Undo accidental glue from old clients: https://api…comhttps://cdn…/file
+  for (let i = 0; i < 4; i++) {
+    const m = s.match(/^(https?:\/\/[^/]+)(?=https:\/\/)/i)
+    if (!m) break
+    s = s.slice(m[1].length)
+  }
+
+  // Typo sometimes seen after bad joins: "https//host" (missing colon)
+  if (/^https\/\//i.test(s)) s = `https://${s.slice('https//'.length)}`
+  if (/^http\/\//i.test(s)) s = `http://${s.slice('http//'.length)}`
+
   if (/^https?:\/\//i.test(s)) return s
+
   const base = UPLOADS_BASE.replace(/\/$/, '')
   const p = s.startsWith('/') ? s : `/${s}`
   return `${base}${p}`
