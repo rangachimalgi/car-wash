@@ -119,7 +119,13 @@ export const uploadMedia = async (req, res) => {
       fs.unlink(req.file.path, () => {});
     }
     console.error('Error uploading media:', error);
-    res.status(500).json({ success: false, message: 'Error uploading media', error: error.message });
+    const providerCode = error?.name || error?.Code || error?.code || 'UploadError';
+    const providerMessage = error?.message || 'Unknown upload failure';
+    res.status(500).json({
+      success: false,
+      message: `Error uploading media (${providerCode})`,
+      error: providerMessage,
+    });
   }
 };
 
