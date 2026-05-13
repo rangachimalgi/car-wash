@@ -31,13 +31,18 @@ function getS3Client() {
     throw new Error('R2 env vars are not fully set');
   }
   if (!s3Client) {
+    // R2 is S3-compatible but not full AWS S3: path-style URLs and relaxed checksum behavior
+    // avoid 403 / NotImplemented issues with recent @aws-sdk/client-s3 defaults.
     s3Client = new S3Client({
       region: 'auto',
       endpoint: getEndpoint(),
+      forcePathStyle: true,
       credentials: {
         accessKeyId: process.env.R2_ACCESS_KEY_ID.trim(),
         secretAccessKey: process.env.R2_SECRET_ACCESS_KEY.trim(),
       },
+      requestChecksumCalculation: 'WHEN_REQUIRED',
+      responseChecksumValidation: 'WHEN_REQUIRED',
     });
   }
   return s3Client;
@@ -93,6 +98,8 @@ export async function uploadObjectToR2({ key, body, contentType }) {
       requestId: err?.$metadata?.requestId || null,
       extendedRequestId: err?.$metadata?.extendedRequestId || null,
       cfId: err?.$metadata?.cfId || null,
+      hint:
+        '403 usually means the R2 S3 API token lacks PutObject for this bucket, or keys/account ID do not match the bucket. Redeploy after fixing S3 client; create a new token with Object Read & Write scoped to this bucket.',
     };
     throw e;
   }
