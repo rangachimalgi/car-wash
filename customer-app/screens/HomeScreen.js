@@ -42,11 +42,12 @@ export default function HomeScreen({ navigation }) {
   const styles = useMemo(() => createStyles(theme), [theme]);
 
   const heroSlides = useMemo(() => {
-    const list = media.homeSliders || [];
+    const raw = media.homeSliders || [];
+    const list = raw.filter((m) => m?.url && String(m.url).trim());
     if (list.length > 0) {
-      return list.map((m) => ({
-        key: String(m._id || m.url || m.order),
-        uri: m.url || null,
+      return list.map((m, i) => ({
+        key: String(m._id ?? m.url ?? `order-${m.order ?? i}`),
+        uri: String(m.url).trim(),
       }));
     }
     return DEFAULT_HERO_SLIDES;
@@ -108,14 +109,20 @@ export default function HomeScreen({ navigation }) {
     setActiveSlide((i) => Math.min(i, n - 1));
   }, [heroSlides.length]);
 
-  const lastMediaReloadRef = useRef(0);
+  /** Only throttle after a successful fetch so quick tab switches are not stuck with empty media. */
+  const lastMediaFetchOkAtRef = useRef(0);
   const reloadMedia = useCallback(async () => {
     const now = Date.now();
-    if (now - lastMediaReloadRef.current < 3000) return;
-    lastMediaReloadRef.current = now;
+    if (lastMediaFetchOkAtRef.current > 0 && now - lastMediaFetchOkAtRef.current < 3000) return;
     try {
       const data = await getMedia();
-      setMedia(data);
+      lastMediaFetchOkAtRef.current = Date.now();
+      setMedia({
+        testimonials: data.testimonials ?? [],
+        transformations: data.transformations ?? [],
+        seeTheDifference: data.seeTheDifference ?? [],
+        homeSliders: data.homeSliders ?? [],
+      });
     } catch (_) {
       /* keep previous media; next focus/foreground will retry */
     }
@@ -214,7 +221,8 @@ export default function HomeScreen({ navigation }) {
           >
             {heroSlides.map((item) => (
               <View key={item.key} style={styles.sliderCard}>
-                <Image 
+                <Image
+                  key={item.uri ? `remote-${item.key}` : `local-${item.key}`}
                   source={item.uri ? { uri: item.uri } : item.source}
                   style={styles.sliderImage}
                   resizeMode="cover"

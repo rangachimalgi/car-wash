@@ -138,7 +138,12 @@ export const resolveAssetUrl = (path) => {
 
 export const getMedia = async () => {
   // Public media payload is small, but video URLs may point at cold R2 edges; allow a longer read than default 10s.
-  const { data } = await api.get('/media/public', { timeout: 25000 });
+  // Bust intermediaries that might cache JSON without newer keys (e.g. homeSliders).
+  const { data } = await api.get('/media/public', {
+    timeout: 25000,
+    params: { _t: Date.now() },
+    headers: { 'Cache-Control': 'no-cache', Pragma: 'no-cache' },
+  });
   if (!data?.success || !data.data) {
     return {
       testimonials: [],
