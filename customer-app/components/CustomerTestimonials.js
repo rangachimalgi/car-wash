@@ -8,9 +8,18 @@ import {
   Image,
   Dimensions,
   Modal,
-  ActivityIndicator,
   Platform,
+  useWindowDimensions,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import Animated, {
+  Easing,
+  interpolate,
+  useAnimatedStyle,
+  useSharedValue,
+  withRepeat,
+  withTiming,
+} from 'react-native-reanimated';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Audio } from 'expo-av';
 import { useEvent } from 'expo';
@@ -18,8 +27,45 @@ import { useVideoPlayer, VideoView } from 'expo-video';
 import * as VideoThumbnails from 'expo-video-thumbnails';
 import { useTheme } from '../theme/ThemeContext';
 
+/** Lightweight skeleton shimmer (no extra native deps; works with Expo + Reanimated). */
+function TestimonialShimmer({ width, height, borderRadius, baseColor, highlightColor }) {
+  const progress = useSharedValue(0);
+  const stripeW = Math.max(56, Math.min(112, width * 0.45));
+
+  useEffect(() => {
+    progress.value = 0;
+    progress.value = withRepeat(withTiming(1, { duration: 1350, easing: Easing.linear }), -1, false);
+  }, [width, height, stripeW, progress]);
+
+  const animStyle = useAnimatedStyle(
+    () => ({
+      transform: [{ translateX: interpolate(progress.value, [0, 1], [-stripeW, width + stripeW]) }],
+    }),
+    [width, stripeW]
+  );
+
+  if (!width || !height) return null;
+
+  return (
+    <View style={{ width, height, borderRadius, overflow: 'hidden', backgroundColor: baseColor }}>
+      <Animated.View style={[{ position: 'absolute', left: 0, top: 0, bottom: 0, width: stripeW }, animStyle]}>
+        <LinearGradient
+          colors={['transparent', highlightColor, 'transparent']}
+          locations={[0, 0.5, 1]}
+          start={{ x: 0, y: 0.5 }}
+          end={{ x: 1, y: 0.5 }}
+          style={{ flex: 1, width: stripeW }}
+        />
+      </Animated.View>
+    </View>
+  );
+}
+
 /** expo-av `Video` is unreliable in some prod / New-Arch builds; expo-video uses the platform player. */
 function TestimonialModalVideo({ uri, styles: s }) {
+  const { width: winW } = useWindowDimensions();
+  const shimmerW = Math.max(160, winW - 36);
+
   const player = useVideoPlayer(uri, (p) => {
     p.loop = false;
     p.muted = false;
@@ -41,7 +87,13 @@ function TestimonialModalVideo({ uri, styles: s }) {
       />
       {showLoading ? (
         <View style={s.videoLoadingOverlay} pointerEvents="none">
-          <ActivityIndicator size="large" color="#FFFFFF" />
+          <TestimonialShimmer
+            width={shimmerW}
+            height={360}
+            borderRadius={8}
+            baseColor={s.videoModalSkeletonBase}
+            highlightColor={s.videoModalSkeletonHighlight}
+          />
         </View>
       ) : null}
     </View>
@@ -58,25 +110,52 @@ const DEFAULT_ITEMS = [
 
 const isVideoUrl = (url) => /\.(mp4|webm|mov)(\?|$)/i.test(url || '');
 
+/** Warm TLS + CDN edge before decoding frames (cheap on RN; ignore failures). */
+async function warmRemoteVideoUrls(urls) {
+  await Promise.all(
+    urls.map(async (url) => {
+      if (!/^https?:\/\//i.test(url)) return;
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), 5000);
+      try {
+        await fetch(url, { method: 'HEAD', signal: ctrl.signal });
+      } catch {
+        /* ignore */
+      } finally {
+        clearTimeout(timer);
+      }
+    })
+  );
+}
+
+/** Prefer early frame + lower quality first — much faster over R2 than seeking to 500ms. */
 async function thumbnailWithRetry(url, attempts = 3) {
+  const tries = [
+    { time: 0, quality: 0.42 },
+    { time: 350, quality: 0.5 },
+    { time: 1100, quality: 0.55 },
+  ];
   for (let i = 0; i < attempts; i++) {
+    const opts = tries[i] ?? tries[tries.length - 1];
     try {
-      const { uri } = await VideoThumbnails.getThumbnailAsync(url, { time: 500 });
+      const { uri } = await VideoThumbnails.getThumbnailAsync(url, opts);
       return [url, uri];
     } catch {
-      if (i < attempts - 1) await new Promise((r) => setTimeout(r, 700 * (i + 1)));
+      if (i < attempts - 1) await new Promise((r) => setTimeout(r, 180 * (i + 1)));
     }
   }
   return null;
 }
+
+const CARD_W = Math.min(160, width * 0.42);
 
 export default function CustomerTestimonials({
   title = 'Customer Testimonials',
   items = DEFAULT_ITEMS,
   onPressItem,
 }) {
-  const { theme } = useTheme();
-  const styles = useMemo(() => createStyles(theme), [theme]);
+  const { theme, isLightMode } = useTheme();
+  const styles = useMemo(() => createStyles(theme, isLightMode), [theme, isLightMode]);
   const [activeVideoUrl, setActiveVideoUrl] = useState(null);
   const [videoThumbnails, setVideoThumbnails] = useState({});
 
@@ -101,7 +180,10 @@ export default function CustomerTestimonials({
     if (!videoUrls.length) return undefined;
 
     (async () => {
-      const entries = await Promise.all(videoUrls.map((url) => thumbnailWithRetry(url)));
+      const [, entries] = await Promise.all([
+        warmRemoteVideoUrls(videoUrls),
+        Promise.all(videoUrls.map((url) => thumbnailWithRetry(url))),
+      ]);
 
       if (!mounted) return;
       const ok = entries.filter(Boolean);
@@ -158,8 +240,14 @@ export default function CustomerTestimonials({
               {source ? (
                 <Image source={source} style={styles.image} resizeMode="cover" />
               ) : isVideo ? (
-                <View style={[styles.image, styles.videoPlaceholder]}>
-                  <MaterialCommunityIcons name="video-outline" size={48} color="rgba(255,255,255,0.7)" />
+                <View style={styles.image}>
+                  <TestimonialShimmer
+                    width={CARD_W}
+                    height={300}
+                    borderRadius={18}
+                    baseColor={styles.videoCardSkeletonBase}
+                    highlightColor={styles.videoCardSkeletonHighlight}
+                  />
                 </View>
               ) : null}
               <View style={styles.scrim} />
@@ -206,7 +294,7 @@ export default function CustomerTestimonials({
   );
 }
 
-const createStyles = (theme) =>
+const createStyles = (theme, isLightMode) =>
   StyleSheet.create({
     section: {
       paddingHorizontal: 16,
@@ -223,8 +311,12 @@ const createStyles = (theme) =>
       paddingRight: 16,
       gap: 14,
     },
+    videoCardSkeletonBase: isLightMode ? '#E8ECF3' : 'rgba(18,18,20,0.92)',
+    videoCardSkeletonHighlight: isLightMode ? 'rgba(255,255,255,0.88)' : 'rgba(255,255,255,0.14)',
+    videoModalSkeletonBase: '#070707',
+    videoModalSkeletonHighlight: 'rgba(255,255,255,0.12)',
     card: {
-      width: Math.min(160, width * 0.42),
+      width: CARD_W,
       height: 300,
       borderRadius: 18,
       overflow: 'hidden',
@@ -235,11 +327,6 @@ const createStyles = (theme) =>
     image: {
       width: '100%',
       height: '100%',
-    },
-    videoPlaceholder: {
-      backgroundColor: 'rgba(0,0,0,0.5)',
-      alignItems: 'center',
-      justifyContent: 'center',
     },
     scrim: {
       ...StyleSheet.absoluteFillObject,
@@ -310,7 +397,7 @@ const createStyles = (theme) =>
       ...StyleSheet.absoluteFillObject,
       alignItems: 'center',
       justifyContent: 'center',
-      backgroundColor: 'rgba(0,0,0,0.35)',
+      backgroundColor: 'rgba(0,0,0,0.42)',
     },
     videoCloseButton: {
       position: 'absolute',
