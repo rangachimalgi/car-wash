@@ -234,6 +234,12 @@ function App() {
   const [transformationMediaForm, setTransformationMediaForm] = useState({ name: '', file: null })
   const [uploadingMedia, setUploadingMedia] = useState(false)
   const [seeDiffMediaForm, setSeeDiffMediaForm] = useState({ name: '', file: null })
+  /** Remount file inputs after upload so the next pick always fires `onChange`. */
+  const [mediaFileInputKey, setMediaFileInputKey] = useState({
+    testimonials: 0,
+    transformations: 0,
+    seeTheDifference: 0,
+  })
 
   // Coupons
   const [coupons, setCoupons] = useState([])
@@ -2503,6 +2509,7 @@ function App() {
       if (data.success) {
         setMediaMessage({ type: 'success', text: 'Uploaded successfully' })
         setFormState({ name: '', file: null })
+        setMediaFileInputKey((prev) => ({ ...prev, [type]: (prev[type] || 0) + 1 }))
         fetchMedia()
       } else {
         setMediaMessage({ type: 'error', text: data.message || 'Upload failed' })
@@ -4789,6 +4796,7 @@ function App() {
                 <label className="media-file-input-wrap">
                   <span className="media-file-button">Choose video</span>
                   <input
+                    key={`media-file-testimonials-${mediaFileInputKey.testimonials}`}
                     type="file"
                     accept="video/mp4,video/webm,video/quicktime"
                     onChange={(e) => {
@@ -4844,6 +4852,7 @@ function App() {
                 <label className="media-file-input-wrap">
                   <span className="media-file-button">Choose video</span>
                   <input
+                    key={`media-file-transformations-${mediaFileInputKey.transformations}`}
                     type="file"
                     accept="video/mp4,video/webm,video/quicktime"
                     onChange={(e) => {
@@ -4899,6 +4908,7 @@ function App() {
                 <label className="media-file-input-wrap">
                   <span className="media-file-button">Choose image</span>
                   <input
+                    key={`media-file-seeTheDifference-${mediaFileInputKey.seeTheDifference}`}
                     type="file"
                     accept="image/*"
                     onChange={(e) => {
