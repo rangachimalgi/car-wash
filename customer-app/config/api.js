@@ -136,29 +136,99 @@ export const resolveAssetUrl = (path) => {
   return `${base}${p}`;
 };
 
-export const getMedia = async () => {
-  // Public media payload is small, but video URLs may point at cold R2 edges; allow a longer read than default 10s.
-  // Bust intermediaries that might cache JSON without newer keys (e.g. homeSliders).
-  const { data } = await api.get('/media/public', {
-    timeout: 25000,
-    params: { _t: Date.now() },
-    headers: { 'Cache-Control': 'no-cache', Pragma: 'no-cache' },
-  });
-  if (!data?.success || !data.data) {
-    return {
-      testimonials: [],
-      transformations: [],
-      seeTheDifference: [],
-      homeSliders: [],
-    };
+const emptyMedia = () => ({
+  testimonials: [],
+  transformations: [],
+  seeTheDifference: [],
+  homeSliders: [],
+});
+
+/** Raw URL string from a media row (backend uses `url`; tolerate odd shapes). */
+const pickMediaUrl = (m) => {
+  if (!m || typeof m !== 'object') return '';
+  const raw = m.url ?? m.URL ?? m.src ?? m.href ?? m.image ?? '';
+  const s = String(raw).trim();
+  return s;
+};
+
+/** Unwrap { success, data: { ... } } or a flat payload. */
+const unwrapPublicMediaBody = (payload) => {
+  if (!payload || typeof payload !== 'object') return null;
+  if (payload.data && typeof payload.data === 'object' && !Array.isArray(payload.data)) {
+    return payload.data;
   }
-  const d = data.data;
-  const withResolvedUrl = (m) => ({ ...m, url: m.url ? resolveAssetUrl(m.url) : null });
+  if (
+    Array.isArray(payload.testimonials) ||
+    Array.isArray(payload.homeSliders) ||
+    Array.isArray(payload.home_sliders)
+  ) {
+    return payload;
+  }
+  return null;
+};
+
+const pickHomeSliderList = (d) => {
+  if (!d || typeof d !== 'object') return [];
+  const cands = [d.homeSliders, d.home_sliders, d.homeSlider, d.home_slider];
+  for (const v of cands) {
+    if (Array.isArray(v)) return v;
+  }
+  return [];
+};
+
+/**
+ * Public media: use `fetch` without Authorization so a stale/invalid JWT can never
+ * affect this read. Same URL as axios `api` base + `/media/public`.
+ */
+export const getMedia = async () => {
+  const base = API_BASE_URL.replace(/\/$/, '');
+  const url = `${base}/media/public?_t=${Date.now()}`;
+  const controller = new AbortController();
+  const t = setTimeout(() => controller.abort(), 25000);
+  let res;
+  try {
+    res = await fetch(url, {
+      method: 'GET',
+      signal: controller.signal,
+      headers: {
+        Accept: 'application/json',
+        'Cache-Control': 'no-cache',
+        Pragma: 'no-cache',
+      },
+    });
+  } catch {
+    return emptyMedia();
+  } finally {
+    clearTimeout(t);
+  }
+
+  if (!res.ok) {
+    return emptyMedia();
+  }
+
+  const text = await res.text().catch(() => '');
+  let payload;
+  try {
+    payload = text ? JSON.parse(text) : null;
+  } catch {
+    return emptyMedia();
+  }
+
+  const d = unwrapPublicMediaBody(payload);
+  if (!d) return emptyMedia();
+
+  const withResolvedUrl = (m) => {
+    const raw = pickMediaUrl(m);
+    return { ...m, url: raw ? resolveAssetUrl(raw) : null };
+  };
+
+  const homeSlidersRaw = pickHomeSliderList(d);
+
   return {
-    testimonials: (d.testimonials || []).map(withResolvedUrl),
-    transformations: (d.transformations || []).map(withResolvedUrl),
-    seeTheDifference: (d.seeTheDifference || []).map(withResolvedUrl),
-    homeSliders: (d.homeSliders || []).map(withResolvedUrl),
+    testimonials: (Array.isArray(d.testimonials) ? d.testimonials : []).map(withResolvedUrl),
+    transformations: (Array.isArray(d.transformations) ? d.transformations : []).map(withResolvedUrl),
+    seeTheDifference: (Array.isArray(d.seeTheDifference) ? d.seeTheDifference : []).map(withResolvedUrl),
+    homeSliders: homeSlidersRaw.map(withResolvedUrl),
   };
 };
 

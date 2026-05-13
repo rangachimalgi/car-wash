@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Dimensions, TouchableOpacity, Image, Share, AppState } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Dimensions, TouchableOpacity, Image, Share, AppState, ActivityIndicator } from 'react-native';
+import { Image as ExpoImage } from 'expo-image';
 import { useFocusEffect } from '@react-navigation/native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
@@ -15,12 +16,11 @@ import { getReferralInfo } from '../services/walletApi';
 
 const sliderCardWidth = Dimensions.get('window').width;
 const cardWidth = (sliderCardWidth - 48) / 3; // 3 cards with padding
-const DEFAULT_HERO_SLIDES = [
-  { source: require('../assets/carbanner.jpeg'), key: 'special1' },
-  { source: require('../assets/carbannertwo.jpeg'), key: 'special2' },
-  { source: require('../assets/carbannerthree.jpeg'), key: 'special3' },
-  { source: require('../assets/carbannerfour.jpeg'), key: 'special4' },
-];
+
+/** One slide while waiting for GET /media/public — avoids flashing old bundled banners. */
+const HERO_LOADING_SLIDE = [{ key: 'hero-loading', kind: 'loading' }];
+/** After fetch: no homeSliders from admin — neutral strip (not hardcoded marketing photos). */
+const HERO_EMPTY_SLIDE = [{ key: 'hero-empty', kind: 'empty' }];
 
 export default function HomeScreen({ navigation }) {
   const [imageErrors, setImageErrors] = useState({});
@@ -38,20 +38,24 @@ export default function HomeScreen({ navigation }) {
     totalEarnings: 0,
     perReferralRewardReferred: 100,
   });
+  /** After first public media fetch (success or fail) we stop showing the loading hero. */
+  const [publicMediaFetched, setPublicMediaFetched] = useState(false);
   const { theme, isLightMode } = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
 
   const heroSlides = useMemo(() => {
+    if (!publicMediaFetched) return HERO_LOADING_SLIDE;
     const raw = media.homeSliders || [];
     const list = raw.filter((m) => m?.url && String(m.url).trim());
     if (list.length > 0) {
       return list.map((m, i) => ({
         key: String(m._id ?? m.url ?? `order-${m.order ?? i}`),
+        kind: 'remote',
         uri: String(m.url).trim(),
       }));
     }
-    return DEFAULT_HERO_SLIDES;
-  }, [media.homeSliders]);
+    return HERO_EMPTY_SLIDE;
+  }, [media.homeSliders, publicMediaFetched]);
 
   const handleImageError = (key) => {
     setImageErrors(prev => ({ ...prev, [key]: true }));
@@ -125,8 +129,14 @@ export default function HomeScreen({ navigation }) {
       });
     } catch (_) {
       /* keep previous media; next focus/foreground will retry */
+    } finally {
+      setPublicMediaFetched(true);
     }
   }, []);
+
+  useEffect(() => {
+    reloadMedia();
+  }, [reloadMedia]);
 
   useFocusEffect(
     useCallback(() => {
@@ -221,12 +231,25 @@ export default function HomeScreen({ navigation }) {
           >
             {heroSlides.map((item) => (
               <View key={item.key} style={styles.sliderCard}>
-                <Image
-                  key={item.uri ? `remote-${item.key}` : `local-${item.key}`}
-                  source={item.uri ? { uri: item.uri } : item.source}
-                  style={styles.sliderImage}
-                  resizeMode="cover"
-                />
+                {item.kind === 'loading' ? (
+                  <View style={[styles.sliderImage, styles.heroCentered]}>
+                    <ActivityIndicator size="large" color={theme.accent} />
+                  </View>
+                ) : item.kind === 'empty' ? (
+                  <View style={[styles.sliderImage, styles.heroCentered, { backgroundColor: theme.cardBackground }]}>
+                    <Text style={{ color: theme.textSecondary, fontSize: 15, textAlign: 'center', paddingHorizontal: 24 }}>
+                      Add hero images in Admin → Media → Home hero slider
+                    </Text>
+                  </View>
+                ) : (
+                  <ExpoImage
+                    source={{ uri: item.uri }}
+                    style={styles.sliderImage}
+                    contentFit="cover"
+                    transition={200}
+                    cachePolicy="memory-disk"
+                  />
+                )}
               </View>
             ))}
           </ScrollView>
@@ -590,6 +613,10 @@ const createStyles = theme => StyleSheet.create({
   sliderImage: {
     width: '100%',
     height: '100%',
+  },
+  heroCentered: {
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   sliderDotsInside: {
     position: 'absolute',
