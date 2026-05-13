@@ -81,20 +81,21 @@ export default function SeeTheDifference({ slides = DEFAULT_SLIDES }) {
         >
           {list.map((slide) => (
             <View key={slide.id} style={styles.slide}>
-              <Image source={slide.image} style={styles.image} resizeMode="cover" />
-              <View style={styles.scrim} />
-
-              <View style={styles.overlay}>
-                {(slide.title || (slide.bullets && slide.bullets.length > 0)) ? (
-                  <View style={styles.badge}>
-                    {slide.title ? <Text style={styles.badgeTitle}>{slide.title}</Text> : null}
-                    {slide.bullets?.map((b, idx) => (
-                      <Text key={`${slide.id}-b-${idx}`} style={styles.badgeBullet}>
-                        {b}
-                      </Text>
-                    ))}
-                  </View>
-                ) : null}
+              <View style={styles.imageWrap}>
+                <Image source={slide.image} style={styles.image} resizeMode="contain" />
+                <View style={styles.scrim} />
+                <View style={styles.overlay}>
+                  {(slide.title || (slide.bullets && slide.bullets.length > 0)) ? (
+                    <View style={styles.badge}>
+                      {slide.title ? <Text style={styles.badgeTitle}>{slide.title}</Text> : null}
+                      {slide.bullets?.map((b, idx) => (
+                        <Text key={`${slide.id}-b-${idx}`} style={styles.badgeBullet}>
+                          {b}
+                        </Text>
+                      ))}
+                    </View>
+                  ) : null}
+                </View>
               </View>
             </View>
           ))}
@@ -133,26 +134,30 @@ const createStyles = (theme) =>
       width,
       paddingHorizontal: 16,
     },
+    imageWrap: {
+      width: '100%',
+      height: 220,
+      borderRadius: 18,
+      overflow: 'hidden',
+      backgroundColor: theme.cardBackground,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: theme.cardBorder,
+    },
     image: {
       width: '100%',
-      height: 170,
-      borderRadius: 18,
+      height: '100%',
     },
     scrim: {
-      position: 'absolute',
-      left: 16,
-      right: 16,
-      top: 0,
-      bottom: 0,
+      ...StyleSheet.absoluteFillObject,
       borderRadius: 18,
-      backgroundColor: 'rgba(0,0,0,0.18)',
+      backgroundColor: 'rgba(0,0,0,0.14)',
     },
     overlay: {
       position: 'absolute',
-      left: 28,
-      top: 14,
-      right: 28,
-      bottom: 14,
+      left: 12,
+      top: 12,
+      right: 12,
+      bottom: 12,
     },
     badge: {
       alignSelf: 'flex-start',
