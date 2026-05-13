@@ -58,6 +58,18 @@ const DEFAULT_ITEMS = [
 
 const isVideoUrl = (url) => /\.(mp4|webm|mov)(\?|$)/i.test(url || '');
 
+async function thumbnailWithRetry(url, attempts = 3) {
+  for (let i = 0; i < attempts; i++) {
+    try {
+      const { uri } = await VideoThumbnails.getThumbnailAsync(url, { time: 500 });
+      return [url, uri];
+    } catch {
+      if (i < attempts - 1) await new Promise((r) => setTimeout(r, 700 * (i + 1)));
+    }
+  }
+  return null;
+}
+
 export default function CustomerTestimonials({
   title = 'Customer Testimonials',
   items = DEFAULT_ITEMS,
@@ -89,16 +101,7 @@ export default function CustomerTestimonials({
     if (!videoUrls.length) return undefined;
 
     (async () => {
-      const entries = await Promise.all(
-        videoUrls.map(async (url) => {
-          try {
-            const { uri } = await VideoThumbnails.getThumbnailAsync(url, { time: 500 });
-            return [url, uri];
-          } catch {
-            return null;
-          }
-        })
-      );
+      const entries = await Promise.all(videoUrls.map((url) => thumbnailWithRetry(url)));
 
       if (!mounted) return;
       const ok = entries.filter(Boolean);

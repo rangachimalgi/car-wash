@@ -1,19 +1,20 @@
+// Must run before any other local imports that read process.env at module load (e.g. multer R2 vs disk).
+import 'dotenv/config';
 import express from 'express';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
-import dotenv from 'dotenv';
 import cors from 'cors';
 import connectDB from './config/db.js';
 import { startKeepAlive } from './keepAlive.js';
+import { isR2Configured } from './services/r2Upload.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-// Load environment variables
-dotenv.config();
-
 // Connect to database
 connectDB();
+
+console.log(isR2Configured() ? '📦 Media uploads: Cloudflare R2' : '📁 Media uploads: local disk (set all R2_* in .env for R2)');
 
 const app = express();
 
@@ -23,8 +24,15 @@ fs.mkdirSync(path.join(uploadsDir, 'documents'), { recursive: true });
 fs.mkdirSync(path.join(uploadsDir, 'media'), { recursive: true });
 fs.mkdirSync(path.join(uploadsDir, 'order-photos'), { recursive: true });
 
-// Middleware
-app.use(cors());
+// Middleware — admin panel is a different origin (e.g. Vite :5173 vs API :8000).
+// Requests with Authorization need a concrete Access-Control-Allow-Origin, not "*".
+app.use(
+  cors({
+    origin: true,
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+  })
+);
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 

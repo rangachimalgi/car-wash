@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Dimensions, TouchableOpacity, Image, Share } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Dimensions, TouchableOpacity, Image, Share, AppState } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import CustomHeader from '../components/CustomHeader';
@@ -85,13 +86,35 @@ export default function HomeScreen({ navigation }) {
     return () => clearInterval(interval);
   }, []);
 
-  useEffect(() => {
-    let cancelled = false;
-    getMedia()
-      .then((data) => { if (!cancelled) setMedia(data); })
-      .catch(() => {});
-    return () => { cancelled = true; };
+  const lastMediaReloadRef = useRef(0);
+  const reloadMedia = useCallback(async () => {
+    const now = Date.now();
+    if (now - lastMediaReloadRef.current < 3000) return;
+    lastMediaReloadRef.current = now;
+    try {
+      const data = await getMedia();
+      setMedia(data);
+    } catch (_) {
+      /* keep previous media; next focus/foreground will retry */
+    }
   }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      reloadMedia();
+    }, [reloadMedia])
+  );
+
+  const appStateRef = useRef(AppState.currentState);
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (next) => {
+      if (appStateRef.current.match(/inactive|background/) && next === 'active') {
+        reloadMedia();
+      }
+      appStateRef.current = next;
+    });
+    return () => sub.remove();
+  }, [reloadMedia]);
 
   useEffect(() => {
     let cancelled = false;
