@@ -54,15 +54,16 @@ export const getMedia = async (req, res) => {
   }
 };
 
-// @desc    Get media for customer app (testimonials, transformations, seeTheDifference)
+// @desc    Get media for customer app (testimonials, transformations, seeTheDifference, homeSliders)
 // @route   GET /api/media/public
 // @access  Public
 export const getPublicMedia = async (req, res) => {
   try {
-    const [testimonials, transformations, seeTheDifference] = await Promise.all([
+    const [testimonials, transformations, seeTheDifference, homeSliders] = await Promise.all([
       Media.find({ type: 'testimonials' }).sort({ order: 1 }).select('url name order').lean(),
       Media.find({ type: 'transformations' }).sort({ order: 1 }).select('url name order').lean(),
       Media.find({ type: 'seeTheDifference' }).sort({ order: 1 }).select('url name order').lean(),
+      Media.find({ type: 'homeSliders' }).sort({ order: 1 }).select('url name order').lean(),
     ]);
     res.status(200).json({
       success: true,
@@ -70,6 +71,7 @@ export const getPublicMedia = async (req, res) => {
         testimonials,
         transformations,
         seeTheDifference,
+        homeSliders,
       },
     });
   } catch (error) {
@@ -87,17 +89,17 @@ export const uploadMedia = async (req, res) => {
       return res.status(400).json({ success: false, message: 'No file uploaded' });
     }
     const type = req.body?.type || 'testimonials';
-    const allowedTypes = ['testimonials', 'transformations', 'seeTheDifference'];
+    const allowedTypes = ['testimonials', 'transformations', 'seeTheDifference', 'homeSliders'];
     if (!allowedTypes.includes(type)) {
       if (!isR2Configured() && req.file.path && fs.existsSync(req.file.path)) {
         fs.unlink(req.file.path, () => {});
       }
       return res.status(400).json({
         success: false,
-        message: 'Type must be testimonials, transformations, or seeTheDifference',
+        message: 'Invalid media type',
       });
     }
-    if (type === 'seeTheDifference') {
+    if (type === 'seeTheDifference' || type === 'homeSliders') {
       const mt = req.file.mimetype || '';
       if (!/^image\/(jpeg|jpg|png|webp|gif)$/i.test(mt)) {
         if (!isR2Configured() && req.file.path && fs.existsSync(req.file.path)) {
@@ -105,7 +107,7 @@ export const uploadMedia = async (req, res) => {
         }
         return res.status(400).json({
           success: false,
-          message: 'See The Difference accepts images only (JPEG, PNG, WebP, GIF)',
+          message: 'This media type accepts images only (JPEG, PNG, WebP, GIF)',
         });
       }
     }

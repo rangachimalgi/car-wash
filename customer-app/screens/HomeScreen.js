@@ -15,7 +15,7 @@ import { getReferralInfo } from '../services/walletApi';
 
 const sliderCardWidth = Dimensions.get('window').width;
 const cardWidth = (sliderCardWidth - 48) / 3; // 3 cards with padding
-const sliderImages = [
+const DEFAULT_HERO_SLIDES = [
   { source: require('../assets/carbanner.jpeg'), key: 'special1' },
   { source: require('../assets/carbannertwo.jpeg'), key: 'special2' },
   { source: require('../assets/carbannerthree.jpeg'), key: 'special3' },
@@ -26,7 +26,12 @@ export default function HomeScreen({ navigation }) {
   const [imageErrors, setImageErrors] = useState({});
   const sliderRef = useRef(null);
   const [activeSlide, setActiveSlide] = useState(0);
-  const [media, setMedia] = useState({ testimonials: [], transformations: [], seeTheDifference: [] });
+  const [media, setMedia] = useState({
+    testimonials: [],
+    transformations: [],
+    seeTheDifference: [],
+    homeSliders: [],
+  });
   const [referralInfo, setReferralInfo] = useState({
     code: '',
     totalReferrals: 0,
@@ -35,6 +40,17 @@ export default function HomeScreen({ navigation }) {
   });
   const { theme, isLightMode } = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
+
+  const heroSlides = useMemo(() => {
+    const list = media.homeSliders || [];
+    if (list.length > 0) {
+      return list.map((m) => ({
+        key: String(m._id || m.url || m.order),
+        uri: m.url || null,
+      }));
+    }
+    return DEFAULT_HERO_SLIDES;
+  }, [media.homeSliders]);
 
   const handleImageError = (key) => {
     setImageErrors(prev => ({ ...prev, [key]: true }));
@@ -74,17 +90,23 @@ export default function HomeScreen({ navigation }) {
   }, []);
 
   useEffect(() => {
-    if (sliderImages.length <= 1) return;
+    if (heroSlides.length <= 1) return;
     const interval = setInterval(() => {
-      setActiveSlide(prev => {
-        const nextIndex = (prev + 1) % sliderImages.length;
+      setActiveSlide((prev) => {
+        const nextIndex = (prev + 1) % heroSlides.length;
         sliderRef.current?.scrollTo({ x: nextIndex * sliderCardWidth, animated: true });
         return nextIndex;
       });
     }, 3500);
 
     return () => clearInterval(interval);
-  }, []);
+  }, [heroSlides.length]);
+
+  useEffect(() => {
+    const n = heroSlides.length;
+    if (n === 0) return;
+    setActiveSlide((i) => Math.min(i, n - 1));
+  }, [heroSlides.length]);
 
   const lastMediaReloadRef = useRef(0);
   const reloadMedia = useCallback(async () => {
@@ -190,10 +212,10 @@ export default function HomeScreen({ navigation }) {
             onMomentumScrollEnd={handleSliderScrollEnd}
             ref={sliderRef}
           >
-            {sliderImages.map(item => (
+            {heroSlides.map((item) => (
               <View key={item.key} style={styles.sliderCard}>
                 <Image 
-                  source={item.source}
+                  source={item.uri ? { uri: item.uri } : item.source}
                   style={styles.sliderImage}
                   resizeMode="cover"
                 />
@@ -202,7 +224,7 @@ export default function HomeScreen({ navigation }) {
           </ScrollView>
 
           <View style={styles.sliderDotsInside}>
-            {sliderImages.map((item, index) => (
+            {heroSlides.map((item, index) => (
               <View
                 key={`${item.key}-dot`}
                 style={[

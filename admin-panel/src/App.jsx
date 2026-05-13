@@ -234,11 +234,13 @@ function App() {
   const [transformationMediaForm, setTransformationMediaForm] = useState({ name: '', file: null })
   const [uploadingMedia, setUploadingMedia] = useState(false)
   const [seeDiffMediaForm, setSeeDiffMediaForm] = useState({ name: '', file: null })
+  const [homeSliderMediaForm, setHomeSliderMediaForm] = useState({ name: '', file: null })
   /** Remount file inputs after upload so the next pick always fires `onChange`. */
   const [mediaFileInputKey, setMediaFileInputKey] = useState({
     testimonials: 0,
     transformations: 0,
     seeTheDifference: 0,
+    homeSliders: 0,
   })
 
   // Coupons
@@ -2477,17 +2479,17 @@ function App() {
   }
 
   const uploadMediaFile = async (type, formState, setFormState) => {
-    const isSeeDiff = type === 'seeTheDifference'
+    const isImageMedia = type === 'seeTheDifference' || type === 'homeSliders'
     if (!formState.file) {
       setMediaMessage({
         type: 'error',
-        text: isSeeDiff ? 'Please select an image' : 'Please select a video file',
+        text: isImageMedia ? 'Please select an image' : 'Please select a video file',
       })
       return
     }
-    const maxBytes = isSeeDiff ? MAX_MEDIA_IMAGE_SIZE_BYTES : MAX_MEDIA_VIDEO_SIZE_BYTES
-    const maxMb = isSeeDiff ? MAX_MEDIA_IMAGE_SIZE_MB : MAX_MEDIA_VIDEO_SIZE_MB
-    const kind = isSeeDiff ? 'image' : 'video'
+    const maxBytes = isImageMedia ? MAX_MEDIA_IMAGE_SIZE_BYTES : MAX_MEDIA_VIDEO_SIZE_BYTES
+    const maxMb = isImageMedia ? MAX_MEDIA_IMAGE_SIZE_MB : MAX_MEDIA_VIDEO_SIZE_MB
+    const kind = isImageMedia ? 'image' : 'video'
     if (formState.file.size > maxBytes) {
       const msg = `Size limit exceeded. Max allowed is ${maxMb} MB per ${kind}.`
       setMediaMessage({ type: 'error', text: msg })
@@ -4780,6 +4782,58 @@ function App() {
                 {mediaMessage.text}
               </div>
             )}
+
+            {/* Home hero slider images */}
+            <div className="media-block">
+              <h3 className="media-block-title">Home hero slider</h3>
+              <p className="media-help-text">Max image size: {MAX_MEDIA_IMAGE_SIZE_MB} MB. One image per upload; order matches carousel. If none are uploaded, the app uses built-in banners.</p>
+              <div className="media-upload-toolbar">
+                <input
+                  type="text"
+                  placeholder="Label (optional)"
+                  value={homeSliderMediaForm.name}
+                  onChange={(e) => setHomeSliderMediaForm((f) => ({ ...f, name: e.target.value }))}
+                  className="media-control media-name-input"
+                />
+                <label className="media-file-input-wrap">
+                  <span className="media-file-button">Choose image</span>
+                  <input
+                    key={`media-file-homeSliders-${mediaFileInputKey.homeSliders}`}
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0] || null
+                      if (file && file.size > MAX_MEDIA_IMAGE_SIZE_BYTES) {
+                        const msg = `Size limit exceeded. Max allowed is ${MAX_MEDIA_IMAGE_SIZE_MB} MB per image.`
+                        setMediaMessage({ type: 'error', text: msg })
+                        window.alert(msg)
+                        e.target.value = ''
+                        return
+                      }
+                      setHomeSliderMediaForm((f) => ({ ...f, file }))
+                    }}
+                  />
+                </label>
+                <span className="media-selected-file">{homeSliderMediaForm.file?.name || 'No file selected'}</span>
+                <button
+                  type="button"
+                  className="media-upload-button"
+                  onClick={() => uploadMediaFile('homeSliders', homeSliderMediaForm, setHomeSliderMediaForm)}
+                  disabled={uploadingMedia || !homeSliderMediaForm.file}
+                >
+                  {uploadingMedia ? 'Uploading...' : 'Upload'}
+                </button>
+              </div>
+              <div className="media-items-grid">
+                {(mediaList.filter((m) => m.type === 'homeSliders') || []).sort((a, b) => a.order - b.order).map((m) => (
+                  <div key={m._id} className="media-item-card">
+                    <img src={resolveUploadOrAbsoluteUrl(m.url)} alt="" className="media-item-preview" />
+                    <span className="media-item-name">{m.name?.trim() ? m.name : `Slide ${m.order + 1}`}</span>
+                    <button type="button" className="secondary-button media-delete-button" onClick={() => deleteMediaItem(m._id)}>Delete</button>
+                  </div>
+                ))}
+              </div>
+            </div>
 
             {/* Testimonials: video upload */}
             <div className="media-block">

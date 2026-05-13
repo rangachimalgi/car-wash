@@ -4,7 +4,7 @@ const mediaSchema = new mongoose.Schema({
   type: {
     type: String,
     required: true,
-    enum: ['testimonials', 'transformations', 'seeTheDifference'],
+    enum: ['testimonials', 'transformations', 'seeTheDifference', 'homeSliders'],
     index: true,
   },
   url: {

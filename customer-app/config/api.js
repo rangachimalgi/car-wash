@@ -139,13 +139,21 @@ export const resolveAssetUrl = (path) => {
 export const getMedia = async () => {
   // Public media payload is small, but video URLs may point at cold R2 edges; allow a longer read than default 10s.
   const { data } = await api.get('/media/public', { timeout: 25000 });
-  if (!data?.success || !data.data) return { testimonials: [], transformations: [], seeTheDifference: [] };
+  if (!data?.success || !data.data) {
+    return {
+      testimonials: [],
+      transformations: [],
+      seeTheDifference: [],
+      homeSliders: [],
+    };
+  }
   const d = data.data;
   const withResolvedUrl = (m) => ({ ...m, url: m.url ? resolveAssetUrl(m.url) : null });
   return {
     testimonials: (d.testimonials || []).map(withResolvedUrl),
     transformations: (d.transformations || []).map(withResolvedUrl),
     seeTheDifference: (d.seeTheDifference || []).map(withResolvedUrl),
+    homeSliders: (d.homeSliders || []).map(withResolvedUrl),
   };
 };
 
