@@ -42,29 +42,7 @@ function createUploadMediaSingle() {
   }).single('file');
 }
 
-function createUploadMediaSeeTheDifference() {
-  const storage = isR2Configured() ? multer.memoryStorage() : diskStorage;
-  return multer({
-    storage,
-    limits: { fileSize: 10 * 1024 * 1024 },
-    fileFilter: (req, file, cb) => {
-      if (allowedImage.test(file.mimetype)) {
-        cb(null, true);
-      } else {
-        cb(new Error('Only images (JPEG, PNG, WebP, GIF) are allowed for See The Difference'));
-      }
-    },
-  }).fields([
-    { name: 'image1', maxCount: 1 },
-    { name: 'image2', maxCount: 1 },
-    { name: 'image3', maxCount: 1 },
-  ]);
-}
-
 export const uploadMediaSingle = (req, res, next) => createUploadMediaSingle()(req, res, next);
-
-export const uploadMediaSeeTheDifference = (req, res, next) =>
-  createUploadMediaSeeTheDifference()(req, res, next);
 
 export function getMediaUrl(filename) {
   return `/uploads/media/${filename}`;

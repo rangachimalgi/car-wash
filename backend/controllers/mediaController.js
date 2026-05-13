@@ -87,11 +87,27 @@ export const uploadMedia = async (req, res) => {
       return res.status(400).json({ success: false, message: 'No file uploaded' });
     }
     const type = req.body?.type || 'testimonials';
-    if (!['testimonials', 'transformations'].includes(type)) {
+    const allowedTypes = ['testimonials', 'transformations', 'seeTheDifference'];
+    if (!allowedTypes.includes(type)) {
       if (!isR2Configured() && req.file.path && fs.existsSync(req.file.path)) {
         fs.unlink(req.file.path, () => {});
       }
-      return res.status(400).json({ success: false, message: 'Type must be testimonials or transformations' });
+      return res.status(400).json({
+        success: false,
+        message: 'Type must be testimonials, transformations, or seeTheDifference',
+      });
+    }
+    if (type === 'seeTheDifference') {
+      const mt = req.file.mimetype || '';
+      if (!/^image\/(jpeg|jpg|png|webp|gif)$/i.test(mt)) {
+        if (!isR2Configured() && req.file.path && fs.existsSync(req.file.path)) {
+          fs.unlink(req.file.path, () => {});
+        }
+        return res.status(400).json({
+          success: false,
+          message: 'See The Difference accepts images only (JPEG, PNG, WebP, GIF)',
+        });
+      }
     }
     const name = (req.body?.name || '').trim();
     let url;
@@ -127,84 +143,6 @@ export const uploadMedia = async (req, res) => {
       error: providerMessage,
       details: error?.details || undefined,
     });
-  }
-};
-
-// @desc    Upload See The Difference (exactly 3 images - replaces existing)
-// @route   POST /api/media/see-the-difference
-// @access  Public (admin)
-export const uploadSeeTheDifference = async (req, res) => {
-  const files = req.files;
-  const image1 = files?.image1?.[0];
-  const image2 = files?.image2?.[0];
-  const image3 = files?.image3?.[0];
-
-  const cleanupLocalTempFiles = () => {
-    [image1, image2, image3].filter(Boolean).forEach((f) => {
-      if (f.path && fs.existsSync(f.path)) fs.unlinkSync(f.path);
-    });
-  };
-
-  try {
-    if (!image1 || !image2 || !image3) {
-      cleanupLocalTempFiles();
-      return res.status(400).json({
-        success: false,
-        message: 'Please upload all 3 images (image1, image2, image3)',
-      });
-    }
-
-    const existing = await Media.find({ type: 'seeTheDifference' });
-    for (const doc of existing) {
-      await removeStoredMediaFile(doc.url);
-    }
-    await Media.deleteMany({ type: 'seeTheDifference' });
-
-    const nameParts = (req.body?.names || '')
-      .split(',')
-      .map((s) => s.trim())
-      .slice(0, 3);
-    while (nameParts.length < 3) nameParts.push('');
-
-    const ts = Date.now();
-    let items;
-
-    if (isR2Configured()) {
-      const uploadOne = async (file, index) => {
-        if (!file.buffer) throw new Error('Missing image buffer');
-        const ext = safeExt(file.originalname, file.mimetype, '.jpg');
-        const key = `media/see-the-difference/${ts}-${index}-${randomSuffix()}${ext}`;
-        const url = await uploadObjectToR2({
-          key,
-          body: file.buffer,
-          contentType: file.mimetype || 'image/jpeg',
-        });
-        return url;
-      };
-      const [u0, u1, u2] = await Promise.all([
-        uploadOne(image1, 0),
-        uploadOne(image2, 1),
-        uploadOne(image3, 2),
-      ]);
-      items = [
-        { type: 'seeTheDifference', url: u0, name: nameParts[0] || '', order: 0 },
-        { type: 'seeTheDifference', url: u1, name: nameParts[1] || '', order: 1 },
-        { type: 'seeTheDifference', url: u2, name: nameParts[2] || '', order: 2 },
-      ];
-    } else {
-      items = [
-        { type: 'seeTheDifference', url: `/uploads/media/${image1.filename}`, name: nameParts[0] || '', order: 0 },
-        { type: 'seeTheDifference', url: `/uploads/media/${image2.filename}`, name: nameParts[1] || '', order: 1 },
-        { type: 'seeTheDifference', url: `/uploads/media/${image3.filename}`, name: nameParts[2] || '', order: 2 },
-      ];
-    }
-
-    const created = await Media.insertMany(items);
-    res.status(201).json({ success: true, data: created });
-  } catch (error) {
-    cleanupLocalTempFiles();
-    console.error('Error uploading see the difference:', error);
-    res.status(500).json({ success: false, message: 'Error uploading images', error: error.message });
   }
 };
 

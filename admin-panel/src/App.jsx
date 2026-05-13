@@ -233,9 +233,7 @@ function App() {
   const [testimonialMediaForm, setTestimonialMediaForm] = useState({ name: '', file: null })
   const [transformationMediaForm, setTransformationMediaForm] = useState({ name: '', file: null })
   const [uploadingMedia, setUploadingMedia] = useState(false)
-  const [seeDiffFiles, setSeeDiffFiles] = useState({ image1: null, image2: null, image3: null })
-  const [seeDiffCaptions, setSeeDiffCaptions] = useState({ caption1: '', caption2: '', caption3: '' })
-  const [uploadingSeeDiff, setUploadingSeeDiff] = useState(false)
+  const [seeDiffMediaForm, setSeeDiffMediaForm] = useState({ name: '', file: null })
 
   // Coupons
   const [coupons, setCoupons] = useState([])
@@ -2473,12 +2471,19 @@ function App() {
   }
 
   const uploadMediaFile = async (type, formState, setFormState) => {
+    const isSeeDiff = type === 'seeTheDifference'
     if (!formState.file) {
-      setMediaMessage({ type: 'error', text: 'Please select a video file' })
+      setMediaMessage({
+        type: 'error',
+        text: isSeeDiff ? 'Please select an image' : 'Please select a video file',
+      })
       return
     }
-    if (formState.file.size > MAX_MEDIA_VIDEO_SIZE_BYTES) {
-      const msg = `Size limit exceeded. Max allowed is ${MAX_MEDIA_VIDEO_SIZE_MB} MB per video.`
+    const maxBytes = isSeeDiff ? MAX_MEDIA_IMAGE_SIZE_BYTES : MAX_MEDIA_VIDEO_SIZE_BYTES
+    const maxMb = isSeeDiff ? MAX_MEDIA_IMAGE_SIZE_MB : MAX_MEDIA_VIDEO_SIZE_MB
+    const kind = isSeeDiff ? 'image' : 'video'
+    if (formState.file.size > maxBytes) {
+      const msg = `Size limit exceeded. Max allowed is ${maxMb} MB per ${kind}.`
       setMediaMessage({ type: 'error', text: msg })
       window.alert(msg)
       return
@@ -2506,50 +2511,6 @@ function App() {
       setMediaMessage({ type: 'error', text: e.message || 'Upload failed' })
     } finally {
       setUploadingMedia(false)
-    }
-  }
-
-  const uploadSeeTheDifference = async () => {
-    if (!seeDiffFiles.image1 || !seeDiffFiles.image2 || !seeDiffFiles.image3) {
-      setMediaMessage({ type: 'error', text: 'Please select all 3 images' })
-      return
-    }
-    const tooLargeImage = [seeDiffFiles.image1, seeDiffFiles.image2, seeDiffFiles.image3]
-      .find((file) => file && file.size > MAX_MEDIA_IMAGE_SIZE_BYTES)
-    if (tooLargeImage) {
-      const msg = `Size limit exceeded. Max allowed is ${MAX_MEDIA_IMAGE_SIZE_MB} MB per image.`
-      setMediaMessage({ type: 'error', text: msg })
-      window.alert(msg)
-      return
-    }
-    setUploadingSeeDiff(true)
-    setMediaMessage({ type: '', text: '' })
-    try {
-      const formData = new FormData()
-      formData.append('image1', seeDiffFiles.image1)
-      formData.append('image2', seeDiffFiles.image2)
-      formData.append('image3', seeDiffFiles.image3)
-      const namesCsv = [seeDiffCaptions.caption1, seeDiffCaptions.caption2, seeDiffCaptions.caption3]
-        .map((s) => (s || '').trim())
-        .join(',')
-      formData.append('names', namesCsv)
-      const opts = getFetchOptions()
-      const headers = { ...opts.headers }
-      delete headers['Content-Type']
-      const res = await fetch(`${API_BASE_URL}/media/see-the-difference`, { ...opts, method: 'POST', headers, body: formData })
-      const data = await res.json()
-      if (data.success) {
-        setMediaMessage({ type: 'success', text: 'See The Difference images updated' })
-        setSeeDiffFiles({ image1: null, image2: null, image3: null })
-        setSeeDiffCaptions({ caption1: '', caption2: '', caption3: '' })
-        fetchMedia()
-      } else {
-        setMediaMessage({ type: 'error', text: data.message || 'Upload failed' })
-      }
-    } catch (e) {
-      setMediaMessage({ type: 'error', text: e.message || 'Upload failed' })
-    } finally {
-      setUploadingSeeDiff(false)
     }
   }
 
@@ -4923,83 +4884,52 @@ function App() {
               </div>
             </div>
 
-            {/* See The Difference: 3 images */}
+            {/* See The Difference: images (one at a time, like testimonials) */}
             <div className="media-block">
-              <h3 className="media-block-title">See The Difference (3 images)</h3>
-              <p className="media-help-text">Upload exactly 3 images (max {MAX_MEDIA_IMAGE_SIZE_MB} MB each). They will replace the current set. Optional captions appear on each slide in the app; leave blank for image-only slides.</p>
-              <div className="form-row" style={{ marginBottom: '12px', flexWrap: 'wrap', gap: '8px' }}>
-                <div className="form-group" style={{ minWidth: '160px', flex: '1 1 160px' }}>
-                  <label htmlFor="seeDiffCaption1">Caption 1 (optional)</label>
-                  <input
-                    id="seeDiffCaption1"
-                    type="text"
-                    value={seeDiffCaptions.caption1}
-                    onChange={(e) => setSeeDiffCaptions((c) => ({ ...c, caption1: e.target.value }))}
-                    placeholder="e.g. Before"
-                  />
-                </div>
-                <div className="form-group" style={{ minWidth: '160px', flex: '1 1 160px' }}>
-                  <label htmlFor="seeDiffCaption2">Caption 2 (optional)</label>
-                  <input
-                    id="seeDiffCaption2"
-                    type="text"
-                    value={seeDiffCaptions.caption2}
-                    onChange={(e) => setSeeDiffCaptions((c) => ({ ...c, caption2: e.target.value }))}
-                    placeholder="e.g. Deep foam"
-                  />
-                </div>
-                <div className="form-group" style={{ minWidth: '160px', flex: '1 1 160px' }}>
-                  <label htmlFor="seeDiffCaption3">Caption 3 (optional)</label>
-                  <input
-                    id="seeDiffCaption3"
-                    type="text"
-                    value={seeDiffCaptions.caption3}
-                    onChange={(e) => setSeeDiffCaptions((c) => ({ ...c, caption3: e.target.value }))}
-                    placeholder="e.g. After"
-                  />
-                </div>
-              </div>
+              <h3 className="media-block-title">See The Difference (images)</h3>
+              <p className="media-help-text">Max image size: {MAX_MEDIA_IMAGE_SIZE_MB} MB each. Upload one at a time; order follows upload sequence.</p>
               <div className="media-upload-toolbar">
-                <label className="media-file-input-wrap"><span className="media-file-button">Image 1</span><input type="file" accept="image/*" onChange={(e) => {
-                  const file = e.target.files?.[0] || null
-                  if (file && file.size > MAX_MEDIA_IMAGE_SIZE_BYTES) {
-                    const msg = `Size limit exceeded. Max allowed is ${MAX_MEDIA_IMAGE_SIZE_MB} MB per image.`
-                    setMediaMessage({ type: 'error', text: msg })
-                    window.alert(msg)
-                    e.target.value = ''
-                    return
-                  }
-                  setSeeDiffFiles((f) => ({ ...f, image1: file }))
-                }} /></label>
-                <label className="media-file-input-wrap"><span className="media-file-button">Image 2</span><input type="file" accept="image/*" onChange={(e) => {
-                  const file = e.target.files?.[0] || null
-                  if (file && file.size > MAX_MEDIA_IMAGE_SIZE_BYTES) {
-                    const msg = `Size limit exceeded. Max allowed is ${MAX_MEDIA_IMAGE_SIZE_MB} MB per image.`
-                    setMediaMessage({ type: 'error', text: msg })
-                    window.alert(msg)
-                    e.target.value = ''
-                    return
-                  }
-                  setSeeDiffFiles((f) => ({ ...f, image2: file }))
-                }} /></label>
-                <label className="media-file-input-wrap"><span className="media-file-button">Image 3</span><input type="file" accept="image/*" onChange={(e) => {
-                  const file = e.target.files?.[0] || null
-                  if (file && file.size > MAX_MEDIA_IMAGE_SIZE_BYTES) {
-                    const msg = `Size limit exceeded. Max allowed is ${MAX_MEDIA_IMAGE_SIZE_MB} MB per image.`
-                    setMediaMessage({ type: 'error', text: msg })
-                    window.alert(msg)
-                    e.target.value = ''
-                    return
-                  }
-                  setSeeDiffFiles((f) => ({ ...f, image3: file }))
-                }} /></label>
-                <button type="button" className="media-upload-button" onClick={uploadSeeTheDifference} disabled={uploadingSeeDiff}> {uploadingSeeDiff ? 'Uploading...' : 'Upload 3 images'} </button>
+                <input
+                  type="text"
+                  placeholder="Caption (optional)"
+                  value={seeDiffMediaForm.name}
+                  onChange={(e) => setSeeDiffMediaForm((f) => ({ ...f, name: e.target.value }))}
+                  className="media-control media-name-input"
+                />
+                <label className="media-file-input-wrap">
+                  <span className="media-file-button">Choose image</span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0] || null
+                      if (file && file.size > MAX_MEDIA_IMAGE_SIZE_BYTES) {
+                        const msg = `Size limit exceeded. Max allowed is ${MAX_MEDIA_IMAGE_SIZE_MB} MB per image.`
+                        setMediaMessage({ type: 'error', text: msg })
+                        window.alert(msg)
+                        e.target.value = ''
+                        return
+                      }
+                      setSeeDiffMediaForm((f) => ({ ...f, file }))
+                    }}
+                  />
+                </label>
+                <span className="media-selected-file">{seeDiffMediaForm.file?.name || 'No file selected'}</span>
+                <button
+                  type="button"
+                  className="media-upload-button"
+                  onClick={() => uploadMediaFile('seeTheDifference', seeDiffMediaForm, setSeeDiffMediaForm)}
+                  disabled={uploadingMedia || !seeDiffMediaForm.file}
+                >
+                  {uploadingMedia ? 'Uploading...' : 'Upload'}
+                </button>
               </div>
-              <div className="media-see-diff-grid">
+              <div className="media-items-grid">
                 {(mediaList.filter((m) => m.type === 'seeTheDifference') || []).sort((a, b) => a.order - b.order).map((m) => (
-                  <div key={m._id} className="media-see-diff-card">
-                    <img src={resolveUploadOrAbsoluteUrl(m.url)} alt={m.name} className="media-see-diff-image" />
-                    <span className="media-see-diff-label">{m.name?.trim() ? m.name : `Image ${m.order + 1}`}</span>
+                  <div key={m._id} className="media-item-card">
+                    <img src={resolveUploadOrAbsoluteUrl(m.url)} alt="" className="media-item-preview" />
+                    <span className="media-item-name">{m.name?.trim() ? m.name : `Slide ${m.order + 1}`}</span>
+                    <button type="button" className="secondary-button media-delete-button" onClick={() => deleteMediaItem(m._id)}>Delete</button>
                   </div>
                 ))}
               </div>
