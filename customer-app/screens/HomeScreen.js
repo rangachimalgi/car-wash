@@ -1,6 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Dimensions, TouchableOpacity, Image, Share, AppState, ActivityIndicator } from 'react-native';
-import { Image as ExpoImage } from 'expo-image';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Share, AppState, ActivityIndicator, useWindowDimensions } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
@@ -13,9 +12,6 @@ import { getMedia } from '../config/api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getReferralInfo } from '../services/walletApi';
 // import { getPopularServices } from '../services/serviceApi';
-
-const sliderCardWidth = Dimensions.get('window').width;
-const cardWidth = (sliderCardWidth - 48) / 3; // 3 cards with padding
 
 /** One slide while waiting for GET /media/public — avoids flashing old bundled banners. */
 const HERO_LOADING_SLIDE = [{ key: 'hero-loading', kind: 'loading' }];
@@ -41,7 +37,12 @@ export default function HomeScreen({ navigation }) {
   /** After first public media fetch (success or fail) we stop showing the loading hero. */
   const [publicMediaFetched, setPublicMediaFetched] = useState(false);
   const { theme, isLightMode } = useTheme();
-  const styles = useMemo(() => createStyles(theme), [theme]);
+  const { width: screenW } = useWindowDimensions();
+  const layout = useMemo(
+    () => ({ screenW, heroH: Math.round(screenW * (9 / 16)) }),
+    [screenW]
+  );
+  const styles = useMemo(() => createStyles(theme, layout), [theme, layout]);
 
   const heroSlides = useMemo(() => {
     if (!publicMediaFetched) return HERO_LOADING_SLIDE;
@@ -65,7 +66,7 @@ export default function HomeScreen({ navigation }) {
     if (imageErrors[imageKey]) {
       return (
         <View style={{
-          width: sliderCardWidth,
+          width: layout.screenW,
           height: 260,
           backgroundColor: theme.cardBackground,
           alignItems: 'center',
@@ -90,22 +91,22 @@ export default function HomeScreen({ navigation }) {
   };
 
   const handleSliderScrollEnd = useCallback((event) => {
-    const nextIndex = Math.round(event.nativeEvent.contentOffset.x / sliderCardWidth);
+    const nextIndex = Math.round(event.nativeEvent.contentOffset.x / layout.screenW);
     setActiveSlide(nextIndex);
-  }, []);
+  }, [layout.screenW]);
 
   useEffect(() => {
     if (heroSlides.length <= 1) return;
     const interval = setInterval(() => {
       setActiveSlide((prev) => {
         const nextIndex = (prev + 1) % heroSlides.length;
-        sliderRef.current?.scrollTo({ x: nextIndex * sliderCardWidth, animated: true });
+        sliderRef.current?.scrollTo({ x: nextIndex * layout.screenW, animated: true });
         return nextIndex;
       });
     }, 3500);
 
     return () => clearInterval(interval);
-  }, [heroSlides.length]);
+  }, [heroSlides.length, layout.screenW]);
 
   useEffect(() => {
     const n = heroSlides.length;
@@ -225,29 +226,27 @@ export default function HomeScreen({ navigation }) {
             style={styles.sliderScrollView}
             contentContainerStyle={styles.sliderScrollContent}
             decelerationRate="fast"
-            snapToInterval={sliderCardWidth}
+            snapToInterval={layout.screenW}
             onMomentumScrollEnd={handleSliderScrollEnd}
             ref={sliderRef}
           >
             {heroSlides.map((item) => (
               <View key={item.key} style={styles.sliderCard}>
                 {item.kind === 'loading' ? (
-                  <View style={[styles.sliderImage, styles.heroCentered]}>
+                  <View style={[styles.sliderHeroImage, styles.heroCentered]}>
                     <ActivityIndicator size="large" color={theme.accent} />
                   </View>
                 ) : item.kind === 'empty' ? (
-                  <View style={[styles.sliderImage, styles.heroCentered, { backgroundColor: theme.cardBackground }]}>
+                  <View style={[styles.sliderHeroImage, styles.heroCentered, { backgroundColor: theme.cardBackground }]}>
                     <Text style={{ color: theme.textSecondary, fontSize: 15, textAlign: 'center', paddingHorizontal: 24 }}>
                       Add hero images in Admin → Media → Home hero slider
                     </Text>
                   </View>
                 ) : (
-                  <ExpoImage
+                  <Image
                     source={{ uri: item.uri }}
-                    style={styles.sliderImage}
-                    contentFit="cover"
-                    transition={200}
-                    cachePolicy="memory-disk"
+                    style={styles.sliderHeroImage}
+                    resizeMode="cover"
                   />
                 )}
               </View>
@@ -467,7 +466,7 @@ export default function HomeScreen({ navigation }) {
   );
 }
 
-const createStyles = theme => StyleSheet.create({
+const createStyles = (theme, layout) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: theme.background,
@@ -605,10 +604,14 @@ const createStyles = theme => StyleSheet.create({
     paddingHorizontal: 0,
   },
   sliderCard: {
-    width: sliderCardWidth,
-    height: 300,
+    width: layout.screenW,
+    height: layout.heroH,
     backgroundColor: theme.cardBackground,
     overflow: 'hidden',
+  },
+  sliderHeroImage: {
+    width: layout.screenW,
+    height: layout.heroH,
   },
   sliderImage: {
     width: '100%',
@@ -891,7 +894,7 @@ const createStyles = theme => StyleSheet.create({
     paddingHorizontal: 16,
   },
   whyChooseCard: {
-    width: sliderCardWidth - 64,
+    width: layout.screenW - 64,
     height: 120,
     borderRadius: 20,
     marginRight: 16,

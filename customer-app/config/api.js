@@ -9,15 +9,21 @@ import Constants from 'expo-constants';
 // Optional: set in `.env`:
 //   EXPO_PUBLIC_API_BASE_URL=http://192.168.1.18:8000/api
 //   EXPO_PUBLIC_API_PORT=5000   (if you use the server default instead)
+// If the app hits a *local* API in __DEV__ but hero sliders live on production, they are merged automatically
+// from the same host as release (opt out: EXPO_PUBLIC_DISABLE_PROD_MEDIA_MERGE=1). Override merge source:
+//   EXPO_PUBLIC_MERGE_MEDIA_FROM_URL=https://YOUR-HOST/api/media/public
 //
-// Android emulator: set EXPO_PUBLIC_ANDROID_API_HOST=10.0.2.2 (maps host → your machine).
+// Android emulator: host defaults to 10.0.2.2 (AVD → your machine). Override with EXPO_PUBLIC_ANDROID_API_HOST.
 const COMPUTER_IP = '192.168.1.18';
 const DEV_API_PORT = process.env.EXPO_PUBLIC_API_PORT || '8000';
 const ANDROID_API_HOST = process.env.EXPO_PUBLIC_ANDROID_API_HOST || COMPUTER_IP;
+/** Production API root (release build + dev hero-slider merge). */
+const REMOTE_PRODUCTION_API_BASE = 'https://car-wash-vbry.onrender.com/api';
 
 const normalizeApiBase = (raw) => {
-  const u = String(raw || '').trim().replace(/\/$/, '');
+  let u = String(raw || '').trim().replace(/\/$/, '');
   if (!u) return null;
+  u = u.replace(/\/api\/api(?=\/|$)/i, '/api');
   return u.endsWith('/api') ? u : `${u}/api`;
 };
 
@@ -27,11 +33,16 @@ const getBaseURL = () => {
   if (fromEnv) return fromEnv;
 
   if (!__DEV__) {
-    return 'https://car-wash-vbry.onrender.com/api';
+    return REMOTE_PRODUCTION_API_BASE;
   }
 
   if (Platform.OS === 'android') {
-    return `http://${ANDROID_API_HOST}:${DEV_API_PORT}/api`;
+    // Emulator must use 10.0.2.2 to reach the dev machine; LAN IP does not work from AVD.
+    const host =
+      Constants.isDevice === false
+        ? (String(process.env.EXPO_PUBLIC_ANDROID_API_HOST || '').trim() || '10.0.2.2')
+        : ANDROID_API_HOST;
+    return `http://${host}:${DEV_API_PORT}/api`;
   }
   if (Platform.OS === 'ios') {
     // Simulator: localhost. Physical device: same LAN host as Android (localhost would be the phone).
@@ -43,7 +54,7 @@ const getBaseURL = () => {
   return `http://localhost:${DEV_API_PORT}/api`;
 };
 
-const API_BASE_URL = getBaseURL();
+const API_BASE_URL = normalizeApiBase(getBaseURL()) || getBaseURL();
 
 // Log the API URL for debugging (only in development)
 if (__DEV__) {
@@ -59,10 +70,18 @@ const api = axios.create({
   },
 });
 
+const requestTouchesPublicMedia = (config) => {
+  const u = String(config.url || '');
+  return u.includes('/media/public');
+};
+
 // Request interceptor (for adding auth tokens)
 api.interceptors.request.use(
   async (config) => {
-    // Add auth token if available
+    if (requestTouchesPublicMedia(config)) {
+      delete config.headers.Authorization;
+      return config;
+    }
     try {
       const token = await AsyncStorage.getItem('authToken');
       if (token) {
@@ -176,46 +195,9 @@ const pickHomeSliderList = (d) => {
   return [];
 };
 
-/**
- * Public media: use `fetch` without Authorization so a stale/invalid JWT can never
- * affect this read. Same URL as axios `api` base + `/media/public`.
- */
-export const getMedia = async () => {
-  const base = API_BASE_URL.replace(/\/$/, '');
-  const url = `${base}/media/public?_t=${Date.now()}`;
-  const controller = new AbortController();
-  const t = setTimeout(() => controller.abort(), 25000);
-  let res;
-  try {
-    res = await fetch(url, {
-      method: 'GET',
-      signal: controller.signal,
-      headers: {
-        Accept: 'application/json',
-        'Cache-Control': 'no-cache',
-        Pragma: 'no-cache',
-      },
-    });
-  } catch {
-    return emptyMedia();
-  } finally {
-    clearTimeout(t);
-  }
-
-  if (!res.ok) {
-    return emptyMedia();
-  }
-
-  const text = await res.text().catch(() => '');
-  let payload;
-  try {
-    payload = text ? JSON.parse(text) : null;
-  } catch {
-    return emptyMedia();
-  }
-
+const buildPublicMediaFromPayload = (payload) => {
   const d = unwrapPublicMediaBody(payload);
-  if (!d) return emptyMedia();
+  if (!d) return null;
 
   const withResolvedUrl = (m) => {
     const raw = pickMediaUrl(m);
@@ -230,6 +212,91 @@ export const getMedia = async () => {
     seeTheDifference: (Array.isArray(d.seeTheDifference) ? d.seeTheDifference : []).map(withResolvedUrl),
     homeSliders: homeSlidersRaw.map(withResolvedUrl),
   };
+};
+
+const normalizeMergeMediaUrl = (raw) => {
+  const u = String(raw || '').trim();
+  if (!u) return '';
+  if (/\/media\/public/i.test(u)) return u.replace(/\/$/, '');
+  const base = u.replace(/\/$/, '');
+  return `${base.endsWith('/api') ? base : `${base}/api`}/media/public`;
+};
+
+/**
+ * Public media: same axios `api` instance as the rest of the app (no Bearer on `/media/public`).
+ * Optional `EXPO_PUBLIC_MERGE_MEDIA_FROM_URL`: full `.../api/media/public` or API root — used only
+ * to fill `homeSliders` when the primary API returns none (typical local API + prod admin).
+ */
+export const getMedia = async () => {
+  let payload = null;
+  try {
+    const { data } = await api.get('/media/public', {
+      params: { _t: Date.now() },
+      timeout: 25000,
+      headers: {
+        Accept: 'application/json',
+        'Cache-Control': 'no-cache',
+        Pragma: 'no-cache',
+      },
+    });
+    payload = data;
+  } catch {
+    try {
+      const url = `${API_BASE_URL.replace(/\/$/, '')}/media/public?_t=${Date.now()}`;
+      const res = await fetch(url, {
+        method: 'GET',
+        headers: {
+          Accept: 'application/json',
+          'Cache-Control': 'no-cache',
+          Pragma: 'no-cache',
+        },
+      });
+      if (res.ok) payload = await res.json();
+    } catch {
+      /* ignore */
+    }
+  }
+
+  if (!payload || typeof payload !== 'object') return emptyMedia();
+  let parsed = buildPublicMediaFromPayload(payload);
+  if (!parsed) parsed = emptyMedia();
+
+  const mergeFromEnv = normalizeMergeMediaUrl(process.env.EXPO_PUBLIC_MERGE_MEDIA_FROM_URL?.trim());
+  let mergeUrl = mergeFromEnv;
+  const mergeDisabled =
+    process.env.EXPO_PUBLIC_DISABLE_PROD_MEDIA_MERGE === '1' ||
+    process.env.EXPO_PUBLIC_DISABLE_PROD_MEDIA_MERGE === 'true';
+  if (
+    !mergeUrl &&
+    __DEV__ &&
+    !mergeDisabled &&
+    !API_BASE_URL.includes(new URL(REMOTE_PRODUCTION_API_BASE).hostname) &&
+    (!parsed.homeSliders || parsed.homeSliders.length === 0)
+  ) {
+    mergeUrl = `${REMOTE_PRODUCTION_API_BASE.replace(/\/$/, '')}/media/public`;
+  }
+
+  if (mergeUrl && (!parsed.homeSliders || parsed.homeSliders.length === 0)) {
+    try {
+      const sep = mergeUrl.includes('?') ? '&' : '?';
+      const { data: alt } = await axios.get(`${mergeUrl}${sep}_t=${Date.now()}`, {
+        timeout: 25000,
+        headers: {
+          Accept: 'application/json',
+          'Cache-Control': 'no-cache',
+          Pragma: 'no-cache',
+        },
+      });
+      const altParsed = buildPublicMediaFromPayload(alt);
+      if (altParsed?.homeSliders?.length) {
+        parsed = { ...parsed, homeSliders: altParsed.homeSliders };
+      }
+    } catch {
+      /* keep primary */
+    }
+  }
+
+  return parsed;
 };
 
 export default api;
