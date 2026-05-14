@@ -193,8 +193,10 @@ export default function LoginScreen({ navigation }) {
 
             {/* App Description */}
             <View style={styles.appDescription}>
-              <Text style={styles.appDescriptionTop}>India's </Text>
-              <Text style={styles.appDescriptionBottom}>Car & Bike Care App</Text>
+              {/* <Text style={styles.appDescriptionTop}>{"India's"}</Text> */}
+              <Text style={styles.appDescriptionBottom}>
+                {"Your Vehicle's Best\nCompanion App"}
+              </Text>
             </View>
           </>
         )}
@@ -419,18 +421,23 @@ const createStyles = theme => StyleSheet.create({
     alignItems: 'center',
     marginBottom: 40,
     paddingHorizontal: 20,
+    width: '100%',
   },
   appDescriptionTop: {
     fontSize: 20,
     color: '#6B7280',
     fontWeight: '600',
     marginBottom: 6,
+    textAlign: 'center',
+    width: '100%',
   },
   appDescriptionBottom: {
-    fontSize: 28,
+    fontSize: 24,
     color: '#1A1A1A',
     fontWeight: 'bold',
     letterSpacing: 0.5,
+    textAlign: 'center',
+    width: '100%',
   },
   formSection: {
     paddingHorizontal: 24,
