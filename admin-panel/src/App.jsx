@@ -128,6 +128,7 @@ function App() {
   const [editingServiceId, setEditingServiceId] = useState(null) // Track which service is being edited
   const [servicesError, setServicesError] = useState('')
   const [uploadingMainImage, setUploadingMainImage] = useState(false)
+  const [uploadingPackageImage, setUploadingPackageImage] = useState(false)
   const [authToken, setAuthToken] = useState(() => localStorage.getItem('adminAuthToken') || '')
   
   // Time Slots state
@@ -272,6 +273,7 @@ function App() {
     packageCards: [],
   })
   const [newPackageCard, setNewPackageCard] = useState({ ...DEFAULT_PACKAGE_CARD, times: 2 })
+  const [editingPackageCardIndex, setEditingPackageCardIndex] = useState(null)
   const [loadingPackagePricing, setLoadingPackagePricing] = useState(false)
   const [packagePricingMessage, setPackagePricingMessage] = useState({ type: '', text: '' })
 
@@ -601,6 +603,30 @@ function App() {
     })
   }
 
+  const handleCancelPackageCardEdit = () => {
+    setEditingPackageCardIndex(null)
+    setNewPackageCard({ ...DEFAULT_PACKAGE_CARD, times: 2 })
+    setPackagePricingMessage({ type: '', text: '' })
+  }
+
+  const handleEditPackageCard = (index) => {
+    const card = packagePricingForm.packageCards?.[index]
+    if (!card) return
+    setEditingPackageCardIndex(index)
+    setNewPackageCard({
+      name: card.name || '',
+      description: card.description || '',
+      image: card.image || '',
+      times: card.times ?? 2,
+      price: card.price ?? '',
+      addOnServiceIds: Array.isArray(card.addOnServiceIds) ? [...card.addOnServiceIds] : [],
+      coverageIncluded: Array.isArray(card.coverageIncluded) ? [...card.coverageIncluded] : [],
+      coverageNotIncluded: Array.isArray(card.coverageNotIncluded) ? [...card.coverageNotIncluded] : [],
+    })
+    setPackagePricingMessage({ type: '', text: '' })
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
   const handleCreatePackageCard = () => {
     if (!String(newPackageCard.name || '').trim()) {
       setPackagePricingMessage({ type: 'error', text: 'Package name is required.' })
@@ -615,7 +641,7 @@ function App() {
       return
     }
 
-    const packageToAdd = {
+    const packageToSave = {
       ...newPackageCard,
       name: String(newPackageCard.name || '').trim(),
       description: String(newPackageCard.description || '').trim(),
@@ -624,15 +650,32 @@ function App() {
       price: Number(newPackageCard.price || 0),
     }
 
+    if (editingPackageCardIndex != null) {
+      setPackagePricingForm((prev) => {
+        const cards = [...(prev.packageCards || [])]
+        cards[editingPackageCardIndex] = packageToSave
+        return { ...prev, packageCards: cards }
+      })
+      setEditingPackageCardIndex(null)
+      setNewPackageCard({ ...DEFAULT_PACKAGE_CARD, times: 2 })
+      setPackagePricingMessage({ type: 'success', text: 'Package updated. Click "Save Packages" to persist.' })
+      return
+    }
+
     setPackagePricingForm((prev) => ({
       ...prev,
-      packageCards: [...(prev.packageCards || []), packageToAdd],
+      packageCards: [...(prev.packageCards || []), packageToSave],
     }))
     setNewPackageCard({ ...DEFAULT_PACKAGE_CARD, times: 2 })
     setPackagePricingMessage({ type: 'success', text: 'Package added. Click "Save Packages" to persist.' })
   }
 
-  const removePackageCardRow = (index) => {
+  const deletePackageCardRow = (index) => {
+    if (editingPackageCardIndex === index) {
+      handleCancelPackageCardEdit()
+    } else if (editingPackageCardIndex != null && editingPackageCardIndex > index) {
+      setEditingPackageCardIndex(editingPackageCardIndex - 1)
+    }
     setPackagePricingForm((prev) => ({
       ...prev,
       packageCards: (prev.packageCards || []).filter((_, idx) => idx !== index),
@@ -1929,6 +1972,27 @@ function App() {
     } finally {
       setUploadingMainImage(false)
     }
+  }
+
+  const handlePackageImageUpload = async (e) => {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file) return
+    setUploadingPackageImage(true)
+    setPackagePricingMessage({ type: '', text: '' })
+    try {
+      const [uploadedUrl] = await uploadServiceImageFiles([file])
+      setNewPackageCard((prev) => ({ ...prev, image: uploadedUrl || '' }))
+      setPackagePricingMessage({ type: 'success', text: 'Package image uploaded to storage.' })
+    } catch (error) {
+      setPackagePricingMessage({ type: 'error', text: error.message || 'Failed to upload package image' })
+    } finally {
+      setUploadingPackageImage(false)
+    }
+  }
+
+  const handleClearPackageImage = () => {
+    setNewPackageCard((prev) => ({ ...prev, image: '' }))
   }
 
   const addPackageRow = (packageType) => {
@@ -3544,7 +3608,23 @@ function App() {
               </div>
 
               <div className="form packages-form">
-                <h3 className="packages-block-title">Create Package</h3>
+                <div className="section-header packages-form-header" style={{ marginBottom: '16px' }}>
+                  <div>
+                    <h3 className="packages-block-title" style={{ marginBottom: '4px' }}>
+                      {editingPackageCardIndex != null ? 'Edit Package' : 'Create Package'}
+                    </h3>
+                    {editingPackageCardIndex != null ? (
+                      <p style={{ margin: 0, fontSize: '13px', color: '#64748b' }}>
+                        Editing selected package — update fields below, then save
+                      </p>
+                    ) : null}
+                  </div>
+                  {editingPackageCardIndex != null ? (
+                    <button type="button" className="secondary-button" onClick={handleCancelPackageCardEdit}>
+                      + Create New
+                    </button>
+                  ) : null}
+                </div>
                 <div className="form-row">
                   <div className="form-group">
                     <label>Package Name</label>
@@ -3588,6 +3668,42 @@ function App() {
                       placeholder="1499"
                     />
                   </div>
+                </div>
+                <div className="form-group">
+                  <label>Package Image</label>
+                  <div className="service-upload-row">
+                    <label className="service-upload-button">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handlePackageImageUpload}
+                        disabled={uploadingPackageImage}
+                      />
+                      {uploadingPackageImage ? 'Uploading...' : 'Upload Package Image'}
+                    </label>
+                    {newPackageCard.image ? (
+                      <span className="service-upload-status">Uploaded</span>
+                    ) : (
+                      <span className="service-upload-status muted">No image</span>
+                    )}
+                    {newPackageCard.image ? (
+                      <button type="button" className="secondary-button" onClick={handleClearPackageImage}>
+                        Clear
+                      </button>
+                    ) : null}
+                  </div>
+                  {newPackageCard.image ? (
+                    <div className="package-image-preview-wrap">
+                      <img
+                        src={resolveUploadOrAbsoluteUrl(newPackageCard.image)}
+                        alt="Package preview"
+                        className="package-image-preview"
+                      />
+                      <small className="help-text">{newPackageCard.image}</small>
+                    </div>
+                  ) : (
+                    <small className="help-text">Shown on the customer app package card. Stored in R2 like service images.</small>
+                  )}
                 </div>
                 <div className="form-row">
                   <div className="form-group">
@@ -3650,10 +3766,15 @@ function App() {
                     </div>
                   </div>
                 </div>
-                <div className="form-actions">
+                <div className="form-actions" style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem', alignItems: 'center' }}>
                   <button type="button" className="secondary-button" onClick={handleCreatePackageCard}>
-                    + Add Package
+                    {editingPackageCardIndex != null ? 'Save Package' : '+ Add Package'}
                   </button>
+                  {editingPackageCardIndex != null ? (
+                    <button type="button" className="cancel-button" onClick={handleCancelPackageCardEdit}>
+                      Cancel
+                    </button>
+                  ) : null}
                 </div>
               </div>
 
@@ -3666,7 +3787,14 @@ function App() {
                 ) : (
                   <div className="addons-clean-list">
                     {(packagePricingForm.packageCards || []).map((card, index) => (
-                      <div key={`pkg-${index}`} className="addon-list-row">
+                      <div key={`pkg-${index}`} className="addon-list-row package-list-row">
+                        {card.image ? (
+                          <img
+                            src={resolveUploadOrAbsoluteUrl(card.image)}
+                            alt=""
+                            className="package-list-thumb"
+                          />
+                        ) : null}
                         <div className="addon-list-main">
                           <h4 className="addon-list-name">{card.name || `Package ${index + 1}`}</h4>
                           <span className="addon-list-applicable">
@@ -3676,11 +3804,65 @@ function App() {
                             {Number(card.times || 0)} washes/month | {Number(card.addOnServiceIds?.length || 0)} add-ons | {Number(card.coverageIncluded?.length || 0)} included | {Number(card.coverageNotIncluded?.length || 0)} not included
                           </span>
                         </div>
-                        <div className="addon-list-meta">
-                          <span className="addon-list-price">₹{card.price || 0}</span>
-                          <button type="button" className="danger-button" onClick={() => removePackageCardRow(index)}>
-                            Remove
-                          </button>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexShrink: 0 }}>
+                          <div className="addon-list-meta">
+                            <span className="addon-list-price">₹{card.price || 0}</span>
+                          </div>
+                          <div className="addon-list-actions" style={{ display: 'flex', gap: '8px' }}>
+                            <button
+                              type="button"
+                              onClick={() => handleEditPackageCard(index)}
+                              style={{
+                                width: '30px',
+                                height: '30px',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                cursor: 'pointer',
+                                backgroundColor: '#111827',
+                                color: '#fff',
+                                border: 'none',
+                                borderRadius: '6px',
+                              }}
+                              aria-label="Edit package"
+                              title="Edit package"
+                            >
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                                <path
+                                  d="M4 20.5h4.2L19.2 9.5l-4-4L4 16.4V20.5z"
+                                  stroke="currentColor"
+                                  strokeWidth="1.7"
+                                  strokeLinejoin="round"
+                                />
+                                <path d="M15 5.5l3.5 3.5" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+                              </svg>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => deletePackageCardRow(index)}
+                              style={{
+                                width: '30px',
+                                height: '30px',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                cursor: 'pointer',
+                                backgroundColor: '#DC2626',
+                                color: '#fff',
+                                border: 'none',
+                                borderRadius: '6px',
+                              }}
+                              aria-label="Delete package"
+                              title="Delete package"
+                            >
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                                <path d="M3.5 6.5h17" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+                                <path d="M8 6.5V5a1.5 1.5 0 011.5-1.5h5A1.5 1.5 0 0116 5v1.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+                                <path d="M6.5 6.5l1 13a1.5 1.5 0 001.5 1.4h6a1.5 1.5 0 001.5-1.4l1-13" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                                <path d="M10 10.5v6M14 10.5v6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+                              </svg>
+                            </button>
+                          </div>
                         </div>
                       </div>
                     ))}

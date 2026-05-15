@@ -2030,6 +2030,36 @@
   height: 16px;
 }
 
+.package-image-preview-wrap {
+  margin-top: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.package-image-preview {
+  width: 160px;
+  height: 100px;
+  object-fit: cover;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+  background: #f8fafc;
+}
+
+.package-list-row {
+  align-items: center;
+}
+
+.package-list-thumb {
+  width: 56px;
+  height: 56px;
+  object-fit: cover;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+  flex-shrink: 0;
+  background: #f8fafc;
+}
+
 .packages-form .form-actions {
   margin-top: 1rem;
   padding-top: 0.9rem;

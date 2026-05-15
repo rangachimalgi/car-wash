@@ -201,7 +201,12 @@ const buildPublicMediaFromPayload = (payload) => {
 
   const withResolvedUrl = (m) => {
     const raw = pickMediaUrl(m);
-    return { ...m, url: raw ? resolveAssetUrl(raw) : null };
+    const posterRaw = String(m?.posterUrl ?? m?.poster ?? '').trim();
+    return {
+      ...m,
+      url: raw ? resolveAssetUrl(raw) : null,
+      posterUrl: posterRaw ? resolveAssetUrl(posterRaw) : null,
+    };
   };
 
   const homeSlidersRaw = pickHomeSliderList(d);

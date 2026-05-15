@@ -11,6 +11,11 @@ const mediaSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
+  /** JPEG poster for video items — generated on upload, fast to load in the app. */
+  posterUrl: {
+    type: String,
+    default: '',
+  },
   name: {
     type: String,
     default: '',

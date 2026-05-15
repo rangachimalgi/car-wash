@@ -9,6 +9,11 @@ import {
   publicUrlToR2Key,
   randomSuffix,
 } from '../services/r2Upload.js';
+import {
+  isVideoMime,
+  generatePosterBufferFromVideoBuffer,
+  generatePosterBufferFromVideoPath,
+} from '../services/videoPoster.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const uploadsDir = path.join(__dirname, '..', 'uploads', 'media');
@@ -39,6 +44,33 @@ async function removeStoredMediaFile(url) {
   }
 }
 
+async function uploadVideoPoster({ type, videoBuffer, videoPath, videoExt }) {
+  try {
+    const posterBuffer = videoBuffer
+      ? await generatePosterBufferFromVideoBuffer(videoBuffer, videoExt)
+      : await generatePosterBufferFromVideoPath(videoPath);
+    if (!posterBuffer?.length) return '';
+
+    if (isR2Configured()) {
+      const posterKey = `media/${type}/posters/${Date.now()}-${randomSuffix()}.jpg`;
+      return await uploadObjectToR2({
+        key: posterKey,
+        body: posterBuffer,
+        contentType: 'image/jpeg',
+      });
+    }
+
+    const posterName = `poster-${Date.now()}-${randomSuffix()}.jpg`;
+    const posterPath = path.join(uploadsDir, posterName);
+    fs.mkdirSync(uploadsDir, { recursive: true });
+    fs.writeFileSync(posterPath, posterBuffer);
+    return `/uploads/media/${posterName}`;
+  } catch (err) {
+    console.warn('[uploadMedia] poster generation skipped:', err?.message || err);
+    return '';
+  }
+}
+
 // @desc    Get all media (admin) or by type
 // @route   GET /api/media
 // @access  Public (admin panel)
@@ -60,10 +92,10 @@ export const getMedia = async (req, res) => {
 export const getPublicMedia = async (req, res) => {
   try {
     const [testimonials, transformations, seeTheDifference, homeSliders] = await Promise.all([
-      Media.find({ type: 'testimonials' }).sort({ order: 1 }).select('url name order').lean(),
-      Media.find({ type: 'transformations' }).sort({ order: 1 }).select('url name order').lean(),
-      Media.find({ type: 'seeTheDifference' }).sort({ order: 1 }).select('url name order').lean(),
-      Media.find({ type: 'homeSliders' }).sort({ order: 1 }).select('url name order').lean(),
+      Media.find({ type: 'testimonials' }).sort({ order: 1 }).select('url posterUrl name order').lean(),
+      Media.find({ type: 'transformations' }).sort({ order: 1 }).select('url posterUrl name order').lean(),
+      Media.find({ type: 'seeTheDifference' }).sort({ order: 1 }).select('url posterUrl name order').lean(),
+      Media.find({ type: 'homeSliders' }).sort({ order: 1 }).select('url posterUrl name order').lean(),
     ]);
     res.status(200).json({
       success: true,
@@ -112,10 +144,11 @@ export const uploadMedia = async (req, res) => {
       }
     }
     const name = (req.body?.name || '').trim();
+    const ext = safeExt(req.file.originalname, req.file.mimetype);
     let url;
+    let posterUrl = '';
 
     if (isR2Configured()) {
-      const ext = safeExt(req.file.originalname, req.file.mimetype);
       const key = `media/${type}/${Date.now()}-${randomSuffix()}${ext}`;
       if (!req.file.buffer) {
         return res.status(500).json({ success: false, message: 'Upload buffer missing (R2 mode)' });
@@ -125,12 +158,26 @@ export const uploadMedia = async (req, res) => {
         body: req.file.buffer,
         contentType: req.file.mimetype || 'application/octet-stream',
       });
+      if (isVideoMime(req.file.mimetype)) {
+        posterUrl = await uploadVideoPoster({
+          type,
+          videoBuffer: req.file.buffer,
+          videoExt: ext,
+        });
+      }
     } else {
       url = `/uploads/media/${req.file.filename}`;
+      if (isVideoMime(req.file.mimetype) && req.file.path) {
+        posterUrl = await uploadVideoPoster({
+          type,
+          videoPath: req.file.path,
+          videoExt: ext,
+        });
+      }
     }
 
     const count = await Media.countDocuments({ type });
-    const doc = await Media.create({ type, url, name, order: count });
+    const doc = await Media.create({ type, url, posterUrl, name, order: count });
     res.status(201).json({ success: true, data: doc });
   } catch (error) {
     if (!isR2Configured() && req.file?.path && fs.existsSync(req.file.path)) {
@@ -158,6 +205,7 @@ export const deleteMedia = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Media not found' });
     }
     await removeStoredMediaFile(doc.url);
+    if (doc.posterUrl) await removeStoredMediaFile(doc.posterUrl);
     await Media.findByIdAndDelete(req.params.id);
     res.status(200).json({ success: true, message: 'Media deleted' });
   } catch (error) {

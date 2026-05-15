@@ -24,10 +24,9 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Audio } from 'expo-av';
 import { useEvent } from 'expo';
 import { useVideoPlayer, VideoView } from 'expo-video';
-import * as VideoThumbnails from 'expo-video-thumbnails';
 import { useTheme } from '../theme/ThemeContext';
 
-/** Lightweight skeleton shimmer (no extra native deps; works with Expo + Reanimated). */
+/** Shimmer for modal video buffer only (not used on the home carousel). */
 function TestimonialShimmer({ width, height, borderRadius, baseColor, highlightColor }) {
   const progress = useSharedValue(0);
   const stripeW = Math.max(56, Math.min(112, width * 0.45));
@@ -61,7 +60,6 @@ function TestimonialShimmer({ width, height, borderRadius, baseColor, highlightC
   );
 }
 
-/** expo-av `Video` is unreliable in some prod / New-Arch builds; expo-video uses the platform player. */
 function TestimonialModalVideo({ uri, styles: s }) {
   const { width: winW } = useWindowDimensions();
   const shimmerW = Math.max(160, winW - 36);
@@ -69,10 +67,15 @@ function TestimonialModalVideo({ uri, styles: s }) {
   const player = useVideoPlayer(uri, (p) => {
     p.loop = false;
     p.muted = false;
-    p.play();
   });
   const { status } = useEvent(player, 'statusChange', { status: player.status });
   const showLoading = status !== 'readyToPlay' && status !== 'error';
+
+  useEffect(() => {
+    if (status === 'readyToPlay') {
+      player.play();
+    }
+  }, [status, player]);
 
   return (
     <View style={s.videoPlayerWrap}>
@@ -110,43 +113,6 @@ const DEFAULT_ITEMS = [
 
 const isVideoUrl = (url) => /\.(mp4|webm|mov)(\?|$)/i.test(url || '');
 
-/** Warm TLS + CDN edge before decoding frames (cheap on RN; ignore failures). */
-async function warmRemoteVideoUrls(urls) {
-  await Promise.all(
-    urls.map(async (url) => {
-      if (!/^https?:\/\//i.test(url)) return;
-      const ctrl = new AbortController();
-      const timer = setTimeout(() => ctrl.abort(), 5000);
-      try {
-        await fetch(url, { method: 'HEAD', signal: ctrl.signal });
-      } catch {
-        /* ignore */
-      } finally {
-        clearTimeout(timer);
-      }
-    })
-  );
-}
-
-/** Prefer early frame + lower quality first — much faster over R2 than seeking to 500ms. */
-async function thumbnailWithRetry(url, attempts = 3) {
-  const tries = [
-    { time: 0, quality: 0.42 },
-    { time: 350, quality: 0.5 },
-    { time: 1100, quality: 0.55 },
-  ];
-  for (let i = 0; i < attempts; i++) {
-    const opts = tries[i] ?? tries[tries.length - 1];
-    try {
-      const { uri } = await VideoThumbnails.getThumbnailAsync(url, opts);
-      return [url, uri];
-    } catch {
-      if (i < attempts - 1) await new Promise((r) => setTimeout(r, 180 * (i + 1)));
-    }
-  }
-  return null;
-}
-
 const CARD_W = Math.min(160, width * 0.42);
 
 export default function CustomerTestimonials({
@@ -157,7 +123,6 @@ export default function CustomerTestimonials({
   const { theme, isLightMode } = useTheme();
   const styles = useMemo(() => createStyles(theme, isLightMode), [theme, isLightMode]);
   const [activeVideoUrl, setActiveVideoUrl] = useState(null);
-  const [videoThumbnails, setVideoThumbnails] = useState({});
 
   useEffect(() => {
     Audio.setAudioModeAsync({
@@ -169,105 +134,67 @@ export default function CustomerTestimonials({
     }).catch(() => {});
   }, []);
 
-  // Pre-generate thumbnails in parallel (faster than sequential). Depends only on `items`
-  // so we do not re-run the whole pipeline on every thumbnail state update.
-  useEffect(() => {
-    let mounted = true;
-    const videoUrls = items
-      .map((item) => (typeof item?.url === 'string' ? item.url : ''))
-      .filter((url) => isVideoUrl(url));
-
-    if (!videoUrls.length) return undefined;
-
-    (async () => {
-      const [, entries] = await Promise.all([
-        warmRemoteVideoUrls(videoUrls),
-        Promise.all(videoUrls.map((url) => thumbnailWithRetry(url))),
-      ]);
-
-      if (!mounted) return;
-      const ok = entries.filter(Boolean);
-      if (!ok.length) return;
-      setVideoThumbnails((prev) => {
-        const next = { ...prev };
-        ok.forEach(([url, uri]) => {
-          if (!next[url]) next[url] = uri;
-        });
-        return next;
-      });
-    })();
-
-    return () => {
-      mounted = false;
-    };
-  }, [items]);
-
   return (
     <>
       <View style={styles.section}>
-      <Text style={styles.title}>{title}</Text>
+        <Text style={styles.title}>{title}</Text>
 
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.row}
-      >
-        {items.map((item) => {
-          const key = item._id || item.id;
-          const hasRemoteUrl = typeof item.url === 'string' && item.url;
-          const isVideo = hasRemoteUrl && isVideoUrl(item.url);
-          const source = item.image
-            ? item.image
-            : isVideo
-              ? (videoThumbnails[item.url] ? { uri: videoThumbnails[item.url] } : null)
-              : hasRemoteUrl
-                ? { uri: item.url }
-                : null;
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.row}
+        >
+          {items.map((item) => {
+            const key = item._id || item.id;
+            const hasRemoteUrl = typeof item.url === 'string' && item.url;
+            const isVideo = hasRemoteUrl && isVideoUrl(item.url);
+            const posterUri = item.posterUrl || item.thumbnailUrl || null;
+            const source = item.image
+              ? item.image
+              : posterUri
+                ? { uri: posterUri }
+                : !isVideo && hasRemoteUrl
+                  ? { uri: item.url }
+                  : null;
 
-          return (
-            <TouchableOpacity
-              key={key}
-              activeOpacity={0.9}
-              style={styles.card}
-              onPress={() => {
-                if (isVideo && item.url) {
-                  setActiveVideoUrl(item.url);
-                  return;
-                }
-                onPressItem?.(item);
-              }}
-            >
-              {source ? (
-                <Image source={source} style={styles.image} resizeMode="cover" />
-              ) : isVideo ? (
-                <View style={styles.image}>
-                  <TestimonialShimmer
-                    width={CARD_W}
-                    height={300}
-                    borderRadius={18}
-                    baseColor={styles.videoCardSkeletonBase}
-                    highlightColor={styles.videoCardSkeletonHighlight}
-                  />
+            return (
+              <TouchableOpacity
+                key={key}
+                activeOpacity={0.9}
+                style={styles.card}
+                onPress={() => {
+                  if (isVideo && item.url) {
+                    setActiveVideoUrl(item.url);
+                    return;
+                  }
+                  onPressItem?.(item);
+                }}
+              >
+                {source ? (
+                  <Image source={source} style={styles.image} resizeMode="cover" />
+                ) : isVideo ? (
+                  <View style={styles.videoPlaceholder}>
+                    <MaterialCommunityIcons name="play-circle-outline" size={56} color="rgba(255,255,255,0.92)" />
+                  </View>
+                ) : null}
+                <View style={styles.scrim} />
+
+                <View style={styles.playWrap}>
+                  <View style={styles.playCircle}>
+                    <MaterialCommunityIcons name="play" size={28} color="#FFFFFF" />
+                  </View>
                 </View>
-              ) : null}
-              <View style={styles.scrim} />
 
-              <View style={styles.playWrap}>
-                <View style={styles.playCircle}>
-                  <MaterialCommunityIcons name="play" size={28} color="#FFFFFF" />
+                <View style={styles.nameWrap}>
+                  <View style={styles.nameAccent} />
+                  <Text style={styles.name} numberOfLines={1}>
+                    {item.name || 'Video'}
+                  </Text>
                 </View>
-              </View>
-
-              <View style={styles.nameWrap}>
-                <View style={styles.nameAccent} />
-                <Text style={styles.name} numberOfLines={1}>
-                  {item.name || 'Video'}
-                </Text>
-              </View>
-            </TouchableOpacity>
-          );
-        })}
-      </ScrollView>
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
       </View>
       <Modal
         visible={Boolean(activeVideoUrl)}
@@ -311,8 +238,6 @@ const createStyles = (theme, isLightMode) =>
       paddingRight: 16,
       gap: 14,
     },
-    videoCardSkeletonBase: isLightMode ? '#E8ECF3' : 'rgba(18,18,20,0.92)',
-    videoCardSkeletonHighlight: isLightMode ? 'rgba(255,255,255,0.88)' : 'rgba(255,255,255,0.14)',
     videoModalSkeletonBase: '#070707',
     videoModalSkeletonHighlight: 'rgba(255,255,255,0.12)',
     card: {
@@ -327,6 +252,13 @@ const createStyles = (theme, isLightMode) =>
     image: {
       width: '100%',
       height: '100%',
+    },
+    videoPlaceholder: {
+      width: '100%',
+      height: '100%',
+      backgroundColor: isLightMode ? '#1a2744' : '#12141a',
+      alignItems: 'center',
+      justifyContent: 'center',
     },
     scrim: {
       ...StyleSheet.absoluteFillObject,
@@ -412,4 +344,3 @@ const createStyles = (theme, isLightMode) =>
       backgroundColor: 'rgba(0,0,0,0.55)',
     },
   });
-
