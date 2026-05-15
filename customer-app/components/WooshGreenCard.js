@@ -163,7 +163,7 @@ export default function WooshGreenCard({ navigation }) {
         <View style={styles.topLeft}>
           <View style={styles.logoWrap}>
             <Image
-              source={require('../assets/appicon.png')}
+              source={require('../assets/WooshLogo.png')}
               style={styles.logoImage}
               resizeMode="contain"
               accessibilityLabel="Woosh logo"

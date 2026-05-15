@@ -5,12 +5,12 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  Image,
   Dimensions,
   Modal,
   Platform,
   useWindowDimensions,
 } from 'react-native';
+import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, {
   Easing,
@@ -26,7 +26,6 @@ import { useEvent } from 'expo';
 import { useVideoPlayer, VideoView } from 'expo-video';
 import { useTheme } from '../theme/ThemeContext';
 
-/** Shimmer for modal video buffer only (not used on the home carousel). */
 function TestimonialShimmer({ width, height, borderRadius, baseColor, highlightColor }) {
   const progress = useSharedValue(0);
   const stripeW = Math.max(56, Math.min(112, width * 0.45));
@@ -60,7 +59,7 @@ function TestimonialShimmer({ width, height, borderRadius, baseColor, highlightC
   );
 }
 
-function TestimonialModalVideo({ uri, styles: s }) {
+function TestimonialModalVideo({ uri, posterUri, styles: s }) {
   const { width: winW } = useWindowDimensions();
   const shimmerW = Math.max(160, winW - 36);
 
@@ -69,18 +68,25 @@ function TestimonialModalVideo({ uri, styles: s }) {
     p.muted = false;
   });
   const { status } = useEvent(player, 'statusChange', { status: player.status });
-  const showLoading = status !== 'readyToPlay' && status !== 'error';
+  const ready = status === 'readyToPlay';
+  const showLoading = !ready && status !== 'error';
 
   useEffect(() => {
-    if (status === 'readyToPlay') {
-      player.play();
-    }
-  }, [status, player]);
+    if (ready) player.play();
+  }, [ready, player]);
 
   return (
     <View style={s.videoPlayerWrap}>
+      {posterUri && showLoading ? (
+        <Image
+          source={{ uri: posterUri }}
+          style={s.videoPlayer}
+          contentFit="contain"
+          cachePolicy="memory-disk"
+        />
+      ) : null}
       <VideoView
-        style={s.videoPlayer}
+        style={[s.videoPlayer, !ready && posterUri ? s.videoHiddenUntilReady : null]}
         player={player}
         nativeControls
         contentFit="contain"
@@ -122,7 +128,7 @@ export default function CustomerTestimonials({
 }) {
   const { theme, isLightMode } = useTheme();
   const styles = useMemo(() => createStyles(theme, isLightMode), [theme, isLightMode]);
-  const [activeVideoUrl, setActiveVideoUrl] = useState(null);
+  const [activeVideo, setActiveVideo] = useState(null);
 
   useEffect(() => {
     Audio.setAudioModeAsync({
@@ -133,6 +139,13 @@ export default function CustomerTestimonials({
       playThroughEarpieceAndroid: false,
     }).catch(() => {});
   }, []);
+
+  useEffect(() => {
+    items.forEach((item) => {
+      const poster = item.posterUrl || item.thumbnailUrl;
+      if (poster) Image.prefetch(poster, { cachePolicy: 'memory-disk' }).catch(() => {});
+    });
+  }, [items]);
 
   return (
     <>
@@ -149,13 +162,6 @@ export default function CustomerTestimonials({
             const hasRemoteUrl = typeof item.url === 'string' && item.url;
             const isVideo = hasRemoteUrl && isVideoUrl(item.url);
             const posterUri = item.posterUrl || item.thumbnailUrl || null;
-            const source = item.image
-              ? item.image
-              : posterUri
-                ? { uri: posterUri }
-                : !isVideo && hasRemoteUrl
-                  ? { uri: item.url }
-                  : null;
 
             return (
               <TouchableOpacity
@@ -164,18 +170,33 @@ export default function CustomerTestimonials({
                 style={styles.card}
                 onPress={() => {
                   if (isVideo && item.url) {
-                    setActiveVideoUrl(item.url);
+                    setActiveVideo({ url: item.url, posterUri });
                     return;
                   }
                   onPressItem?.(item);
                 }}
               >
-                {source ? (
-                  <Image source={source} style={styles.image} resizeMode="cover" />
+                {item.image ? (
+                  <Image source={item.image} style={styles.image} contentFit="cover" />
+                ) : posterUri ? (
+                  <Image
+                    source={{ uri: posterUri }}
+                    style={styles.image}
+                    contentFit="cover"
+                    cachePolicy="memory-disk"
+                    transition={200}
+                  />
                 ) : isVideo ? (
                   <View style={styles.videoPlaceholder}>
                     <MaterialCommunityIcons name="play-circle-outline" size={56} color="rgba(255,255,255,0.92)" />
                   </View>
+                ) : hasRemoteUrl ? (
+                  <Image
+                    source={{ uri: item.url }}
+                    style={styles.image}
+                    contentFit="cover"
+                    cachePolicy="memory-disk"
+                  />
                 ) : null}
                 <View style={styles.scrim} />
 
@@ -197,22 +218,27 @@ export default function CustomerTestimonials({
         </ScrollView>
       </View>
       <Modal
-        visible={Boolean(activeVideoUrl)}
+        visible={Boolean(activeVideo?.url)}
         animationType="fade"
         transparent
-        onRequestClose={() => setActiveVideoUrl(null)}
+        onRequestClose={() => setActiveVideo(null)}
       >
         <View style={styles.videoModalBackdrop}>
           <View style={styles.videoModalCard}>
             <TouchableOpacity
               style={styles.videoCloseButton}
-              onPress={() => setActiveVideoUrl(null)}
+              onPress={() => setActiveVideo(null)}
               activeOpacity={0.85}
             >
               <MaterialCommunityIcons name="close" size={22} color="#FFFFFF" />
             </TouchableOpacity>
-            {activeVideoUrl ? (
-              <TestimonialModalVideo key={activeVideoUrl} uri={activeVideoUrl} styles={styles} />
+            {activeVideo?.url ? (
+              <TestimonialModalVideo
+                key={activeVideo.url}
+                uri={activeVideo.url}
+                posterUri={activeVideo.posterUri}
+                styles={styles}
+              />
             ) : null}
           </View>
         </View>
@@ -324,6 +350,10 @@ const createStyles = (theme, isLightMode) =>
       width: '100%',
       height: 360,
       backgroundColor: '#000',
+    },
+    videoHiddenUntilReady: {
+      opacity: 0,
+      position: 'absolute',
     },
     videoLoadingOverlay: {
       ...StyleSheet.absoluteFillObject,

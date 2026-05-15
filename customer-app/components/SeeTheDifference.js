@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, Image, Dimensions } from 'react-native';
 import { useTheme } from '../theme/ThemeContext';
 
@@ -33,25 +33,43 @@ const isGenericSlideLabel = (name) => {
 
 const normalizeSlides = (slides) => {
   if (!slides || !slides.length) return DEFAULT_SLIDES;
-  return slides.map((s, i) => {
-    if (s.image && typeof s.image === 'number') return { ...s, id: s.id || `s-${i}` };
-    const fromApi = Boolean(s.url);
-    const rawName = s.name != null && String(s.name).trim() !== '' ? String(s.name).trim() : '';
-    const title =
-      s.title ||
-      (fromApi
-        ? isGenericSlideLabel(rawName)
-          ? null
-          : rawName
-        : rawName || `Slide ${i + 1}`);
-    return {
-      id: s._id || s.id || `s-${i}`,
-      title,
-      bullets: s.bullets,
-      image: s.url ? { uri: s.url } : s.image,
-    };
-  });
+  const mapped = slides
+    .map((s, i) => {
+      if (s.image && typeof s.image === 'number') return { ...s, id: s.id || `s-${i}` };
+      const url = s.url != null ? String(s.url).trim() : '';
+      const fromApi = Boolean(url);
+      const rawName = s.name != null && String(s.name).trim() !== '' ? String(s.name).trim() : '';
+      const title =
+        s.title ||
+        (fromApi
+          ? isGenericSlideLabel(rawName)
+            ? null
+            : rawName
+          : rawName || `Slide ${i + 1}`);
+      return {
+        id: s._id || s.id || `s-${i}`,
+        title,
+        bullets: s.bullets,
+        image: url ? { uri: url } : s.image,
+      };
+    })
+    .filter((s) => s.image && (typeof s.image === 'number' || s.image.uri));
+  return mapped.length > 0 ? mapped : DEFAULT_SLIDES;
 };
+
+function SlideImage({ source, style, fallbackSource }) {
+  const [failed, setFailed] = useState(false);
+  const resolved = failed ? fallbackSource : source;
+  if (!resolved) return <View style={[style, { backgroundColor: '#1a2744' }]} />;
+  return (
+    <Image
+      source={resolved}
+      style={style}
+      resizeMode="cover"
+      onError={() => setFailed(true)}
+    />
+  );
+}
 
 export default function SeeTheDifference({ slides = DEFAULT_SLIDES }) {
   const { theme } = useTheme();
@@ -59,6 +77,14 @@ export default function SeeTheDifference({ slides = DEFAULT_SLIDES }) {
   const ref = useRef(null);
   const [activeIndex, setActiveIndex] = useState(0);
   const list = useMemo(() => normalizeSlides(slides), [slides]);
+  const fallbackImage = DEFAULT_SLIDES[0]?.image;
+
+  useEffect(() => {
+    list.forEach((slide) => {
+      const uri = slide.image?.uri;
+      if (uri) Image.prefetch(uri).catch(() => {});
+    });
+  }, [list]);
 
   const onMomentumScrollEnd = useCallback((event) => {
     const nextIndex = Math.round(event.nativeEvent.contentOffset.x / width);
@@ -82,7 +108,7 @@ export default function SeeTheDifference({ slides = DEFAULT_SLIDES }) {
           {list.map((slide) => (
             <View key={slide.id} style={styles.slide}>
               <View style={styles.imageWrap}>
-                <Image source={slide.image} style={styles.image} resizeMode="contain" />
+                <SlideImage source={slide.image} style={styles.image} fallbackSource={fallbackImage} />
                 <View style={styles.scrim} />
                 <View style={styles.overlay}>
                   {(slide.title || (slide.bullets && slide.bullets.length > 0)) ? (

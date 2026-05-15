@@ -8,7 +8,7 @@ import CustomerTestimonials from '../components/CustomerTestimonials';
 import SeeTheDifference from '../components/SeeTheDifference';
 import SeeTheTransformations from '../components/SeeTheTransformations';
 import { useTheme } from '../theme/ThemeContext';
-import { getMedia } from '../config/api';
+import { backfillMediaPosters, getMedia } from '../config/api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getReferralInfo } from '../services/walletApi';
 // import { getPopularServices } from '../services/serviceApi';
@@ -116,18 +116,36 @@ export default function HomeScreen({ navigation }) {
 
   /** Only throttle after a successful fetch so quick tab switches are not stuck with empty media. */
   const lastMediaFetchOkAtRef = useRef(0);
+  const posterBackfillRequestedRef = useRef(false);
   const reloadMedia = useCallback(async () => {
     const now = Date.now();
     if (lastMediaFetchOkAtRef.current > 0 && now - lastMediaFetchOkAtRef.current < 3000) return;
     try {
       const data = await getMedia();
       lastMediaFetchOkAtRef.current = Date.now();
-      setMedia({
+      const nextMedia = {
         testimonials: data.testimonials ?? [],
         transformations: data.transformations ?? [],
         seeTheDifference: data.seeTheDifference ?? [],
         homeSliders: data.homeSliders ?? [],
-      });
+      };
+      setMedia(nextMedia);
+
+      const needsPosters = [...nextMedia.testimonials, ...nextMedia.transformations].some(
+        (row) =>
+          row?.url &&
+          /\.(mp4|webm|mov)(\?|$)/i.test(String(row.url)) &&
+          !row.posterUrl
+      );
+      if (needsPosters && !posterBackfillRequestedRef.current) {
+        posterBackfillRequestedRef.current = true;
+        backfillMediaPosters().finally(() => {
+          setTimeout(() => {
+            lastMediaFetchOkAtRef.current = 0;
+            reloadMedia();
+          }, 1500);
+        });
+      }
     } catch (_) {
       /* keep previous media; next focus/foreground will retry */
     } finally {

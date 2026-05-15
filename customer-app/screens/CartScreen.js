@@ -663,7 +663,7 @@ export default function CartScreen({ navigation, route }) {
             {cartItems.filter((i) => i.packageType === 'Membership').map((mem) => (
               <View key={mem.id} style={styles.membershipCartRow}>
                 <Image
-                  source={require('../assets/appicon.png')}
+                  source={require('../assets/WooshLogo.png')}
                   style={styles.membershipCartImage}
                   resizeMode="contain"
                   accessibilityLabel="Woosh Green"

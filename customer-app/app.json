@@ -4,12 +4,12 @@
     "slug": "customer-app",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/appicon.png",
+    "icon": "./assets/WooshLogo.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "splash": {
-      "image": "./assets/logo-splash.png",
-      "resizeMode": "cover",
+      "image": "./assets/WooshLogo.png",
+      "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
     "plugins": [
@@ -33,7 +33,7 @@
     "android": {
       "usesCleartextTraffic": true,
       "adaptiveIcon": {
-        "foregroundImage": "./assets/appicon.png",
+        "foregroundImage": "./assets/WooshLogo.png",
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": false,

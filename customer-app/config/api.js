@@ -195,6 +195,14 @@ const pickHomeSliderList = (d) => {
   return [];
 };
 
+const pickMediaList = (d, keys) => {
+  if (!d || typeof d !== 'object') return [];
+  for (const key of keys) {
+    if (Array.isArray(d[key])) return d[key];
+  }
+  return [];
+};
+
 const buildPublicMediaFromPayload = (payload) => {
   const d = unwrapPublicMediaBody(payload);
   if (!d) return null;
@@ -210,13 +218,34 @@ const buildPublicMediaFromPayload = (payload) => {
   };
 
   const homeSlidersRaw = pickHomeSliderList(d);
+  const seeTheDifferenceRaw = pickMediaList(d, [
+    'seeTheDifference',
+    'see_the_difference',
+    'seeTheDiff',
+  ]);
 
   return {
-    testimonials: (Array.isArray(d.testimonials) ? d.testimonials : []).map(withResolvedUrl),
-    transformations: (Array.isArray(d.transformations) ? d.transformations : []).map(withResolvedUrl),
-    seeTheDifference: (Array.isArray(d.seeTheDifference) ? d.seeTheDifference : []).map(withResolvedUrl),
+    testimonials: pickMediaList(d, ['testimonials']).map(withResolvedUrl),
+    transformations: pickMediaList(d, ['transformations']).map(withResolvedUrl),
+    seeTheDifference: seeTheDifferenceRaw.map(withResolvedUrl),
     homeSliders: homeSlidersRaw.map(withResolvedUrl),
   };
+};
+
+/** In dev, fill empty sections from production CDN URLs when the local API has no media rows. */
+const mergeMissingPublicMedia = (primary, alt) => {
+  if (!alt) return primary;
+  const keys = ['testimonials', 'transformations', 'seeTheDifference', 'homeSliders'];
+  const next = { ...primary };
+  keys.forEach((key) => {
+    const localRows = Array.isArray(primary[key]) ? primary[key] : [];
+    const localWithUrl = localRows.filter((row) => row?.url && String(row.url).trim());
+    const remoteRows = Array.isArray(alt[key]) ? alt[key] : [];
+    if (localWithUrl.length === 0 && remoteRows.length > 0) {
+      next[key] = remoteRows;
+    }
+  });
+  return next;
 };
 
 const normalizeMergeMediaUrl = (raw) => {
@@ -230,7 +259,7 @@ const normalizeMergeMediaUrl = (raw) => {
 /**
  * Public media: same axios `api` instance as the rest of the app (no Bearer on `/media/public`).
  * Optional `EXPO_PUBLIC_MERGE_MEDIA_FROM_URL`: full `.../api/media/public` or API root — used only
- * to fill `homeSliders` when the primary API returns none (typical local API + prod admin).
+ * to fill empty media sections when the primary API returns none (typical local API + prod admin).
  */
 export const getMedia = async () => {
   let payload = null;
@@ -271,17 +300,13 @@ export const getMedia = async () => {
   const mergeDisabled =
     process.env.EXPO_PUBLIC_DISABLE_PROD_MEDIA_MERGE === '1' ||
     process.env.EXPO_PUBLIC_DISABLE_PROD_MEDIA_MERGE === 'true';
-  if (
-    !mergeUrl &&
-    __DEV__ &&
-    !mergeDisabled &&
-    !API_BASE_URL.includes(new URL(REMOTE_PRODUCTION_API_BASE).hostname) &&
-    (!parsed.homeSliders || parsed.homeSliders.length === 0)
-  ) {
+  const prodHostname = new URL(REMOTE_PRODUCTION_API_BASE).hostname;
+  const onLocalDevApi = __DEV__ && !mergeDisabled && !API_BASE_URL.includes(prodHostname);
+  if (!mergeUrl && onLocalDevApi) {
     mergeUrl = `${REMOTE_PRODUCTION_API_BASE.replace(/\/$/, '')}/media/public`;
   }
 
-  if (mergeUrl && (!parsed.homeSliders || parsed.homeSliders.length === 0)) {
+  if (mergeUrl) {
     try {
       const sep = mergeUrl.includes('?') ? '&' : '?';
       const { data: alt } = await axios.get(`${mergeUrl}${sep}_t=${Date.now()}`, {
@@ -293,15 +318,23 @@ export const getMedia = async () => {
         },
       });
       const altParsed = buildPublicMediaFromPayload(alt);
-      if (altParsed?.homeSliders?.length) {
-        parsed = { ...parsed, homeSliders: altParsed.homeSliders };
-      }
+      parsed = mergeMissingPublicMedia(parsed, altParsed);
     } catch {
       /* keep primary */
     }
   }
 
   return parsed;
+};
+
+/** Ask server to generate JPEG posters for videos missing posterUrl (runs ffmpeg on the backend). */
+export const backfillMediaPosters = async () => {
+  try {
+    const { data } = await api.post('/media/backfill-posters', {}, { timeout: 120000 });
+    return data;
+  } catch {
+    return null;
+  }
 };
 
 export default api;

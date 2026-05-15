@@ -231,8 +231,8 @@ function App() {
   const [mediaList, setMediaList] = useState([])
   const [loadingMedia, setLoadingMedia] = useState(false)
   const [mediaMessage, setMediaMessage] = useState({ type: '', text: '' })
-  const [testimonialMediaForm, setTestimonialMediaForm] = useState({ name: '', file: null })
-  const [transformationMediaForm, setTransformationMediaForm] = useState({ name: '', file: null })
+  const [testimonialMediaForm, setTestimonialMediaForm] = useState({ name: '', file: null, posterFile: null })
+  const [transformationMediaForm, setTransformationMediaForm] = useState({ name: '', file: null, posterFile: null })
   const [uploadingMedia, setUploadingMedia] = useState(false)
   const [seeDiffMediaForm, setSeeDiffMediaForm] = useState({ name: '', file: null })
   const [homeSliderMediaForm, setHomeSliderMediaForm] = useState({ name: '', file: null })
@@ -242,6 +242,10 @@ function App() {
     transformations: 0,
     seeTheDifference: 0,
     homeSliders: 0,
+  })
+  const [mediaPosterInputKey, setMediaPosterInputKey] = useState({
+    testimonials: 0,
+    transformations: 0,
   })
 
   // Coupons
@@ -2588,6 +2592,9 @@ function App() {
       formData.append('type', type)
       formData.append('name', formState.name)
       formData.append('file', formState.file)
+      if (formState.posterFile) {
+        formData.append('poster', formState.posterFile)
+      }
       const opts = getFetchOptions()
       const headers = { ...opts.headers }
       delete headers['Content-Type']
@@ -2595,8 +2602,11 @@ function App() {
       const data = await res.json()
       if (data.success) {
         setMediaMessage({ type: 'success', text: 'Uploaded successfully' })
-        setFormState({ name: '', file: null })
+        setFormState({ name: '', file: null, posterFile: null })
         setMediaFileInputKey((prev) => ({ ...prev, [type]: (prev[type] || 0) + 1 }))
+        if (type === 'testimonials' || type === 'transformations') {
+          setMediaPosterInputKey((prev) => ({ ...prev, [type]: (prev[type] || 0) + 1 }))
+        }
         fetchMedia()
       } else {
         setMediaMessage({ type: 'error', text: data.message || 'Upload failed' })
@@ -5067,7 +5077,9 @@ function App() {
             {/* Testimonials: video upload */}
             <div className="media-block">
               <h3 className="media-block-title">Customer Testimonials (videos)</h3>
-              <p className="media-help-text">Max video size: {MAX_MEDIA_VIDEO_SIZE_MB} MB</p>
+              <p className="media-help-text">
+                Max video size: {MAX_MEDIA_VIDEO_SIZE_MB} MB. Upload a thumbnail image (recommended) for the app carousel.
+              </p>
               <div className="media-upload-toolbar">
                 <input
                   type="text"
@@ -5095,7 +5107,29 @@ function App() {
                     }}
                   />
                 </label>
-                <span className="media-selected-file">{testimonialMediaForm.file?.name || 'No file selected'}</span>
+                <label className="media-file-input-wrap">
+                  <span className="media-file-button">Choose thumbnail</span>
+                  <input
+                    key={`media-poster-testimonials-${mediaPosterInputKey.testimonials}`}
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp,image/gif"
+                    onChange={(e) => {
+                      const posterFile = e.target.files?.[0] || null
+                      if (posterFile && posterFile.size > MAX_MEDIA_IMAGE_SIZE_BYTES) {
+                        const msg = `Thumbnail too large. Max ${MAX_MEDIA_IMAGE_SIZE_MB} MB.`
+                        setMediaMessage({ type: 'error', text: msg })
+                        window.alert(msg)
+                        e.target.value = ''
+                        return
+                      }
+                      setTestimonialMediaForm((f) => ({ ...f, posterFile }))
+                    }}
+                  />
+                </label>
+                <span className="media-selected-file">
+                  {testimonialMediaForm.file?.name || 'No video'}
+                  {testimonialMediaForm.posterFile?.name ? ` · thumb: ${testimonialMediaForm.posterFile.name}` : ''}
+                </span>
                 <button
                   type="button"
                   className="media-upload-button"
@@ -5108,7 +5142,9 @@ function App() {
               <div className="media-items-grid">
                 {(mediaList.filter((m) => m.type === 'testimonials') || []).map((m) => (
                   <div key={m._id} className="media-item-card">
-                    {m.url.match(/\.(mp4|webm|mov)$/i) ? (
+                    {m.posterUrl ? (
+                      <img src={resolveUploadOrAbsoluteUrl(m.posterUrl)} alt="" className="media-item-preview" />
+                    ) : m.url.match(/\.(mp4|webm|mov)$/i) ? (
                       <video src={resolveUploadOrAbsoluteUrl(m.url)} controls className="media-item-preview" />
                     ) : (
                       <img src={resolveUploadOrAbsoluteUrl(m.url)} alt="" className="media-item-preview" />
@@ -5123,7 +5159,9 @@ function App() {
             {/* Transformations: video upload (same form, type=transformations) - list below */}
             <div className="media-block">
               <h3 className="media-block-title">See The Transformations (videos)</h3>
-              <p className="media-help-text">Max video size: {MAX_MEDIA_VIDEO_SIZE_MB} MB</p>
+              <p className="media-help-text">
+                Max video size: {MAX_MEDIA_VIDEO_SIZE_MB} MB. Upload a thumbnail image (recommended) for the app carousel.
+              </p>
               <div className="media-upload-toolbar">
                 <input
                   type="text"
@@ -5151,7 +5189,29 @@ function App() {
                     }}
                   />
                 </label>
-                <span className="media-selected-file">{transformationMediaForm.file?.name || 'No file selected'}</span>
+                <label className="media-file-input-wrap">
+                  <span className="media-file-button">Choose thumbnail</span>
+                  <input
+                    key={`media-poster-transformations-${mediaPosterInputKey.transformations}`}
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp,image/gif"
+                    onChange={(e) => {
+                      const posterFile = e.target.files?.[0] || null
+                      if (posterFile && posterFile.size > MAX_MEDIA_IMAGE_SIZE_BYTES) {
+                        const msg = `Thumbnail too large. Max ${MAX_MEDIA_IMAGE_SIZE_MB} MB.`
+                        setMediaMessage({ type: 'error', text: msg })
+                        window.alert(msg)
+                        e.target.value = ''
+                        return
+                      }
+                      setTransformationMediaForm((f) => ({ ...f, posterFile }))
+                    }}
+                  />
+                </label>
+                <span className="media-selected-file">
+                  {transformationMediaForm.file?.name || 'No video'}
+                  {transformationMediaForm.posterFile?.name ? ` · thumb: ${transformationMediaForm.posterFile.name}` : ''}
+                </span>
                 <button
                   type="button"
                   className="media-upload-button"
@@ -5164,7 +5224,9 @@ function App() {
               <div className="media-items-grid">
                 {(mediaList.filter((m) => m.type === 'transformations') || []).map((m) => (
                   <div key={m._id} className="media-item-card">
-                    {m.url.match(/\.(mp4|webm|mov)$/i) ? (
+                    {m.posterUrl ? (
+                      <img src={resolveUploadOrAbsoluteUrl(m.posterUrl)} alt="" className="media-item-preview" />
+                    ) : m.url.match(/\.(mp4|webm|mov)$/i) ? (
                       <video src={resolveUploadOrAbsoluteUrl(m.url)} controls className="media-item-preview" />
                     ) : (
                       <img src={resolveUploadOrAbsoluteUrl(m.url)} alt="" className="media-item-preview" />

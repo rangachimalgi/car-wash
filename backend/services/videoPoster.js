@@ -62,6 +62,49 @@ export async function generatePosterBufferFromVideoBuffer(videoBuffer, ext = '.m
   }
 }
 
+const isVideoUrl = (url = '') => /\.(mp4|webm|mov)(\?|$)/i.test(String(url));
+
+/** ffmpeg reads HTTP(S) directly — no need to download the full file into the app server RAM first. */
+export async function generatePosterBufferFromVideoUrl(videoUrl) {
+  if (!ffmpegPath || !videoUrl || !/^https?:\/\//i.test(videoUrl)) return null;
+
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'woosh-vid-'));
+  const outputPath = path.join(tmpDir, 'poster.jpg');
+
+  try {
+    await execFileAsync(
+      ffmpegPath,
+      [
+        '-hide_banner',
+        '-loglevel',
+        'error',
+        '-ss',
+        '0.5',
+        '-i',
+        videoUrl,
+        '-frames:v',
+        '1',
+        '-q:v',
+        '5',
+        '-y',
+        outputPath,
+      ],
+      { timeout: 90000 }
+    );
+    if (!fs.existsSync(outputPath) || fs.statSync(outputPath).size === 0) return null;
+    return fs.readFileSync(outputPath);
+  } catch (err) {
+    console.warn('[videoPoster] remote extraction failed:', err?.message || err);
+    return null;
+  } finally {
+    try {
+      fs.rmSync(tmpDir, { recursive: true, force: true });
+    } catch {
+      /* ignore */
+    }
+  }
+}
+
 export async function generatePosterBufferFromVideoPath(filePath) {
   if (!ffmpegPath || !filePath) return null;
 
@@ -84,4 +127,4 @@ export async function generatePosterBufferFromVideoPath(filePath) {
   }
 }
 
-export { isVideoMime };
+export { isVideoMime, isVideoUrl };

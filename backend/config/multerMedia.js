@@ -44,6 +44,33 @@ function createUploadMediaSingle() {
 
 export const uploadMediaSingle = (req, res, next) => createUploadMediaSingle()(req, res, next);
 
+/** Main media file + optional poster/thumbnail image (videos only). */
+function createUploadMediaFields() {
+  const storage = isR2Configured() ? multer.memoryStorage() : diskStorage;
+  return multer({
+    storage,
+    limits: { fileSize: 25 * 1024 * 1024 },
+    fileFilter: (req, file, cb) => {
+      if (file.fieldname === 'poster') {
+        if (allowedImage.test(file.mimetype)) return cb(null, true);
+        return cb(new Error('Thumbnail must be an image (JPEG, PNG, WebP, GIF)'));
+      }
+      if (file.fieldname === 'file') {
+        if (allowedVideo.test(file.mimetype) || allowedImage.test(file.mimetype)) {
+          return cb(null, true);
+        }
+        return cb(new Error('Only videos (MP4, WebM) and images (JPEG, PNG, WebP, GIF) are allowed'));
+      }
+      return cb(new Error(`Unexpected field: ${file.fieldname}`));
+    },
+  }).fields([
+    { name: 'file', maxCount: 1 },
+    { name: 'poster', maxCount: 1 },
+  ]);
+}
+
+export const uploadMediaFields = (req, res, next) => createUploadMediaFields()(req, res, next);
+
 export function getMediaUrl(filename) {
   return `/uploads/media/${filename}`;
 }

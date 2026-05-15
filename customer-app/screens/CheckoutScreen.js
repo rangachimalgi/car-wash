@@ -496,7 +496,7 @@ export default function CheckoutScreen({ navigation, route }) {
                 <Image
                   source={
                     item.packageType === 'Membership'
-                      ? require('../assets/appicon.png')
+                      ? require('../assets/WooshLogo.png')
                       : { uri: item.image }
                   }
                   style={styles.itemImage}

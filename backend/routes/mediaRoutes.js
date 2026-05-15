@@ -4,14 +4,16 @@ import {
   getPublicMedia,
   uploadMedia,
   deleteMedia,
+  backfillMediaPosters,
 } from '../controllers/mediaController.js';
-import { uploadMediaSingle } from '../config/multerMedia.js';
+import { uploadMediaFields } from '../config/multerMedia.js';
 
 const router = express.Router();
 
 router.get('/public', getPublicMedia);
+router.post('/backfill-posters', backfillMediaPosters);
 router.get('/', getMedia);
-router.post('/', uploadMediaSingle, uploadMedia);
+router.post('/', uploadMediaFields, uploadMedia);
 router.delete('/:id', deleteMedia);
 
 export default router;
