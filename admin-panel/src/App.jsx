@@ -2113,6 +2113,27 @@ function App() {
     }
   }
 
+  const handleDeleteService = async (service) => {
+    if (!window.confirm(`Delete "${service.name}"? This cannot be undone.`)) return
+    try {
+      const response = await fetch(`${API_BASE_URL}/services/${service._id}`, {
+        ...getFetchOptions(),
+        method: 'DELETE',
+      })
+      const data = await response.json()
+      if (response.ok && data.success) {
+        if (editingServiceId && String(editingServiceId) === String(service._id)) handleNewService()
+        setMessage({ type: 'success', text: 'Service deleted.' })
+        fetchAllServices()
+      } else {
+        setMessage({ type: 'error', text: data.message || 'Failed to delete service' })
+      }
+    } catch (error) {
+      console.error('Error deleting service:', error)
+      setMessage({ type: 'error', text: error.message || 'Failed to delete service' })
+    }
+  }
+
   // Reset form to create new service
   const handleNewService = () => {
     setEditingServiceId(null)
@@ -3079,13 +3100,39 @@ function App() {
                         <div className="service-mini-meta">
                           <span className="service-mini-category">{service.category}</span>
                         </div>
-                        <button
-                          type="button"
-                          className="bw-button"
-                          onClick={() => handleEditService(service._id)}
-                        >
-                          Edit
-                        </button>
+                        <div className="service-mini-actions">
+                          <button
+                            type="button"
+                            className="service-icon-btn service-icon-btn--edit"
+                            onClick={() => handleEditService(service._id)}
+                            aria-label="Edit service"
+                            title="Edit service"
+                          >
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                              <path
+                                d="M4 20.5h4.2L19.2 9.5l-4-4L4 16.4V20.5z"
+                                stroke="currentColor"
+                                strokeWidth="1.7"
+                                strokeLinejoin="round"
+                              />
+                              <path d="M15 5.5l3.5 3.5" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+                            </svg>
+                          </button>
+                          <button
+                            type="button"
+                            className="service-icon-btn service-icon-btn--delete"
+                            onClick={() => handleDeleteService(service)}
+                            aria-label="Delete service"
+                            title="Delete service"
+                          >
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                              <path d="M3.5 6.5h17" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+                              <path d="M8 6.5V5a1.5 1.5 0 011.5-1.5h5A1.5 1.5 0 0116 5v1.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+                              <path d="M6.5 6.5l1 13a1.5 1.5 0 001.5 1.4h6a1.5 1.5 0 001.5-1.4l1-13" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                              <path d="M10 10.5v6M14 10.5v6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+                            </svg>
+                          </button>
+                        </div>
                           </div>
                         </div>
                       </div>

@@ -1215,6 +1215,44 @@
   padding: 0.2rem 0.5rem;
 }
 
+.service-mini-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-top: 0.55rem;
+}
+
+.service-icon-btn {
+  width: 30px;
+  height: 30px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  border: none;
+  border-radius: 6px;
+  padding: 0;
+  flex-shrink: 0;
+}
+
+.service-icon-btn--edit {
+  background-color: #111827;
+  color: #fff;
+}
+
+.service-icon-btn--edit:hover {
+  background-color: #1f2937;
+}
+
+.service-icon-btn--delete {
+  background-color: #dc2626;
+  color: #fff;
+}
+
+.service-icon-btn--delete:hover {
+  background-color: #b91c1c;
+}
+
 .services-filter-tabs {
   display: flex;
   gap: 0.4rem;
