@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image, ActivityIndicator } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { resolveAssetUrl } from '../config/api';
 import { useTheme } from '../theme/ThemeContext';
@@ -193,7 +194,7 @@ export default function ServiceAccordionCard({
             <MaterialCommunityIcons
               name={expanded ? 'chevron-up' : 'chevron-down'}
               size={22}
-              color="#0B0B0B"
+              color="#1a3d6b"
             />
           </View>
         </View>
@@ -226,8 +227,14 @@ export default function ServiceAccordionCard({
                 <View style={styles.ratingDot} />
                 <Text style={styles.ratingsCount}>{hardcodedRatingsCount.toLocaleString()} Ratings</Text>
               </View>
-              <View style={styles.priceSection}>
-                <Text style={styles.cardPriceLine} numberOfLines={1}>
+              <LinearGradient
+                colors={['#e8f4fc', '#b9d9f5', '#9ec8ef']}
+                locations={[0, 0.55, 1]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.priceBadge}
+              >
+                <Text style={styles.cardPriceLine} numberOfLines={2}>
                   <Text style={styles.cardPricePrefix}>Starting </Text>
                   {memberPct > 0 ? (
                     <>
@@ -244,7 +251,7 @@ export default function ServiceAccordionCard({
                 {memberPct > 0 ? (
                   <Text style={styles.memberPriceHint}>Woosh Green discount {memberPct}%</Text>
                 ) : null}
-              </View>
+              </LinearGradient>
             </View>
           </>
         ) : null}
@@ -398,9 +405,11 @@ const createStyles = (theme) =>
       paddingHorizontal: 16,
       paddingTop: 16,
       paddingBottom: 12,
-      backgroundColor: '#66abf1',
+      backgroundColor: '#e8f4fc',
       borderTopLeftRadius: 16,
       borderTopRightRadius: 16,
+      borderBottomWidth: 1,
+      borderBottomColor: '#d4e8f7',
     },
     cardHeaderRow: {
       flexDirection: 'row',
@@ -412,7 +421,8 @@ const createStyles = (theme) =>
       flex: 1,
       fontSize: 18,
       fontWeight: '700',
-      color: '#000000',
+      color: '#122E54',
+      letterSpacing:-0.2,
     },
     imageContainer: {
       position: 'relative',
@@ -421,7 +431,7 @@ const createStyles = (theme) =>
       borderRadius: 0,
       overflow: 'hidden',
       height: 200,
-      backgroundColor: '#f4f6f8',
+      backgroundColor: '#FFFFFF',
       justifyContent: 'center',
       alignItems: 'center',
     },
@@ -435,23 +445,27 @@ const createStyles = (theme) =>
       justifyContent: 'center',
     },
     cardBottomSection: {
+      position: 'relative',
       flexDirection: 'row',
-      alignItems: 'center',
-      height: 60,
+      alignItems: 'stretch',
+      minHeight: 76,
+      backgroundColor: '#FFFFFF',
+      overflow: 'hidden',
     },
     ratingSection: {
       flex: 1,
       flexDirection: 'row',
       alignItems: 'center',
       backgroundColor: '#FFFFFF',
-      paddingHorizontal: 16,
-      height: '100%',
+      paddingHorizontal: 14,
+      paddingVertical: 12,
       gap: 6,
+      zIndex: 1,
     },
     ratingValue: {
       fontSize: 16,
       fontWeight: '700',
-      color: '#000000',
+      color: '#1E293B',
     },
     ratingDot: {
       width: 4,
@@ -460,45 +474,52 @@ const createStyles = (theme) =>
       backgroundColor: '#666666',
     },
     ratingsCount: {
-      fontSize: 14,
+      fontSize: 13,
       fontWeight: '500',
-      color: '#000000',
+      color: '#64748B',
+      flexShrink: 1,
     },
-    priceSection: {
+    priceBadge: {
       flex: 1,
-      backgroundColor: '#66abf1',
-      paddingHorizontal: 16,
-      height: '100%',
+      maxWidth: '52%',
+      backgroundColor: '#F0F7FD', // Matches the subtle, premium light blue panel tint
+      borderTopLeftRadius: 100, // Large organic wave radius curving beautifully inward
+      borderBottomLeftRadius: 0,
+      paddingTop: 16,
+      paddingBottom: 14,
+      paddingLeft: 28, // Deep inner padding pushes text clean away from the wave curve
+      paddingRight: 18,
       justifyContent: 'center',
       alignItems: 'flex-end',
     },
     cardPriceLine: {
-      fontSize: 15,
-      fontWeight: '700',
-      color: '#0B0B0B',
+      flexDirection: 'row', // Ensures price elements line up perfectly straight
+      alignItems: 'baseline',
+      gap: 6,
     },
     cardPricePrefix: {
-      fontSize: 15,
-      fontWeight: '700',
-      color: '#0B0B0B',
+      fontSize: 14,
+      fontWeight: '600',
+      color: '#1a3d6b',
     },
     cardPriceValue: {
-      fontSize: 18,
+      fontSize: 17,
       fontWeight: '900',
-      color: '#0B0B0B',
+      color: '#1a3d6b',
     },
     cardPriceStrike: {
-      fontSize: 15,
-      fontWeight: '700',
-      color: '#555555',
+      fontSize: 14,
+      fontWeight: '600',
+      color: '#4a6f94',
       textDecorationLine: 'line-through',
     },
     memberPriceHint: {
       marginTop: 4,
       fontSize: 11,
       fontWeight: '700',
-      color: wooshGreen.medium,
+      color: wooshGreen.primary,
       textAlign: 'right',
+      paddingRight: 2,
     },
     memberDiscountCaption: {
       fontSize: 11,
