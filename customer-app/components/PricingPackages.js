@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTheme } from '../theme/ThemeContext';
+import { wooshGreen } from '../theme/wooshGreen';
 import {
   applyWooshMembershipDiscount,
   scaleLineItemsToDiscountedGross,
@@ -367,7 +368,7 @@ export function AddToCartButton({
           <View>
             <Text style={styles.addToCartPriceStrike}>₹{Math.round(displayPrice)}</Text>
             <Text style={styles.addToCartPrice}>₹{displayPriceMember}</Text>
-            <Text style={styles.addToCartMemberCaption}>Woosh Black discount {memberPct}%</Text>
+            <Text style={styles.addToCartMemberCaption}>Woosh Green discount {memberPct}%</Text>
           </View>
         ) : (
           <Text style={styles.addToCartPrice}>₹{Math.round(displayPrice)}</Text>
@@ -552,7 +553,7 @@ const createStyles = theme => StyleSheet.create({
     marginTop: 4,
     fontSize: 11,
     fontWeight: '700',
-    color: theme.textSecondary,
+    color: wooshGreen.medium,
   },
   addToCartDuration: {
     fontSize: 14,

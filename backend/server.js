@@ -15,11 +15,11 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 connectDB();
 
 if (isR2Configured()) {
-  console.log('📦 Media uploads: Cloudflare R2');
+  console.log('📦 Uploads (media + service images): Cloudflare R2');
 } else {
   const missing = getMissingR2EnvKeys();
   console.log(
-    `📁 Media uploads: local disk (missing R2 env: ${missing.join(', ') || 'unknown'})`
+    `📁 Uploads: local disk (missing R2 env: ${missing.join(', ') || 'unknown'})`
   );
 }
 
@@ -29,6 +29,7 @@ const app = express();
 const uploadsDir = path.join(__dirname, 'uploads');
 fs.mkdirSync(path.join(uploadsDir, 'documents'), { recursive: true });
 fs.mkdirSync(path.join(uploadsDir, 'media'), { recursive: true });
+fs.mkdirSync(path.join(uploadsDir, 'services'), { recursive: true });
 fs.mkdirSync(path.join(uploadsDir, 'order-photos'), { recursive: true });
 
 // Middleware — admin panel is a different origin (e.g. Vite :5173 vs API :8000).

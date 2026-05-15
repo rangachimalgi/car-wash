@@ -7,6 +7,7 @@ import AddOnCard from '../components/AddOnCard';
 import MonthlyPackageCard from '../components/MonthlyPackageCard';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTheme } from '../theme/ThemeContext';
+import { wooshGreen } from '../theme/wooshGreen';
 import { resolveAssetUrl } from '../config/api';
 import { getAddressKeys, getVehicleKeys } from '../services/addressStorage';
 import { getServiceById } from '../services/serviceApi';
@@ -167,7 +168,7 @@ export default function CartScreen({ navigation, route }) {
     }, [loadAddressAndVehicle])
   );
 
-  // Woosh Black can add/remove membership in AsyncStorage from Car Wash; keep cart state in sync on focus.
+  // Woosh Green can add/remove membership in AsyncStorage from Car Wash; keep cart state in sync on focus.
   useFocusEffect(
     useCallback(() => {
       let cancelled = false;
@@ -297,7 +298,7 @@ export default function CartScreen({ navigation, route }) {
         if (newItem?.packageType === 'Membership') {
           const exists = prevItems.some((i) => i.packageType === 'Membership');
           if (exists) {
-            Alert.alert('Woosh Black', 'Membership is already in your cart.');
+            Alert.alert('Woosh Green', 'Membership is already in your cart.');
             return prevItems;
           }
           return [...prevItems, newItem];
@@ -665,11 +666,11 @@ export default function CartScreen({ navigation, route }) {
                   source={require('../assets/appicon.png')}
                   style={styles.membershipCartImage}
                   resizeMode="contain"
-                  accessibilityLabel="Woosh Black"
+                  accessibilityLabel="Woosh Green"
                 />
                 <View style={styles.membershipCartBody}>
                   <Text style={styles.membershipCartTitle} numberOfLines={2}>
-                    {mem.title || mem.serviceName || 'Woosh Black'}
+                    {mem.title || mem.serviceName || 'Woosh Green'}
                   </Text>
                   <Text style={styles.membershipCartSub}>Membership plan</Text>
                 </View>
@@ -976,10 +977,10 @@ const createStyles = theme => StyleSheet.create({
     paddingVertical: 14,
     marginHorizontal: 16,
     marginTop: 12,
-    backgroundColor: '#fafafa',
+    backgroundColor: wooshGreen.soft,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: '#E5E5E5',
+    borderColor: wooshGreen.softBorder,
     gap: 12,
   },
   membershipCartImage: {
@@ -994,13 +995,13 @@ const createStyles = theme => StyleSheet.create({
   membershipCartTitle: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#000000',
+    color: wooshGreen.deep,
   },
   membershipCartSub: {
     marginTop: 2,
     fontSize: 12,
     fontWeight: '500',
-    color: theme.textSecondary,
+    color: wooshGreen.medium,
   },
   membershipCartRight: {
     alignItems: 'flex-end',

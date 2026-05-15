@@ -5,6 +5,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import BackHeader from '../components/BackHeader';
 import { useTheme } from '../theme/ThemeContext';
+import { wooshGreen } from '../theme/wooshGreen';
 import { getPackagePricing } from '../services/packagePricingApi';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
@@ -431,7 +432,7 @@ export default function PackageDetailsScreen({ navigation, route }) {
                 <Text style={styles.priceValueStrike}>₹{Math.round(resolvedPrice)}</Text>
                 <Text style={styles.priceValue}>₹{resolvedPriceMember}</Text>
                 <Text style={styles.memberHint}>
-                  Woosh Black discount {membershipWashDiscountPercent}%
+                  Woosh Green discount {membershipWashDiscountPercent}%
                 </Text>
               </View>
             ) : (
@@ -738,7 +739,7 @@ const createStyles = (theme) => StyleSheet.create({
     marginTop: 4,
     fontSize: 12,
     fontWeight: '700',
-    color: theme.accent,
+    color: wooshGreen.medium,
   },
   continueButton: {
     height: 50,

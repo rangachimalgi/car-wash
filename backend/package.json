@@ -4,7 +4,7 @@
   "scripts": {
     "dev": "nodemon server.js",
     "start": "node server.js",
-    "seed:membership": "node scripts/seedWooshBlackMembership.js"
+    "seed:membership": "node scripts/seedWooshGreenMembership.js"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1045.0",

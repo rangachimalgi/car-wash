@@ -199,7 +199,7 @@ export const createOrder = async (req, res) => {
         if (!Number.isFinite(unitPrice) || unitPrice < 0) {
           throw new Error('Invalid membership price');
         }
-        const displayName = String(service.name || item.serviceName || item.title || 'Woosh Black').trim();
+        const displayName = String(service.name || item.serviceName || item.title || 'Woosh Green').trim();
         return {
           service: service._id,
           serviceName: displayName,
@@ -480,7 +480,7 @@ export const createOrder = async (req, res) => {
       await activateMembershipFromOrder({
         userId,
         sourceOrderId: order._id,
-        planId: 'woosh_black',
+        planId: 'woosh_green',
         durationMonths: svc?.membershipDurationMonths || 12,
         discountPercent: svc?.membershipDiscountPercent || 0,
         serviceId: line.service,

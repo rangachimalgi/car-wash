@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, Image, ActivityIndicator } fr
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { resolveAssetUrl } from '../config/api';
 import { useTheme } from '../theme/ThemeContext';
+import { wooshGreen } from '../theme/wooshGreen';
 import AddOnServicesList from './AddOnServicesList';
 import {
   applyWooshMembershipDiscount,
@@ -201,33 +202,16 @@ export default function ServiceAccordionCard({
           <>
             <View style={styles.imageContainer}>
               {!imageError ? (
-                <View style={styles.splitImageContainer}>
-                  <View style={styles.imageLeftWrapper}>
-                    <Image
-                      source={
-                        fallbackImageSource && !service?.image && !serviceSummary?.image
-                          ? fallbackImageSource
-                          : { uri: imageUri }
-                      }
-                      style={styles.imageLeft}
-                      resizeMode="cover"
-                      onError={() => setImageError(true)}
-                    />
-                  </View>
-                  <View style={styles.imageRightWrapper}>
-                    <Image
-                      source={
-                        fallbackImageSource && !service?.image && !serviceSummary?.image
-                          ? fallbackImageSource
-                          : { uri: imageUri }
-                      }
-                      style={styles.imageRight}
-                      resizeMode="cover"
-                      onError={() => setImageError(true)}
-                    />
-                  </View>
-                  <View style={styles.diagonalOverlay} />
-                </View>
+                <Image
+                  source={
+                    fallbackImageSource && !service?.image && !serviceSummary?.image
+                      ? fallbackImageSource
+                      : { uri: imageUri }
+                  }
+                  style={styles.serviceImage}
+                  resizeMode="cover"
+                  onError={() => setImageError(true)}
+                />
               ) : (
                 <View style={[styles.serviceImage, styles.placeholderImage]}>
                   <MaterialCommunityIcons name="image-outline" size={48} color={theme.accent} />
@@ -258,7 +242,7 @@ export default function ServiceAccordionCard({
                   )}
                 </Text>
                 {memberPct > 0 ? (
-                  <Text style={styles.memberPriceHint}>Woosh Black discount {memberPct}%</Text>
+                  <Text style={styles.memberPriceHint}>Woosh Green discount {memberPct}%</Text>
                 ) : null}
               </View>
             </View>
@@ -310,7 +294,7 @@ export default function ServiceAccordionCard({
           </View>
 
           {memberPct > 0 ? (
-            <Text style={styles.memberDiscountCaption}>Woosh Black discount {memberPct}%</Text>
+            <Text style={styles.memberDiscountCaption}>Woosh Green discount {memberPct}%</Text>
           ) : null}
 
           {!hideOneTimeWash ? (
@@ -437,56 +421,13 @@ const createStyles = (theme) =>
       borderRadius: 0,
       overflow: 'hidden',
       height: 200,
-    },
-    splitImageContainer: {
-      flexDirection: 'row',
-      height: '100%',
-      width: '100%',
-      overflow: 'hidden',
-      position: 'relative',
-    },
-    imageLeftWrapper: {
-      position: 'absolute',
-      left: 0,
-      top: 0,
-      width: '55%',
-      height: '100%',
-      overflow: 'hidden',
-      zIndex: 1,
-    },
-    imageLeft: {
-      width: '100%',
-      height: '100%',
-    },
-    imageRightWrapper: {
-      position: 'absolute',
-      right: 0,
-      top: 0,
-      width: '55%',
-      height: '100%',
-      overflow: 'hidden',
-      zIndex: 2,
-    },
-    imageRight: {
-      width: '100%',
-      height: '100%',
-    },
-    diagonalOverlay: {
-      position: 'absolute',
-      top: 0,
-      right: '45%',
-      width: 2,
-      height: '100%',
-      backgroundColor: 'transparent',
-      zIndex: 3,
-      borderLeftWidth: 1,
-      borderLeftColor: 'rgba(255, 255, 255, 0.3)',
-      transform: [{ rotate: '15deg' }, { translateX: -1 }],
+      backgroundColor: '#f4f6f8',
+      justifyContent: 'center',
+      alignItems: 'center',
     },
     serviceImage: {
       width: '100%',
-      height: 200,
-      borderRadius: 0,
+      height: '100%',
     },
     placeholderImage: {
       backgroundColor: theme.accentSoft,
@@ -556,13 +497,13 @@ const createStyles = (theme) =>
       marginTop: 4,
       fontSize: 11,
       fontWeight: '700',
-      color: '#0B0B0B',
+      color: wooshGreen.medium,
       textAlign: 'right',
     },
     memberDiscountCaption: {
       fontSize: 11,
       fontWeight: '700',
-      color: theme.textSecondary,
+      color: wooshGreen.medium,
       marginBottom: 10,
     },
 

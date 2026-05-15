@@ -1,4 +1,40 @@
 import Service from '../models/Service.js';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import {
+  isR2Configured,
+  uploadObjectToR2,
+  deleteR2ObjectByPublicUrl,
+  publicUrlToR2Key,
+  randomSuffix,
+} from '../services/r2Upload.js';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const serviceUploadsDir = path.join(__dirname, '..', 'uploads', 'services');
+
+function safeImageExt(originalname, mimetype) {
+  let ext = path.extname(originalname || '');
+  if (!ext && mimetype) {
+    if (/jpeg|jpg/i.test(mimetype)) ext = '.jpg';
+    else if (/png/i.test(mimetype)) ext = '.png';
+    else if (/webp/i.test(mimetype)) ext = '.webp';
+    else if (/gif/i.test(mimetype)) ext = '.gif';
+  }
+  return ext || '.jpg';
+}
+
+async function removeStoredServiceImage(url) {
+  if (!url || typeof url !== 'string') return;
+  if (publicUrlToR2Key(url)) {
+    await deleteR2ObjectByPublicUrl(url);
+    return;
+  }
+  if (url.startsWith('/uploads/services/')) {
+    const filePath = path.join(serviceUploadsDir, path.basename(url));
+    if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+  }
+}
 
 const WASH_SERVICE_CATEGORIES = ['CarWash', 'BikeWash', 'AutoWash'];
 const ALL_SERVICE_CATEGORIES = [
@@ -19,19 +55,44 @@ export const uploadServiceImage = async (req, res) => {
       });
     }
 
+    let url;
+    let filename;
+
+    if (isR2Configured()) {
+      const ext = safeImageExt(req.file.originalname, req.file.mimetype);
+      filename = `service-${Date.now()}-${randomSuffix()}${ext}`;
+      const key = `services/${filename}`;
+      if (!req.file.buffer) {
+        return res.status(500).json({
+          success: false,
+          message: 'Upload buffer missing (R2 mode)',
+        });
+      }
+      url = await uploadObjectToR2({
+        key,
+        body: req.file.buffer,
+        contentType: req.file.mimetype || 'image/jpeg',
+      });
+    } else {
+      filename = req.file.filename;
+      url = `/uploads/services/${filename}`;
+    }
+
     return res.status(201).json({
       success: true,
-      data: {
-        url: `/uploads/services/${req.file.filename}`,
-        filename: req.file.filename,
-      },
+      data: { url, filename },
     });
   } catch (error) {
+    if (!isR2Configured() && req.file?.path && fs.existsSync(req.file.path)) {
+      fs.unlink(req.file.path, () => {});
+    }
     console.error('Error uploading service image:', error);
+    const providerCode = error?.name || error?.Code || error?.code || 'UploadError';
+    const providerMessage = error?.message || 'Unknown upload failure';
     return res.status(500).json({
       success: false,
-      message: 'Error uploading service image',
-      error: error.message,
+      message: `Error uploading service image (${providerCode})`,
+      error: providerMessage,
     });
   }
 };
@@ -667,6 +728,15 @@ export const deleteService = async (req, res) => {
         success: false,
         message: 'Service not found',
       });
+    }
+
+    try {
+      if (deleted.image) await removeStoredServiceImage(deleted.image);
+      if (Array.isArray(deleted.images)) {
+        await Promise.all(deleted.images.map((u) => removeStoredServiceImage(u)));
+      }
+    } catch (cleanupErr) {
+      console.warn('Service image cleanup after delete:', cleanupErr?.message);
     }
 
     res.status(200).json({

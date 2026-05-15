@@ -1,6 +1,6 @@
 /**
- * One-time seed: Woosh Black membership Service document.
- * Run from backend folder: node scripts/seedWooshBlackMembership.js
+ * One-time seed: Woosh Green membership Service document.
+ * Run from backend folder: node scripts/seedWooshGreenMembership.js
  */
 import dotenv from 'dotenv';
 import mongoose from 'mongoose';
@@ -16,15 +16,25 @@ async function run() {
     process.exit(1);
   }
   await mongoose.connect(MONGO_URI);
-  const existing = await Service.findOne({ category: 'Membership', name: 'Woosh Black' });
+
+  const legacy = await Service.findOne({ category: 'Membership', name: 'Woosh Black' });
+  if (legacy) {
+    legacy.name = 'Woosh Green';
+    await legacy.save();
+    console.log('Renamed Woosh Black → Woosh Green:', legacy._id.toString());
+    await mongoose.disconnect();
+    return;
+  }
+
+  const existing = await Service.findOne({ category: 'Membership', name: 'Woosh Green' });
   if (existing) {
-    console.log('Woosh Black membership service already exists:', existing._id.toString());
+    console.log('Woosh Green membership service already exists:', existing._id.toString());
     await mongoose.disconnect();
     return;
   }
 
   const doc = await Service.create({
-    name: 'Woosh Black',
+    name: 'Woosh Green',
     description: '12-month membership — save on every car wash.',
     category: 'Membership',
     basePrice: 499,
@@ -39,7 +49,7 @@ async function run() {
     specifications: { coverage: [], notIncluded: [] },
   });
 
-  console.log('Created Woosh Black membership service:', doc._id.toString());
+  console.log('Created Woosh Green membership service:', doc._id.toString());
   await mongoose.disconnect();
 }
 

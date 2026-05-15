@@ -12,7 +12,7 @@ const membershipSchema = new mongoose.Schema(
       type: String,
       required: true,
       trim: true,
-      default: 'woosh_black',
+      default: 'woosh_green',
       index: true,
     },
     service: {

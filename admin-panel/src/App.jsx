@@ -2999,7 +2999,7 @@ function App() {
                     className={`services-filter-tab ${serviceFilter === 'membership' ? 'active' : ''}`}
                     onClick={() => setServiceFilter('membership')}
                   >
-                    Woosh Black ({categoryCounts.membership})
+                    Woosh Green ({categoryCounts.membership})
                   </button>
                 </div>
                 {washReorderEnabled ? (
@@ -3169,7 +3169,7 @@ function App() {
                 <option value="CarWash">Car Wash</option>
                 <option value="BikeWash">Bike Wash</option>
                 <option value="AutoWash">Auto Wash</option>
-                <option value="Membership">Woosh Black (Membership)</option>
+                <option value="Membership">Woosh Green (Membership)</option>
                 <option value="AddOn">Add-On</option>
               </select>
             </div>

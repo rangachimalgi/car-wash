@@ -10,6 +10,7 @@ import { getVehicles } from '../services/vehicleApi';
 import { getWallet, getReferralInfo } from '../services/walletApi';
 import { getMyMembership } from '../services/membershipApi';
 import { useTheme } from '../theme/ThemeContext';
+import { wooshGreen } from '../theme/wooshGreen';
 import { useFocusEffect } from '@react-navigation/native';
 import SavedVehiclesModal from '../components/SavedVehiclesModal';
 
@@ -61,7 +62,7 @@ export default function ProfileScreen({ navigation }) {
               if (mem?.success && mem.data?.active && mem.data?.membership) {
                 const m = mem.data.membership;
                 setMembershipInfo({
-                  planLabel: m.planLabel || 'Woosh Black',
+                  planLabel: m.planLabel || 'Woosh Green',
                   discountPercent: Number(m.discountPercent) || 0,
                   endsAt: m.endsAt,
                 });
@@ -157,7 +158,7 @@ export default function ProfileScreen({ navigation }) {
               if (mem?.success && mem.data?.active && mem.data?.membership) {
                 const m = mem.data.membership;
                 setMembershipInfo({
-                  planLabel: m.planLabel || 'Woosh Black',
+                  planLabel: m.planLabel || 'Woosh Green',
                   discountPercent: Number(m.discountPercent) || 0,
                   endsAt: m.endsAt,
                 });
@@ -266,7 +267,7 @@ export default function ProfileScreen({ navigation }) {
         {membershipInfo ? (
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
-              <MaterialCommunityIcons name="crown-outline" size={24} color={theme.accent} />
+              <MaterialCommunityIcons name="crown-outline" size={24} color={wooshGreen.primary} />
               <Text style={styles.sectionTitle}>Membership</Text>
             </View>
             <View style={styles.membershipCard}>
@@ -280,7 +281,7 @@ export default function ProfileScreen({ navigation }) {
               )}
               {membershipInfo.discountPercent > 0 ? (
                 <Text style={styles.membershipPriceHint}>
-                  Woosh Black discount {membershipInfo.discountPercent}%
+                  Woosh Green discount {membershipInfo.discountPercent}%
                 </Text>
               ) : null}
               {membershipInfo.endsAt ? (
@@ -900,16 +901,16 @@ const createStyles = theme => StyleSheet.create({
     borderColor: theme.cardBorder,
   },
   membershipCard: {
-    backgroundColor: theme.cardBackground,
+    backgroundColor: wooshGreen.soft,
     borderRadius: 16,
     padding: 16,
     borderWidth: 1,
-    borderColor: theme.cardBorder,
+    borderColor: wooshGreen.softBorder,
   },
   membershipTitle: {
     fontSize: 17,
     fontWeight: '800',
-    color: theme.textPrimary,
+    color: wooshGreen.deep,
     marginBottom: 8,
   },
   membershipLine: {
@@ -921,7 +922,8 @@ const createStyles = theme => StyleSheet.create({
   membershipPriceHint: {
     fontSize: 13,
     lineHeight: 19,
-    color: theme.textSecondary,
+    color: wooshGreen.medium,
+    fontWeight: '600',
     marginBottom: 8,
   },
   membershipSub: {

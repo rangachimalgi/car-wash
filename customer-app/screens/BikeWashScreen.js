@@ -4,7 +4,7 @@ import { StatusBar } from 'expo-status-bar';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import BackHeader from '../components/BackHeader';
-import WooshBlackCard from '../components/WooshBlackCard';
+import WooshGreenCard from '../components/WooshGreenCard';
 import ServiceAccordionCard from '../components/ServiceAccordionCard';
 import ServiceDetailsBottomSheet from '../components/ServiceDetailsBottomSheet';
 import AddOnServicesList from '../components/AddOnServicesList';
@@ -274,7 +274,7 @@ export default function BikeWashScreen({ navigation }) {
         }
       >
         <View style={styles.content}>
-          <WooshBlackCard navigation={navigation} />
+          <WooshGreenCard navigation={navigation} />
 
           {services.length === 0 ? (
             <View style={styles.emptyContainer}>

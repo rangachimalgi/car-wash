@@ -1,9 +1,9 @@
 import Membership from '../models/Membership.js';
 
-const DEFAULT_PLAN_ID = 'woosh_black';
+const DEFAULT_PLAN_ID = 'woosh_green';
 
 /**
- * Extend or create active Woosh Black membership after a paid membership order line.
+ * Extend or create active Woosh Green membership after a paid membership order line.
  */
 export async function activateMembershipFromOrder({
   userId,

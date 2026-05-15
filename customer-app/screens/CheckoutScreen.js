@@ -168,7 +168,7 @@ export default function CheckoutScreen({ navigation, route }) {
   const getCheckoutItemTitle = (item) => {
     const packageType = item?.packageType || 'OneTime';
     if (packageType === 'Membership') {
-      return item?.serviceName || item?.title || 'Woosh Black';
+      return item?.serviceName || item?.title || 'Woosh Green';
     }
     if (packageType !== 'OneTime') {
       if (item?.serviceName) return item.serviceName;

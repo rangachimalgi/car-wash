@@ -9,7 +9,7 @@ import ServiceDetailsBottomSheet from '../components/ServiceDetailsBottomSheet';
 import AddOnServicesList from '../components/AddOnServicesList';
 import PricingPackages, { AddToCartButton } from '../components/PricingPackages';
 import ServiceCoverage from '../components/ServiceCoverage';
-import WooshBlackCard from '../components/WooshBlackCard';
+import WooshGreenCard from '../components/WooshGreenCard';
 import { resolveAssetUrl } from '../config/api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
@@ -289,7 +289,7 @@ export default function CarWashScreen({ navigation, route }) {
       >
         <View style={styles.content}>
           {(screenCategory === 'CarWash' || screenCategory === 'AutoWash') && (
-            <WooshBlackCard navigation={navigation} />
+            <WooshGreenCard navigation={navigation} />
           )}
 
           {services.length === 0 ? (

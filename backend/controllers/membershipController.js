@@ -1,7 +1,8 @@
 import Service from '../models/Service.js';
 import Membership from '../models/Membership.js';
 
-const DEFAULT_PLAN_ID = 'woosh_black';
+const DEFAULT_PLAN_ID = 'woosh_green';
+const LEGACY_PLAN_ID = 'woosh_black';
 
 const mapServiceToPlan = (svc) => {
   if (!svc) return null;
@@ -10,7 +11,7 @@ const mapServiceToPlan = (svc) => {
   return {
     planId: DEFAULT_PLAN_ID,
     serviceId: String(svc._id),
-    name: svc.name || 'Woosh Black',
+    name: svc.name || 'Woosh Green',
     price,
     mrp,
     durationMonths: Number(svc.membershipDurationMonths) || 12,
@@ -55,7 +56,11 @@ export const getMyMembership = async (req, res) => {
 
     const planId = String(active.planId || '').trim();
     const planLabel =
-      planId === 'woosh_black' ? 'Woosh Black' : planId ? planId.replace(/_/g, ' ') : 'Woosh membership';
+      planId === DEFAULT_PLAN_ID || planId === LEGACY_PLAN_ID
+        ? 'Woosh Green'
+        : planId
+          ? planId.replace(/_/g, ' ')
+          : 'Woosh membership';
 
     res.status(200).json({
       success: true,

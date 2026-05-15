@@ -3,11 +3,12 @@ import { View, Text, StyleSheet, TouchableOpacity, Image, Alert, ActivityIndicat
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
-import { useTheme } from '../theme/ThemeContext';
+import { wooshGreen } from '../theme/wooshGreen';
 import { getMembershipPlans, getMyMembership } from '../services/membershipApi';
 
-const BLACK = '#0a0a0a';
+const INK = '#0a0a0a';
 const GREY = '#6b7280';
+const WOOSH_GREEN_PLAN_IDS = new Set(['woosh_green', 'woosh_black']);
 
 const DEFAULT_PLAN = {
   durationMonths: 12,
@@ -17,11 +18,10 @@ const DEFAULT_PLAN = {
 };
 
 /**
- * Woosh Black membership card — loads plan from API, merges into cart (AsyncStorage) so the user stays on the screen.
+ * Woosh Green membership card — loads plan from API, merges into cart (AsyncStorage) so the user stays on the screen.
  */
-export default function WooshBlackCard({ navigation }) {
-  const { theme } = useTheme();
-  const styles = useMemo(() => createStyles(theme.accent), [theme.accent]);
+export default function WooshGreenCard({ navigation }) {
+  const styles = useMemo(() => createStyles(), []);
   const [plan, setPlan] = useState(null);
   const [loadingPlan, setLoadingPlan] = useState(true);
   const [adding, setAdding] = useState(false);
@@ -55,7 +55,8 @@ export default function WooshBlackCard({ navigation }) {
         const res = await getMembershipPlans();
         if (cancelled) return;
         const list = res?.data || [];
-        const row = list.find((p) => p.planId === 'woosh_black') || list[0];
+        const row =
+          list.find((p) => WOOSH_GREEN_PLAN_IDS.has(p.planId)) || list[0];
         if (row) {
           setPlan(row);
         } else {
@@ -82,7 +83,7 @@ export default function WooshBlackCard({ navigation }) {
       setAdding(true);
       const token = await AsyncStorage.getItem('authToken');
       if (!token) {
-        Alert.alert('Sign in required', 'Please log in to add Woosh Black to your cart.', [
+        Alert.alert('Sign in required', 'Please log in to add Woosh Green to your cart.', [
           { text: 'Cancel', style: 'cancel' },
           { text: 'Log in', onPress: () => navigation.navigate('Login') },
         ]);
@@ -91,14 +92,14 @@ export default function WooshBlackCard({ navigation }) {
       if (!plan?.serviceId) {
         Alert.alert(
           'Unavailable',
-          'Woosh Black is not set up on the server yet. Ask an admin to run the membership seed script.',
+          'Woosh Green is not set up on the server yet. Ask an admin to run the membership seed script.',
         );
         return;
       }
       try {
         const me = await getMyMembership();
         if (me?.success && me.data?.active) {
-          Alert.alert('Woosh Black', 'You already have an active membership.');
+          Alert.alert('Woosh Green', 'You already have an active membership.');
           return;
         }
       } catch (_) {
@@ -106,13 +107,13 @@ export default function WooshBlackCard({ navigation }) {
       }
 
       const newItem = {
-        id: 'membership_woosh_black',
+        id: 'membership_woosh_green',
         serviceId: plan.serviceId,
-        serviceName: plan.name || 'Woosh Black',
-        title: `${plan.name || 'Woosh Black'} – ${plan.durationMonths || 12} months`,
+        serviceName: plan.name || 'Woosh Green',
+        title: `${plan.name || 'Woosh Green'} – ${plan.durationMonths || 12} months`,
         packageType: 'Membership',
         packageTimes: 1,
-        planId: plan.planId || 'woosh_black',
+        planId: plan.planId || 'woosh_green',
         price: Number(plan.price) || 0,
         quantity: 1,
         addOns: [],
@@ -171,9 +172,9 @@ export default function WooshBlackCard({ navigation }) {
           <View style={styles.titleBlock}>
             <View style={styles.titleRow}>
               <Text style={styles.brandWoosh}>WOOSH </Text>
-              <Text style={styles.brandBlack}>BLACK</Text>
+              <Text style={styles.brandGreen}>GREEN</Text>
               <View style={styles.infoWrap}>
-                <MaterialCommunityIcons name="information-outline" size={12} color={theme.accent} />
+                <MaterialCommunityIcons name="information-outline" size={12} color={wooshGreen.medium} />
               </View>
             </View>
             <Text style={styles.durationText}>for {durationMonths} months</Text>
@@ -194,10 +195,10 @@ export default function WooshBlackCard({ navigation }) {
               onPress={membershipInCart ? handleRemove : handleAdd}
               disabled={loadingPlan || adding}
               accessibilityRole="button"
-              accessibilityLabel={membershipInCart ? 'Remove Woosh Black from cart' : 'Add Woosh Black to cart'}
+              accessibilityLabel={membershipInCart ? 'Remove Woosh Green from cart' : 'Add Woosh Green to cart'}
             >
               {adding ? (
-                <ActivityIndicator size="small" color={membershipInCart ? '#b91c1c' : BLACK} />
+                <ActivityIndicator size="small" color={membershipInCart ? '#b91c1c' : '#fff'} />
               ) : (
                 <Text style={membershipInCart ? styles.removeButtonText : styles.addButtonText}>
                   {membershipInCart ? 'Remove' : 'Add'}
@@ -211,21 +212,21 @@ export default function WooshBlackCard({ navigation }) {
         <Text style={styles.footerText}>
           Save upto <Text style={styles.footerHighlight}>{savingsPercent}%</Text> on every service{' '}
           <Text style={styles.footerDot}>●</Text> <Text style={styles.footerBrand}>WOOSH </Text>
-          <Text style={styles.footerBlackItalic}>BLACK</Text>
+          <Text style={styles.footerGreenItalic}>GREEN</Text>
         </Text>
       </View>
     </View>
   );
 }
 
-function createStyles(accent) {
+function createStyles() {
   return StyleSheet.create({
   outer: {
     borderRadius: 12,
-    borderWidth: 2,
-    borderColor: accent,
+    borderWidth: 1.5,
+    borderColor: wooshGreen.softBorder,
     overflow: 'hidden',
-    backgroundColor: '#fff',
+    backgroundColor: wooshGreen.soft,
     marginHorizontal: 16,
     marginBottom: 12,
   },
@@ -235,7 +236,7 @@ function createStyles(accent) {
     alignItems: 'flex-start',
     paddingHorizontal: 12,
     paddingVertical: 10,
-    backgroundColor: '#fff',
+    backgroundColor: wooshGreen.soft,
   },
   topLeft: {
     flexDirection: 'row',
@@ -262,14 +263,14 @@ function createStyles(accent) {
   brandWoosh: {
     fontSize: 15,
     fontWeight: '800',
-    color: BLACK,
+    color: INK,
     letterSpacing: 0.2,
   },
-  brandBlack: {
+  brandGreen: {
     fontSize: 15,
     fontWeight: '900',
     fontStyle: 'italic',
-    color: BLACK,
+    color: wooshGreen.primary,
     letterSpacing: 0.2,
   },
   infoWrap: {
@@ -279,7 +280,7 @@ function createStyles(accent) {
   durationText: {
     marginTop: 2,
     fontSize: 12,
-    color: GREY,
+    color: wooshGreen.medium,
     fontWeight: '500',
   },
   topRight: {
@@ -299,7 +300,7 @@ function createStyles(accent) {
   priceMain: {
     fontSize: 19,
     fontWeight: '800',
-    color: BLACK,
+    color: wooshGreen.deep,
   },
   priceStrike: {
     marginTop: 2,
@@ -309,7 +310,7 @@ function createStyles(accent) {
     fontWeight: '500',
   },
   addButton: {
-    backgroundColor: accent,
+    backgroundColor: wooshGreen.primary,
     paddingHorizontal: 16,
     paddingVertical: 6,
     borderRadius: 7,
@@ -323,7 +324,7 @@ function createStyles(accent) {
   addButtonText: {
     fontSize: 13,
     fontWeight: '800',
-    color: BLACK,
+    color: '#fff',
   },
   removeButton: {
     backgroundColor: '#fff',
@@ -342,31 +343,31 @@ function createStyles(accent) {
     color: '#b91c1c',
   },
   bottomSection: {
-    backgroundColor: BLACK,
+    backgroundColor: wooshGreen.deep,
     paddingVertical: 8,
     paddingHorizontal: 12,
   },
   footerText: {
     fontSize: 11,
-    color: '#fff',
+    color: 'rgba(255,255,255,0.92)',
     fontWeight: '500',
     textAlign: 'center',
     lineHeight: 15,
   },
   footerHighlight: {
-    color: accent,
+    color: wooshGreen.light,
     fontWeight: '800',
   },
   footerDot: {
-    color: accent,
+    color: wooshGreen.light,
     fontSize: 10,
   },
   footerBrand: {
     color: '#fff',
     fontWeight: '700',
   },
-  footerBlackItalic: {
-    color: accent,
+  footerGreenItalic: {
+    color: wooshGreen.light,
     fontStyle: 'italic',
     fontWeight: '700',
   },
