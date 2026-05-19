@@ -13,6 +13,7 @@ import { useTheme } from '../theme/ThemeContext';
 import { wooshGreen } from '../theme/wooshGreen';
 import { useFocusEffect } from '@react-navigation/native';
 import SavedVehiclesModal from '../components/SavedVehiclesModal';
+import { isSessionStillValid, logoutUser } from '../services/authSession';
 
 const SUPPORT_WHATSAPP_NUMBER = process.env.EXPO_PUBLIC_SUPPORT_WHATSAPP || '918744050709';
 
@@ -123,10 +124,11 @@ export default function ProfileScreen({ navigation }) {
 
   useFocusEffect(
     useCallback(() => {
+      let isActive = true;
       const refreshVehicle = async () => {
         try {
           const storedPhone = await AsyncStorage.getItem('authPhone');
-          if (!storedPhone) return;
+          if (!storedPhone || !isActive) return;
           const vKeys = await getVehicleKeys();
           const [storedVehicleType, storedVehicleModel, vehicles, referral] = await Promise.all([
             AsyncStorage.getItem(vKeys.vehicleType),
@@ -134,6 +136,7 @@ export default function ProfileScreen({ navigation }) {
             getVehicles(storedPhone),
             getReferralInfo(storedPhone),
           ]);
+          if (!isActive || !(await isSessionStillValid(storedPhone))) return;
           setVehicleType(storedVehicleType || 'SUV');
           setVehicleModel(storedVehicleModel || '');
           if (Array.isArray(vehicles)) {
@@ -152,30 +155,30 @@ export default function ProfileScreen({ navigation }) {
             }));
           }
           try {
-            const token = await AsyncStorage.getItem('authToken');
-            if (token) {
-              const mem = await getMyMembership();
-              if (mem?.success && mem.data?.active && mem.data?.membership) {
-                const m = mem.data.membership;
-                setMembershipInfo({
-                  planLabel: m.planLabel || 'Woosh Green',
-                  discountPercent: Number(m.discountPercent) || 0,
-                  endsAt: m.endsAt,
-                });
-              } else {
-                setMembershipInfo(null);
-              }
+            if (!(await isSessionStillValid(storedPhone))) return;
+            const mem = await getMyMembership();
+            if (!isActive || !(await isSessionStillValid(storedPhone))) return;
+            if (mem?.success && mem.data?.active && mem.data?.membership) {
+              const m = mem.data.membership;
+              setMembershipInfo({
+                planLabel: m.planLabel || 'Woosh Green',
+                discountPercent: Number(m.discountPercent) || 0,
+                endsAt: m.endsAt,
+              });
             } else {
               setMembershipInfo(null);
             }
           } catch {
-            setMembershipInfo(null);
+            if (isActive) setMembershipInfo(null);
           }
         } catch (error) {
-          console.warn('Failed to refresh vehicle:', error);
+          if (isActive) console.warn('Failed to refresh vehicle:', error);
         }
       };
       refreshVehicle();
+      return () => {
+        isActive = false;
+      };
     }, [])
   );
 
@@ -524,20 +527,15 @@ export default function ProfileScreen({ navigation }) {
                     style: 'destructive',
                     onPress: async () => {
                       try {
-                        // Clear all auth-related storage
-                        await AsyncStorage.multiRemove(['authToken', 'authPhone', 'authName', 'userId']);
+                        await logoutUser();
                         console.log('User logged out');
-                        navigation.reset({
-                          index: 0,
-                          routes: [{ name: 'Login' }],
-                        });
                       } catch (error) {
                         console.error('Error logging out:', error);
-                        navigation.reset({
-                          index: 0,
-                          routes: [{ name: 'Login' }],
-                        });
                       }
+                      navigation.reset({
+                        index: 0,
+                        routes: [{ name: 'Login' }],
+                      });
                     },
                   },
                 ]

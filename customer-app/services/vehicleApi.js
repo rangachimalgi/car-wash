@@ -1,9 +1,19 @@
 import api from '../config/api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getVehicleKeys } from './addressStorage';
+import { isSessionStillValid } from './authSession';
 
 // Get all vehicles for a user
 export const getVehicles = async (phone) => {
+  if (!(await isSessionStillValid(phone))) {
+    try {
+      const keys = await getVehicleKeys();
+      const stored = await AsyncStorage.getItem(keys.vehicles);
+      return stored ? JSON.parse(stored) : [];
+    } catch {
+      return [];
+    }
+  }
   try {
     const response = await api.get(`/users/${phone}/vehicles`);
     console.log('getVehicles API response:', response.data);
@@ -29,8 +39,14 @@ export const getVehicles = async (phone) => {
     console.log('Parsed vehicles:', vehicles.length, vehicles);
     return vehicles;
   } catch (error) {
-    console.warn('Error fetching vehicles from server:', error);
-    console.warn('Error details:', error.response?.data || error.message);
+    const cancelled =
+      error?.code === 'ERR_CANCELED' ||
+      error?.name === 'CanceledError' ||
+      String(error?.message || '').toLowerCase().includes('cancel');
+    if (!cancelled) {
+      console.warn('Error fetching vehicles from server:', error);
+      console.warn('Error details:', error.response?.data || error.message);
+    }
     // Fallback to AsyncStorage (user-scoped key)
     try {
       const keys = await getVehicleKeys();

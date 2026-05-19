@@ -70,14 +70,62 @@ const api = axios.create({
   },
 });
 
+const AUTH_STORAGE_KEYS = ['authToken', 'authPhone', 'authName', 'userId'];
+const pendingAbortControllers = new Set();
+
+/** Abort in-flight API calls (e.g. on logout) so unmount does not surface noisy network errors. */
+export const cancelAllPendingApiRequests = () => {
+  pendingAbortControllers.forEach((controller) => {
+    try {
+      controller.abort();
+    } catch (_) {
+      /* ignore */
+    }
+  });
+  pendingAbortControllers.clear();
+};
+
+export const clearAuthStorage = async () => {
+  await AsyncStorage.multiRemove(AUTH_STORAGE_KEYS);
+};
+
+const detachAbortController = (config) => {
+  const controller = config?.__wooshAbortController;
+  if (controller) pendingAbortControllers.delete(controller);
+};
+
+const isRequestCancelled = (error) => {
+  if (typeof axios.isCancel === 'function' && axios.isCancel(error)) return true;
+  if (error?.code === 'ERR_CANCELED' || error?.name === 'CanceledError') return true;
+  const msg = String(error?.message || '').toLowerCase();
+  return msg.includes('cancel') || msg.includes('aborted');
+};
+
 const requestTouchesPublicMedia = (config) => {
   const u = String(config.url || '');
   return u.includes('/media/public');
 };
 
+const touchesUserResource = (config) => {
+  const u = String(config.url || '');
+  return /^\/users\//i.test(u);
+};
+
 // Request interceptor (for adding auth tokens)
 api.interceptors.request.use(
   async (config) => {
+    const controller = new AbortController();
+    if (config.signal) {
+      if (config.signal.aborted) {
+        controller.abort();
+      } else {
+        config.signal.addEventListener('abort', () => controller.abort(), { once: true });
+      }
+    }
+    config.signal = controller.signal;
+    config.__wooshAbortController = controller;
+    pendingAbortControllers.add(controller);
+
     if (requestTouchesPublicMedia(config)) {
       delete config.headers.Authorization;
       return config;
@@ -86,6 +134,8 @@ api.interceptors.request.use(
       const token = await AsyncStorage.getItem('authToken');
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;
+      } else if (touchesUserResource(config)) {
+        controller.abort();
       }
     } catch (error) {
       console.error('Error getting auth token:', error);
@@ -100,9 +150,16 @@ api.interceptors.request.use(
 // Response interceptor (for error handling)
 api.interceptors.response.use(
   (response) => {
+    detachAbortController(response.config);
     return response;
   },
   async (error) => {
+    detachAbortController(error.config);
+
+    if (isRequestCancelled(error)) {
+      return Promise.reject(error);
+    }
+
     // Handle common errors
     if (error.response) {
       // Server responded with error
@@ -111,15 +168,17 @@ api.interceptors.response.use(
       // If unauthorized (401), clear the token
       if (error.response.status === 401) {
         try {
-          await AsyncStorage.multiRemove(['authToken', 'authPhone', 'authName', 'userId']);
+          await clearAuthStorage();
           console.log('Token cleared due to 401 error');
         } catch (storageError) {
           console.error('Error clearing storage:', storageError);
         }
       }
     } else if (error.request) {
-      // Request made but no response
-      console.error('Network Error:', error.request);
+      // Request made but no response (skip when aborted during logout/navigation)
+      if (!isRequestCancelled(error)) {
+        console.error('Network Error:', error.request);
+      }
     } else {
       // Something else happened
       console.error('Error:', error.message);
