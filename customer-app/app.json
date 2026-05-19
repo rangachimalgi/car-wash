@@ -4,13 +4,13 @@
     "slug": "customer-app",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/WooshLogo.png",
+    "icon": "./assets/AppIcon.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "splash": {
       "image": "./assets/WooshLogo.png",
       "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#000000"
     },
     "plugins": [
       "expo-video"
@@ -33,7 +33,7 @@
     "android": {
       "usesCleartextTraffic": true,
       "adaptiveIcon": {
-        "foregroundImage": "./assets/WooshLogo.png",
+        "foregroundImage": "./assets/AppIcon.png",
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": false,
