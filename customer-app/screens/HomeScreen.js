@@ -18,6 +18,27 @@ const HERO_LOADING_SLIDE = [{ key: 'hero-loading', kind: 'loading' }];
 /** After fetch: no homeSliders from admin — neutral strip (not hardcoded marketing photos). */
 const HERO_EMPTY_SLIDE = [{ key: 'hero-empty', kind: 'empty' }];
 
+const DEFAULT_WHY_CHOOSE_CARDS = [
+  {
+    title: 'Car Wash at Your Home',
+    description: 'No waiting, No travel — we come to you.',
+    source: require('../assets/whychoose.jpeg'),
+    imageKey: 'whyChoose1',
+  },
+  {
+    title: 'Professional Service',
+    description: 'Expert team with top-quality equipment and products.',
+    source: require('../assets/whychooseone.jpeg'),
+    imageKey: 'whyChoose2',
+  },
+  {
+    title: 'Affordable Pricing',
+    description: 'Best value for money with transparent pricing.',
+    source: require('../assets/whychoose.jpeg'),
+    imageKey: 'whyChoose3',
+  },
+];
+
 export default function HomeScreen({ navigation }) {
   const [imageErrors, setImageErrors] = useState({});
   const sliderRef = useRef(null);
@@ -27,6 +48,7 @@ export default function HomeScreen({ navigation }) {
     transformations: [],
     seeTheDifference: [],
     homeSliders: [],
+    whyChooseUs: [],
   });
   const [referralInfo, setReferralInfo] = useState({
     code: '',
@@ -57,6 +79,33 @@ export default function HomeScreen({ navigation }) {
     }
     return HERO_EMPTY_SLIDE;
   }, [media.homeSliders, publicMediaFetched]);
+
+  const whyChooseCards = useMemo(() => {
+    const raw = media.whyChooseUs || [];
+    const fromApi = raw.filter(
+      (m) => m?.url && String(m.url).trim() && String(m.title || '').trim()
+    );
+    if (fromApi.length > 0) {
+      return fromApi.map((m, i) => ({
+        key: String(m._id ?? m.url ?? `why-${m.order ?? i}`),
+        title: String(m.title || '').trim(),
+        description: String(m.description || '').trim(),
+        uri: String(m.url).trim(),
+        imageKey: `whyChoose-api-${i}`,
+        colorIndex: i % 3,
+      }));
+    }
+    return DEFAULT_WHY_CHOOSE_CARDS.map((c, i) => ({
+      ...c,
+      key: `why-default-${i}`,
+      colorIndex: i % 3,
+    }));
+  }, [media.whyChooseUs]);
+
+  const whyChooseCardBgStyles = useMemo(
+    () => [styles.whyChooseCardBlue, styles.whyChooseCardGreen, styles.whyChooseCardPurple],
+    [styles]
+  );
 
   const handleImageError = (key) => {
     setImageErrors(prev => ({ ...prev, [key]: true }));
@@ -128,6 +177,7 @@ export default function HomeScreen({ navigation }) {
         transformations: data.transformations ?? [],
         seeTheDifference: data.seeTheDifference ?? [],
         homeSliders: data.homeSliders ?? [],
+        whyChooseUs: data.whyChooseUs ?? [],
       };
       setMedia(nextMedia);
 
@@ -440,39 +490,25 @@ export default function HomeScreen({ navigation }) {
             style={styles.whyChooseScrollView}
             contentContainerStyle={styles.whyChooseScrollContent}
           >
-            <View style={[styles.whyChooseCard, styles.whyChooseCardBlue]}>
-              <ServiceImage 
-                source={require('../assets/whychoose.jpeg')}
-                style={styles.whyChooseImage}
-                imageKey="whyChoose1"
-              />
-              <View style={styles.whyChooseTextContent}>
-                <Text style={styles.whyChooseCardTitle}>Car Wash at Your Home</Text>
-                <Text style={styles.whyChooseCardDescription}>No waiting, No travel — we come to you.</Text>
+            {whyChooseCards.map((card) => (
+              <View
+                key={card.key}
+                style={[styles.whyChooseCard, whyChooseCardBgStyles[card.colorIndex]]}
+              >
+                <ServiceImage
+                  source={card.source}
+                  uri={card.uri}
+                  style={styles.whyChooseImage}
+                  imageKey={card.imageKey}
+                />
+                <View style={styles.whyChooseTextContent}>
+                  <Text style={styles.whyChooseCardTitle}>{card.title}</Text>
+                  {card.description ? (
+                    <Text style={styles.whyChooseCardDescription}>{card.description}</Text>
+                  ) : null}
+                </View>
               </View>
-            </View>
-            <View style={[styles.whyChooseCard, styles.whyChooseCardGreen]}>
-              <ServiceImage 
-                source={require('../assets/whychooseone.jpeg')}
-                style={styles.whyChooseImage}
-                imageKey="whyChoose2"
-              />
-              <View style={styles.whyChooseTextContent}>
-                <Text style={styles.whyChooseCardTitle}>Professional Service</Text>
-                <Text style={styles.whyChooseCardDescription}>Expert team with top-quality equipment and products.</Text>
-              </View>
-            </View>
-            <View style={[styles.whyChooseCard, styles.whyChooseCardPurple]}>
-              <ServiceImage 
-                source={require('../assets/whychoose.jpeg')}
-                style={styles.whyChooseImage}
-                imageKey="whyChoose3"
-              />
-              <View style={styles.whyChooseTextContent}>
-                <Text style={styles.whyChooseCardTitle}>Affordable Pricing</Text>
-                <Text style={styles.whyChooseCardDescription}>Best value for money with transparent pricing.</Text>
-              </View>
-            </View>
+            ))}
           </ScrollView>
         </View>
 

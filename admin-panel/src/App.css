@@ -2927,6 +2927,25 @@
   white-space: nowrap;
 }
 
+.media-item-card-why-choose .media-item-name {
+  white-space: normal;
+}
+
+.media-item-description {
+  font-size: 0.78rem;
+  color: #6b7280;
+  line-height: 1.35;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.media-description-input {
+  min-width: 12rem;
+  flex: 1 1 14rem;
+}
+
 .media-delete-button {
   padding: 0.4rem 0.62rem;
   font-size: 0.78rem;

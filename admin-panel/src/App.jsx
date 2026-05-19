@@ -236,12 +236,14 @@ function App() {
   const [uploadingMedia, setUploadingMedia] = useState(false)
   const [seeDiffMediaForm, setSeeDiffMediaForm] = useState({ name: '', file: null })
   const [homeSliderMediaForm, setHomeSliderMediaForm] = useState({ name: '', file: null })
+  const [whyChooseMediaForm, setWhyChooseMediaForm] = useState({ title: '', description: '', file: null })
   /** Remount file inputs after upload so the next pick always fires `onChange`. */
   const [mediaFileInputKey, setMediaFileInputKey] = useState({
     testimonials: 0,
     transformations: 0,
     seeTheDifference: 0,
     homeSliders: 0,
+    whyChooseUs: 0,
   })
   const [mediaPosterInputKey, setMediaPosterInputKey] = useState({
     testimonials: 0,
@@ -2568,7 +2570,14 @@ function App() {
   }
 
   const uploadMediaFile = async (type, formState, setFormState) => {
-    const isImageMedia = type === 'seeTheDifference' || type === 'homeSliders'
+    const isImageMedia =
+      type === 'seeTheDifference' || type === 'homeSliders' || type === 'whyChooseUs'
+    if (type === 'whyChooseUs') {
+      if (!formState.title?.trim() || !formState.description?.trim()) {
+        setMediaMessage({ type: 'error', text: 'Title and description are required' })
+        return
+      }
+    }
     if (!formState.file) {
       setMediaMessage({
         type: 'error',
@@ -2590,7 +2599,12 @@ function App() {
     try {
       const formData = new FormData()
       formData.append('type', type)
-      formData.append('name', formState.name)
+      if (type === 'whyChooseUs') {
+        formData.append('title', formState.title.trim())
+        formData.append('description', formState.description.trim())
+      } else {
+        formData.append('name', formState.name)
+      }
       formData.append('file', formState.file)
       if (formState.posterFile) {
         formData.append('poster', formState.posterFile)
@@ -2602,7 +2616,11 @@ function App() {
       const data = await res.json()
       if (data.success) {
         setMediaMessage({ type: 'success', text: 'Uploaded successfully' })
-        setFormState({ name: '', file: null, posterFile: null })
+        setFormState(
+          type === 'whyChooseUs'
+            ? { title: '', description: '', file: null }
+            : { name: '', file: null, posterFile: null }
+        )
         setMediaFileInputKey((prev) => ({ ...prev, [type]: (prev[type] || 0) + 1 }))
         if (type === 'testimonials' || type === 'transformations') {
           setMediaPosterInputKey((prev) => ({ ...prev, [type]: (prev[type] || 0) + 1 }))
@@ -5010,7 +5028,7 @@ function App() {
             <div className="section-header media-header">
               <div>
                 <h2 className="section-title media-title">Media</h2>
-                <p className="media-subtitle">Manage testimonials, transformations, and homepage visuals</p>
+                <p className="media-subtitle">Manage testimonials, transformations, homepage visuals, and Why Choose Woosh cards</p>
               </div>
               <button type="button" className="secondary-button media-refresh-button" onClick={fetchMedia} disabled={loadingMedia}>
                 {loadingMedia ? 'Loading...' : 'Refresh'}
@@ -5068,6 +5086,75 @@ function App() {
                   <div key={m._id} className="media-item-card">
                     <img src={resolveUploadOrAbsoluteUrl(m.url)} alt="" className="media-item-preview" />
                     <span className="media-item-name">{m.name?.trim() ? m.name : `Slide ${m.order + 1}`}</span>
+                    <button type="button" className="secondary-button media-delete-button" onClick={() => deleteMediaItem(m._id)}>Delete</button>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Why Choose Woosh cards */}
+            <div className="media-block">
+              <h3 className="media-block-title">Why Choose Woosh</h3>
+              <p className="media-help-text">
+                Max image size: {MAX_MEDIA_IMAGE_SIZE_MB} MB. Each card needs a title, description, and image. Order matches the home screen carousel. If none are uploaded, the app uses built-in cards.
+              </p>
+              <div className="media-upload-toolbar">
+                <input
+                  type="text"
+                  placeholder="Title (required)"
+                  value={whyChooseMediaForm.title}
+                  onChange={(e) => setWhyChooseMediaForm((f) => ({ ...f, title: e.target.value }))}
+                  className="media-control media-name-input"
+                />
+                <input
+                  type="text"
+                  placeholder="Description (required)"
+                  value={whyChooseMediaForm.description}
+                  onChange={(e) => setWhyChooseMediaForm((f) => ({ ...f, description: e.target.value }))}
+                  className="media-control media-name-input media-description-input"
+                />
+                <label className="media-file-input-wrap">
+                  <span className="media-file-button">Choose image</span>
+                  <input
+                    key={`media-file-whyChooseUs-${mediaFileInputKey.whyChooseUs}`}
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0] || null
+                      if (file && file.size > MAX_MEDIA_IMAGE_SIZE_BYTES) {
+                        const msg = `Size limit exceeded. Max allowed is ${MAX_MEDIA_IMAGE_SIZE_MB} MB per image.`
+                        setMediaMessage({ type: 'error', text: msg })
+                        window.alert(msg)
+                        e.target.value = ''
+                        return
+                      }
+                      setWhyChooseMediaForm((f) => ({ ...f, file }))
+                    }}
+                  />
+                </label>
+                <span className="media-selected-file">{whyChooseMediaForm.file?.name || 'No file selected'}</span>
+                <button
+                  type="button"
+                  className="media-upload-button"
+                  onClick={() => uploadMediaFile('whyChooseUs', whyChooseMediaForm, setWhyChooseMediaForm)}
+                  disabled={
+                    uploadingMedia ||
+                    !whyChooseMediaForm.file ||
+                    !whyChooseMediaForm.title?.trim() ||
+                    !whyChooseMediaForm.description?.trim()
+                  }
+                >
+                  {uploadingMedia ? 'Uploading...' : 'Upload'}
+                </button>
+              </div>
+              <div className="media-items-grid">
+                {(mediaList.filter((m) => m.type === 'whyChooseUs') || []).sort((a, b) => a.order - b.order).map((m) => (
+                  <div key={m._id} className="media-item-card media-item-card-why-choose">
+                    <img src={resolveUploadOrAbsoluteUrl(m.url)} alt="" className="media-item-preview" />
+                    <span className="media-item-name">{m.title?.trim() || `Card ${m.order + 1}`}</span>
+                    {m.description?.trim() ? (
+                      <span className="media-item-description">{m.description}</span>
+                    ) : null}
                     <button type="button" className="secondary-button media-delete-button" onClick={() => deleteMediaItem(m._id)}>Delete</button>
                   </div>
                 ))}
