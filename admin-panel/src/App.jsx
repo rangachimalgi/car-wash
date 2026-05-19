@@ -237,6 +237,7 @@ function App() {
   const [seeDiffMediaForm, setSeeDiffMediaForm] = useState({ name: '', file: null })
   const [homeSliderMediaForm, setHomeSliderMediaForm] = useState({ name: '', file: null })
   const [whyChooseMediaForm, setWhyChooseMediaForm] = useState({ title: '', description: '', file: null })
+  const [loginBannerMediaForm, setLoginBannerMediaForm] = useState({ name: '', file: null })
   /** Remount file inputs after upload so the next pick always fires `onChange`. */
   const [mediaFileInputKey, setMediaFileInputKey] = useState({
     testimonials: 0,
@@ -244,6 +245,7 @@ function App() {
     seeTheDifference: 0,
     homeSliders: 0,
     whyChooseUs: 0,
+    loginBanner: 0,
   })
   const [mediaPosterInputKey, setMediaPosterInputKey] = useState({
     testimonials: 0,
@@ -2571,7 +2573,10 @@ function App() {
 
   const uploadMediaFile = async (type, formState, setFormState) => {
     const isImageMedia =
-      type === 'seeTheDifference' || type === 'homeSliders' || type === 'whyChooseUs'
+      type === 'seeTheDifference' ||
+      type === 'homeSliders' ||
+      type === 'whyChooseUs' ||
+      type === 'loginBanner'
     if (type === 'whyChooseUs') {
       if (!formState.title?.trim() || !formState.description?.trim()) {
         setMediaMessage({ type: 'error', text: 'Title and description are required' })
@@ -5028,7 +5033,7 @@ function App() {
             <div className="section-header media-header">
               <div>
                 <h2 className="section-title media-title">Media</h2>
-                <p className="media-subtitle">Manage testimonials, transformations, homepage visuals, and Why Choose Woosh cards</p>
+                <p className="media-subtitle">Manage testimonials, transformations, homepage and login visuals, and Why Choose Woosh cards</p>
               </div>
               <button type="button" className="secondary-button media-refresh-button" onClick={fetchMedia} disabled={loadingMedia}>
                 {loadingMedia ? 'Loading...' : 'Refresh'}
@@ -5086,6 +5091,62 @@ function App() {
                   <div key={m._id} className="media-item-card">
                     <img src={resolveUploadOrAbsoluteUrl(m.url)} alt="" className="media-item-preview" />
                     <span className="media-item-name">{m.name?.trim() ? m.name : `Slide ${m.order + 1}`}</span>
+                    <button type="button" className="secondary-button media-delete-button" onClick={() => deleteMediaItem(m._id)}>Delete</button>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Login screen banner */}
+            <div className="media-block">
+              <h3 className="media-block-title">Login screen banner</h3>
+              <p className="media-help-text">
+                Max image size: {MAX_MEDIA_IMAGE_SIZE_MB} MB. The first image (lowest order) is shown on the customer app login screen. If none are uploaded, the app uses the built-in banner.
+              </p>
+              <div className="media-upload-toolbar">
+                <input
+                  type="text"
+                  placeholder="Label (optional)"
+                  value={loginBannerMediaForm.name}
+                  onChange={(e) => setLoginBannerMediaForm((f) => ({ ...f, name: e.target.value }))}
+                  className="media-control media-name-input"
+                />
+                <label className="media-file-input-wrap">
+                  <span className="media-file-button">Choose image</span>
+                  <input
+                    key={`media-file-loginBanner-${mediaFileInputKey.loginBanner}`}
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0] || null
+                      if (file && file.size > MAX_MEDIA_IMAGE_SIZE_BYTES) {
+                        const msg = `Size limit exceeded. Max allowed is ${MAX_MEDIA_IMAGE_SIZE_MB} MB per image.`
+                        setMediaMessage({ type: 'error', text: msg })
+                        window.alert(msg)
+                        e.target.value = ''
+                        return
+                      }
+                      setLoginBannerMediaForm((f) => ({ ...f, file }))
+                    }}
+                  />
+                </label>
+                <span className="media-selected-file">{loginBannerMediaForm.file?.name || 'No file selected'}</span>
+                <button
+                  type="button"
+                  className="media-upload-button"
+                  onClick={() => uploadMediaFile('loginBanner', loginBannerMediaForm, setLoginBannerMediaForm)}
+                  disabled={uploadingMedia || !loginBannerMediaForm.file}
+                >
+                  {uploadingMedia ? 'Uploading...' : 'Upload'}
+                </button>
+              </div>
+              <div className="media-items-grid">
+                {(mediaList.filter((m) => m.type === 'loginBanner') || []).sort((a, b) => a.order - b.order).map((m) => (
+                  <div key={m._id} className="media-item-card">
+                    <img src={resolveUploadOrAbsoluteUrl(m.url)} alt="" className="media-item-preview" />
+                    <span className="media-item-name">
+                      {m.order === 0 ? 'Active on login' : m.name?.trim() ? m.name : `Banner ${m.order + 1}`}
+                    </span>
                     <button type="button" className="secondary-button media-delete-button" onClick={() => deleteMediaItem(m._id)}>Delete</button>
                   </div>
                 ))}

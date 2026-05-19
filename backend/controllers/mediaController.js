@@ -198,12 +198,13 @@ const PUBLIC_MEDIA_SELECT = 'url posterUrl name title description order';
 // @access  Public
 export const getPublicMedia = async (req, res) => {
   try {
-    const [testimonials, transformations, seeTheDifference, homeSliders, whyChooseUs] = await Promise.all([
+    const [testimonials, transformations, seeTheDifference, homeSliders, whyChooseUs, loginBanner] = await Promise.all([
       Media.find({ type: 'testimonials' }).sort({ order: 1 }).select(PUBLIC_MEDIA_SELECT).lean(),
       Media.find({ type: 'transformations' }).sort({ order: 1 }).select(PUBLIC_MEDIA_SELECT).lean(),
       Media.find({ type: 'seeTheDifference' }).sort({ order: 1 }).select(PUBLIC_MEDIA_SELECT).lean(),
       Media.find({ type: 'homeSliders' }).sort({ order: 1 }).select(PUBLIC_MEDIA_SELECT).lean(),
       Media.find({ type: 'whyChooseUs' }).sort({ order: 1 }).select(PUBLIC_MEDIA_SELECT).lean(),
+      Media.find({ type: 'loginBanner' }).sort({ order: 1 }).select(PUBLIC_MEDIA_SELECT).lean(),
     ]);
     res.status(200).json({
       success: true,
@@ -213,6 +214,7 @@ export const getPublicMedia = async (req, res) => {
         seeTheDifference,
         homeSliders,
         whyChooseUs,
+        loginBanner,
       },
     });
 
@@ -240,7 +242,7 @@ export const uploadMedia = async (req, res) => {
     if (!isR2Configured() && posterFile?.path) uploadedPaths.push(posterFile.path);
 
     const type = req.body?.type || 'testimonials';
-    const allowedTypes = ['testimonials', 'transformations', 'seeTheDifference', 'homeSliders', 'whyChooseUs'];
+    const allowedTypes = ['testimonials', 'transformations', 'seeTheDifference', 'homeSliders', 'whyChooseUs', 'loginBanner'];
     if (!allowedTypes.includes(type)) {
       uploadedPaths.forEach((p) => fs.existsSync(p) && fs.unlink(p, () => {}));
       return res.status(400).json({
@@ -248,7 +250,7 @@ export const uploadMedia = async (req, res) => {
         message: 'Invalid media type',
       });
     }
-    const imageOnlyTypes = ['seeTheDifference', 'homeSliders', 'whyChooseUs'];
+    const imageOnlyTypes = ['seeTheDifference', 'homeSliders', 'whyChooseUs', 'loginBanner'];
     if (imageOnlyTypes.includes(type)) {
       const mt = mainFile.mimetype || '';
       if (!/^image\/(jpeg|jpg|png|webp|gif)$/i.test(mt)) {

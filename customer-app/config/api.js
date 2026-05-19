@@ -220,6 +220,7 @@ const emptyMedia = () => ({
   seeTheDifference: [],
   homeSliders: [],
   whyChooseUs: [],
+  loginBanner: [],
 });
 
 /** Raw URL string from a media row (backend uses `url`; tolerate odd shapes). */
@@ -240,7 +241,8 @@ const unwrapPublicMediaBody = (payload) => {
     Array.isArray(payload.testimonials) ||
     Array.isArray(payload.homeSliders) ||
     Array.isArray(payload.home_sliders) ||
-    Array.isArray(payload.whyChooseUs)
+    Array.isArray(payload.whyChooseUs) ||
+    Array.isArray(payload.loginBanner)
   ) {
     return payload;
   }
@@ -291,13 +293,14 @@ const buildPublicMediaFromPayload = (payload) => {
     seeTheDifference: seeTheDifferenceRaw.map(withResolvedUrl),
     homeSliders: homeSlidersRaw.map(withResolvedUrl),
     whyChooseUs: pickMediaList(d, ['whyChooseUs', 'why_choose_us']).map(withResolvedUrl),
+    loginBanner: pickMediaList(d, ['loginBanner', 'login_banner']).map(withResolvedUrl),
   };
 };
 
 /** In dev, fill empty sections from production CDN URLs when the local API has no media rows. */
 const mergeMissingPublicMedia = (primary, alt) => {
   if (!alt) return primary;
-  const keys = ['testimonials', 'transformations', 'seeTheDifference', 'homeSliders', 'whyChooseUs'];
+  const keys = ['testimonials', 'transformations', 'seeTheDifference', 'homeSliders', 'whyChooseUs', 'loginBanner'];
   const next = { ...primary };
   keys.forEach((key) => {
     const localRows = Array.isArray(primary[key]) ? primary[key] : [];

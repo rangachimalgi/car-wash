@@ -7,9 +7,11 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { requestOtp, verifyOtp } from '../services/authApi';
 import { registerPushTokenWithBackend } from '../services/pushNotifications';
 import { useTheme } from '../theme/ThemeContext';
+import { getMedia } from '../config/api';
 
 const { width } = Dimensions.get('window');
 const OTP_LENGTH = 6;
+const DEFAULT_LOGIN_BANNER = require('../assets/carpicfour.jpeg');
 
 export default function LoginScreen({ navigation }) {
   const insets = useSafeAreaInsets();
@@ -23,7 +25,28 @@ export default function LoginScreen({ navigation }) {
   const [errors, setErrors] = useState({});
   const [resendTimer, setResendTimer] = useState(60);
   const [canResend, setCanResend] = useState(false);
+  const [loginBannerUri, setLoginBannerUri] = useState('');
+  const [loginBannerFailed, setLoginBannerFailed] = useState(false);
   const otpInputRefs = useRef([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const data = await getMedia();
+        const first = (data.loginBanner || []).find((m) => m?.url && String(m.url).trim());
+        if (!cancelled && first?.url) {
+          setLoginBannerUri(String(first.url).trim());
+          setLoginBannerFailed(false);
+        }
+      } catch (_) {
+        /* keep bundled banner */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const validatePhoneNumber = () => {
     const newErrors = {};
@@ -183,10 +206,15 @@ export default function LoginScreen({ navigation }) {
           <>
             {/* Banner Section with Image */}
             <View style={styles.bannerContainer}>
-              <Image 
-                source={require('../assets/carpicfour.jpeg')} 
+              <Image
+                source={
+                  loginBannerUri && !loginBannerFailed
+                    ? { uri: loginBannerUri }
+                    : DEFAULT_LOGIN_BANNER
+                }
                 style={styles.bannerImage}
                 resizeMode="cover"
+                onError={() => setLoginBannerFailed(true)}
               />
               
             </View>
