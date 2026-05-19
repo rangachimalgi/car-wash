@@ -585,76 +585,81 @@ export default function CartScreen({ navigation, route }) {
           </View>
         ) : (
           <>
-            {monthlyPackages.length > 0 && (
-                  <View style={styles.packagesSection}>
-                    <Text style={styles.packagesTitle}>Monthly Packages</Text>
-                    <FlatList
-                      data={monthlyPackages}
-                      horizontal
-                      showsHorizontalScrollIndicator={false}
-                      keyExtractor={(item) => item.id}
-                      renderItem={({ item }) => {
-                        const isSelected = currentPackageType === 'Monthly' && currentPackageTimes === item.times;
-                        return (
-                          <MonthlyPackageCard
-                            title={`${item.times}x Wash/Month`}
-                            price={item.price}
-                            perWashPrice={item.perWash}
-                            times={item.times}
-                            discount={item.discount}
-                            packageId={item.id}
-                            isSelected={isSelected}
-                            onSelect={() => handlePackageSelectionChange(currentItem, {
-                              type: 'Monthly',
-                              times: item.times,
-                              price: item.price,
-                            })}
-                          />
-                        );
-                      }}
-                      contentContainerStyle={styles.packagesList}
-                    />
-                  </View>
-                )}
+            {currentItem && monthlyPackages.length > 0 && (
+              <View style={styles.packagesCard}>
+                <View style={styles.packagesHeader}>
+                  <Text style={styles.packagesTitle}>Monthly packages</Text>
+                  <Text style={styles.packagesSubtitle}>Save more with a plan</Text>
+                </View>
+                <FlatList
+                  data={monthlyPackages}
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  keyExtractor={(item) => item.id}
+                  renderItem={({ item }) => {
+                    const isSelected =
+                      currentPackageType === 'Monthly' && currentPackageTimes === item.times;
+                    return (
+                      <MonthlyPackageCard
+                        title={`${item.times}x wash / month`}
+                        price={item.price}
+                        perWashPrice={item.perWash}
+                        times={item.times}
+                        discount={item.discount}
+                        packageId={item.id}
+                        isSelected={isSelected}
+                        onSelect={() =>
+                          handlePackageSelectionChange(currentItem, {
+                            type: 'Monthly',
+                            times: item.times,
+                            price: item.price,
+                          })
+                        }
+                      />
+                    );
+                  }}
+                  contentContainerStyle={styles.packagesList}
+                />
+              </View>
+            )}
 
-            {/* Vehicle Header */}
+            {/* Vehicle */}
             {(() => {
               const shouldShowVehicle = vehicle && (!serviceCategory || isVehicleValidForService(vehicle.type, serviceCategory));
-              
-              if (!shouldShowVehicle) {
-                return (
-                  <View style={styles.vehicleHeader}>
-                    <View style={styles.vehicleInfo}>
-                      <MaterialCommunityIcons name="car-alert" size={24} color={theme.textSecondary} />
-                      <Text style={styles.vehicleName}>
-                        {(serviceCategory === 'CarWash' || serviceCategory === 'AutoWash') ? 'Select a car' : serviceCategory === 'BikeWash' ? 'Select a bike' : 'Select a vehicle'}
+              const vehiclePlaceholder =
+                serviceCategory === 'CarWash' || serviceCategory === 'AutoWash'
+                  ? 'Select a car'
+                  : serviceCategory === 'BikeWash'
+                    ? 'Select a bike'
+                    : 'Select a vehicle';
+
+              return (
+                <View style={styles.vehicleCard}>
+                  <View style={styles.vehicleInfo}>
+                    {shouldShowVehicle ? (
+                      <Image
+                        source={getVehicleImage(vehicle.type)}
+                        style={styles.vehicleImage}
+                        resizeMode="contain"
+                      />
+                    ) : (
+                      <View style={styles.vehicleImagePlaceholder}>
+                        <MaterialCommunityIcons name="car-outline" size={22} color="#666666" />
+                      </View>
+                    )}
+                    <View style={styles.vehicleTextCol}>
+                      <Text style={styles.vehicleLabel}>Vehicle</Text>
+                      <Text style={styles.vehicleName} numberOfLines={2}>
+                        {shouldShowVehicle ? vehicle.model || vehicle.type : vehiclePlaceholder}
                       </Text>
                     </View>
-                    <TouchableOpacity 
-                      style={styles.changeVehicleButton}
-                      onPress={() => setShowVehicleModal(true)}
-                    >
-                      <Text style={styles.changeVehicleButtonText}>Change Vehicle</Text>
-                    </TouchableOpacity>
                   </View>
-                );
-              }
-              
-              return (
-                <View style={styles.vehicleHeader}>
-                  <View style={styles.vehicleInfo}>
-                    <Image 
-                      source={FALLBACK_IMAGE}
-                      style={styles.vehicleImage}
-                      resizeMode="cover"
-                    />
-                    <Text style={styles.vehicleName}>{vehicle.type} - {vehicle.model}</Text>
-                  </View>
-                  <TouchableOpacity 
-                    style={styles.changeVehicleButton}
+                  <TouchableOpacity
+                    style={styles.changeButton}
                     onPress={() => setShowVehicleModal(true)}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                   >
-                    <Text style={styles.changeVehicleButtonText}>Change Vehicle</Text>
+                    <Text style={styles.changeButtonText}>Change</Text>
                   </TouchableOpacity>
                 </View>
               );
@@ -689,44 +694,53 @@ export default function CartScreen({ navigation, route }) {
             ))}
 
             {/* Service Items Section */}
-            {currentItem && currentItem.packageType !== 'Membership' && (
-              <View style={styles.serviceItemsSection}>
-                <View style={styles.serviceItemsHeader}>
-                  <Text style={styles.serviceItemsTitle}>Service Items</Text>
-                  <View style={styles.serviceItemsHeaderActions}>
+            {currentItem && currentItem.packageType !== 'Membership' && (() => {
+              const washCollapsed = expandedServiceId === currentItem.id;
+              const washTypeLabel =
+                currentPackageType === 'OneTime' ? 'One-time wash' : 'Monthly package';
+
+              return (
+              <View style={styles.serviceCard}>
+                <View style={styles.serviceCardHeader}>
+                  <Text style={styles.serviceCardTitle}>Selected wash</Text>
+                  <View style={styles.serviceCardActions}>
                     <TouchableOpacity
-                      style={styles.serviceRemoveTouch}
+                      style={styles.iconActionButton}
                       onPress={() => removeItem(currentItem.id)}
                       accessibilityRole="button"
                       accessibilityLabel="Remove service from cart"
                     >
-                      <MaterialCommunityIcons name="trash-can-outline" size={22} color="#b91c1c" />
+                      <MaterialCommunityIcons name="trash-can-outline" size={20} color="#b91c1c" />
                     </TouchableOpacity>
-                    <TouchableOpacity onPress={() => toggleServiceExpanded(currentItem.id)}>
-                      <View style={styles.collapseButton}>
-                        <Text style={styles.collapseText}>Collapse</Text>
-                        <MaterialCommunityIcons 
-                          name={expandedServiceId === currentItem.id ? 'chevron-down' : 'chevron-up'} 
-                          size={18} 
-                          color="#007AFF" 
-                        />
-                      </View>
+                    <TouchableOpacity
+                      style={styles.iconActionButton}
+                      onPress={() => toggleServiceExpanded(currentItem.id)}
+                      accessibilityRole="button"
+                      accessibilityLabel={washCollapsed ? 'Expand wash details' : 'Collapse wash details'}
+                    >
+                      <MaterialCommunityIcons
+                        name={washCollapsed ? 'chevron-down' : 'chevron-up'}
+                        size={22}
+                        color="#000000"
+                      />
                     </TouchableOpacity>
                   </View>
                 </View>
-                
-                {expandedServiceId !== currentItem.id && (
-                  <View style={styles.serviceItemCard}>
-                    <Text style={styles.serviceItemName}>
-                      ({currentPackageType === 'OneTime' ? 'Bucket Wash' : 'Monthly Package'}) {getServiceName(currentItem)}
-                      {currentPackageType !== 'OneTime' && ` & ${currentPackageType === 'Monthly' ? 'Tyre Polish Only' : ''}`}
-                    </Text>
-                    <Text style={styles.serviceItemPrice}>₹{currentItem.price}</Text>
+
+                {!washCollapsed && (
+                  <View style={styles.serviceSummaryCard}>
+                    <View style={styles.serviceSummaryMain}>
+                      <Text style={styles.serviceSummaryType}>{washTypeLabel}</Text>
+                      <Text style={styles.serviceSummaryName} numberOfLines={2}>
+                        {getServiceName(currentItem)}
+                      </Text>
+                    </View>
+                    <Text style={styles.serviceSummaryPrice}>₹{currentItem.price}</Text>
                   </View>
                 )}
 
                 {/* Add Ons Section */}
-                {mappedAddOns.length > 0 && (
+                {!washCollapsed && mappedAddOns.length > 0 && (
                   <View style={styles.addOnsSection}>
                     <Text style={styles.addOnsTitle}>Add Ons</Text>
                     <FlatList
@@ -753,14 +767,20 @@ export default function CartScreen({ navigation, route }) {
                 {/* Monthly Packages Section */}
                 
               </View>
-            )}
+              );
+            })()}
 
             {/* Delivery Address Section */}
             <View style={styles.deliverySection}>
               <View style={styles.deliveryHeader}>
                 <Text style={styles.deliveryLabel}>Delivering service at</Text>
-                <TouchableOpacity onPress={() => navigation.navigate('Addresses', { returnTo: 'Cart' })}>
-                  <Text style={styles.editButton}>Edit</Text>
+                <TouchableOpacity
+                  style={styles.addressEditButton}
+                  onPress={() => navigation.navigate('Addresses', { returnTo: 'Cart' })}
+                  accessibilityRole="button"
+                  accessibilityLabel="Edit delivery address"
+                >
+                  <MaterialCommunityIcons name="pencil-outline" size={20} color="#000000" />
                 </TouchableOpacity>
               </View>
               {address ? (
@@ -931,9 +951,14 @@ const createStyles = theme => StyleSheet.create({
     color: '#000000',
   },
   deliverySection: {
-    paddingHorizontal: 16,
-    paddingTop: 20,
-    paddingBottom: 16,
+    marginHorizontal: 16,
+    marginTop: 8,
+    marginBottom: 16,
+    padding: 14,
+    backgroundColor: '#F8F9FA',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#EEEEEE',
   },
   deliveryHeader: {
     flexDirection: 'row',
@@ -946,10 +971,15 @@ const createStyles = theme => StyleSheet.create({
     fontWeight: '700',
     color: '#000000',
   },
-  editButton: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#007AFF',
+  addressEditButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E5E5E5',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   addressRow: {
     flexDirection: 'row',
@@ -1015,85 +1045,137 @@ const createStyles = theme => StyleSheet.create({
   membershipRemoveTouch: {
     padding: 4,
   },
-  vehicleHeader: {
+  vehicleCard: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderTopWidth: 1,
-    borderBottomWidth: 1,
-    borderColor: '#E5E5E5',
+    marginHorizontal: 16,
+    marginTop: 12,
+    padding: 14,
+    backgroundColor: '#F8F9FA',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#EEEEEE',
   },
   vehicleInfo: {
     flexDirection: 'row',
     alignItems: 'center',
+    flex: 1,
+    marginRight: 12,
     gap: 12,
   },
+  vehicleTextCol: {
+    flex: 1,
+    minWidth: 0,
+  },
+  vehicleLabel: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#666666',
+    marginBottom: 2,
+  },
   vehicleImage: {
-    width: 40,
-    height: 40,
+    width: 44,
+    height: 44,
     borderRadius: 8,
+    backgroundColor: '#FFFFFF',
+  },
+  vehicleImagePlaceholder: {
+    width: 44,
+    height: 44,
+    borderRadius: 8,
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#E5E5E5',
   },
   vehicleName: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '700',
     color: '#000000',
   },
-  serviceItemsSection: {
-    paddingHorizontal: 16,
-    paddingTop: 20,
+  changeButton: {
+    paddingVertical: 4,
+    paddingHorizontal: 2,
   },
-  serviceItemsHeader: {
+  changeButtonText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#000000',
+  },
+  serviceCard: {
+    marginHorizontal: 16,
+    marginTop: 12,
+    padding: 14,
+    backgroundColor: '#F8F9FA',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#EEEEEE',
+  },
+  serviceCardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: 10,
   },
-  serviceItemsHeaderActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  serviceRemoveTouch: {
-    padding: 4,
-  },
-  serviceItemsTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#007AFF',
-  },
-  collapseButton: {
+  serviceCardActions: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
   },
-  collapseText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#007AFF',
-  },
-  serviceItemCard: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+  iconActionButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E5E5E5',
     alignItems: 'center',
-    paddingVertical: 12,
+    justifyContent: 'center',
   },
-  serviceItemName: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#000000',
-    flex: 1,
-    marginRight: 12,
-  },
-  serviceItemPrice: {
-    fontSize: 16,
+  serviceCardTitle: {
+    fontSize: 15,
     fontWeight: '700',
     color: '#000000',
   },
+  serviceSummaryCard: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    padding: 12,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#EEEEEE',
+    gap: 12,
+  },
+  serviceSummaryMain: {
+    flex: 1,
+    minWidth: 0,
+  },
+  serviceSummaryType: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#666666',
+    marginBottom: 4,
+    textTransform: 'uppercase',
+    letterSpacing: 0.3,
+  },
+  serviceSummaryName: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#000000',
+    lineHeight: 20,
+  },
+  serviceSummaryPrice: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#000000',
+  },
   addOnsSection: {
-    marginTop: 20,
-    marginBottom: 20,
+    marginTop: 16,
+    marginBottom: 4,
   },
   addOnsTitle: {
     fontSize: 16,
@@ -1104,18 +1186,32 @@ const createStyles = theme => StyleSheet.create({
   addOnsList: {
     paddingRight: 16,
   },
-  packagesSection: {
-    marginTop: 20,
-    marginBottom: 20,
+  packagesCard: {
+    marginHorizontal: 16,
+    marginTop: 12,
+    padding: 14,
+    backgroundColor: '#F8F9FA',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#EEEEEE',
   },
-  packagesTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#000000',
+  packagesHeader: {
     marginBottom: 12,
   },
+  packagesTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#000000',
+  },
+  packagesSubtitle: {
+    marginTop: 2,
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#666666',
+  },
   packagesList: {
-    paddingRight: 16,
+    paddingRight: 4,
+    gap: 10,
   },
   bottomBar: {
     position: 'absolute',
@@ -1158,17 +1254,6 @@ const createStyles = theme => StyleSheet.create({
   selectSlotText: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#FFFFFF',
-  },
-  changeVehicleButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 6,
-    backgroundColor: theme.accent || '#007AFF',
-  },
-  changeVehicleButtonText: {
-    fontSize: 12,
-    fontWeight: '600',
     color: '#FFFFFF',
   },
   modalOverlay: {
