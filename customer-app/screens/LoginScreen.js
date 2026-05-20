@@ -240,7 +240,7 @@ export default function LoginScreen({ navigation }) {
                   <TextInput
                     style={styles.input}
                     placeholder="Phone Number"
-                    placeholderTextColor="#9CA3AF"
+                    placeholderTextColor={theme.textSecondary}
                     value={phoneNumber}
                     onChangeText={(text) => {
                       const numericText = text.replace(/[^0-9]/g, '').slice(0, 10);
@@ -249,6 +249,7 @@ export default function LoginScreen({ navigation }) {
                     }}
                     keyboardType="phone-pad"
                     maxLength={10}
+                    keyboardAppearance={isLightMode ? 'light' : 'dark'}
                   />
                 </View>
                 {errors.phone && <Text style={styles.errorText}>{errors.phone}</Text>}
@@ -261,13 +262,14 @@ export default function LoginScreen({ navigation }) {
                     <TextInput
                       style={styles.input}
                       placeholder="Full Name"
-                      placeholderTextColor="#9CA3AF"
+                      placeholderTextColor={theme.textSecondary}
                       value={name}
                       onChangeText={(text) => {
                         setName(text);
                         if (errors.name) setErrors({ ...errors, name: '' });
                       }}
                       autoCapitalize="words"
+                      keyboardAppearance={isLightMode ? 'light' : 'dark'}
                     />
                   </View>
                   {errors.name && <Text style={styles.errorText}>{errors.name}</Text>}
@@ -281,13 +283,14 @@ export default function LoginScreen({ navigation }) {
                     <TextInput
                       style={styles.input}
                       placeholder="Referral Code (optional)"
-                      placeholderTextColor="#9CA3AF"
+                      placeholderTextColor={theme.textSecondary}
                       value={referralCode}
                       onChangeText={(text) => {
                         setReferralCode(text.toUpperCase().trimStart());
                       }}
                       autoCapitalize="characters"
                       autoCorrect={false}
+                      keyboardAppearance={isLightMode ? 'light' : 'dark'}
                     />
                   </View>
                 </View>
@@ -330,7 +333,7 @@ export default function LoginScreen({ navigation }) {
                   onPress={() => setOtpSent(false)}
                 >
                   <Text style={styles.phoneNumberText}>{formatPhoneNumber(phoneNumber)}</Text>
-                  <MaterialCommunityIcons name="pencil" size={18} color="#6B7280" style={styles.editIcon} />
+                  <MaterialCommunityIcons name="pencil" size={18} color={theme.textSecondary} style={styles.editIcon} />
                 </TouchableOpacity>
               </View>
               <Text style={styles.smsText}>via SMS</Text>
@@ -394,7 +397,7 @@ export default function LoginScreen({ navigation }) {
 const createStyles = theme => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.background,
   },
   scrollContent: {
     flexGrow: 1,
@@ -476,7 +479,7 @@ const createStyles = theme => StyleSheet.create({
   },
   loginPrompt: {
     fontSize: 16,
-    color: '#6B7280',
+    color: theme.textSecondary,
     marginBottom: 20,
     textAlign: 'center',
   },
@@ -486,20 +489,15 @@ const createStyles = theme => StyleSheet.create({
   inputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.cardBackground,
     borderRadius: 10,
     borderWidth: 1.5,
-    borderColor: '#D1D5DB',
+    borderColor: theme.cardBorder,
     paddingHorizontal: 18,
     minHeight: 58,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
   },
   inputError: {
-    borderColor: '#FF5252',
+    borderColor: theme.danger,
   },
   input: {
     flex: 1,
@@ -509,28 +507,23 @@ const createStyles = theme => StyleSheet.create({
   },
   errorText: {
     fontSize: 12,
-    color: '#FF5252',
+    color: theme.danger,
     marginTop: 6,
     marginLeft: 4,
   },
   loginButton: {
-    backgroundColor: '#000000',
+    backgroundColor: theme.accent,
     borderRadius: 10,
     paddingVertical: 18,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 24,
     marginTop: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 3,
   },
   loginButtonText: {
     fontSize: 17,
     fontWeight: 'bold',
-    color: '#FFFFFF',
+    color: theme.onAccent,
     letterSpacing: 0.5,
   },
   phoneDisplayContainer: {
@@ -572,14 +565,14 @@ const createStyles = theme => StyleSheet.create({
   },
   termsText: {
     fontSize: 12,
-    color: '#9CA3AF',
+    color: theme.textSecondary,
     textAlign: 'center',
     lineHeight: 18,
     paddingHorizontal: 20,
   },
   termsLink: {
     textDecorationLine: 'underline',
-    color: '#6B7280',
+    color: theme.textPrimary,
     fontWeight: '500',
   },
   // OTP Screen Styles
@@ -608,7 +601,7 @@ const createStyles = theme => StyleSheet.create({
   },
   otpInstruction: {
     fontSize: 15,
-    color: '#6B7280',
+    color: theme.textSecondary,
     textAlign: 'center',
     marginBottom: 12,
     lineHeight: 22,
@@ -633,7 +626,7 @@ const createStyles = theme => StyleSheet.create({
   },
   smsText: {
     fontSize: 14,
-    color: '#6B7280',
+    color: theme.textSecondary,
     textAlign: 'center',
     marginBottom: 32,
   },
@@ -648,16 +641,16 @@ const createStyles = theme => StyleSheet.create({
     width: 44,
     height: 50,
     borderWidth: 1.5,
-    borderColor: '#D1D5DB',
+    borderColor: theme.cardBorder,
     borderRadius: 8,
     fontSize: 22,
     fontWeight: '600',
     color: theme.textPrimary,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.cardBackground,
     textAlign: 'center',
   },
   otpBoxError: {
-    borderColor: '#FF5252',
+    borderColor: theme.danger,
   },
   resendCodeContainer: {
     flexDirection: 'row',
@@ -669,20 +662,20 @@ const createStyles = theme => StyleSheet.create({
   },
   resendQuestionText: {
     fontSize: 15,
-    color: '#6B7280',
+    color: theme.textSecondary,
   },
   resendButton: {
-    backgroundColor: '#000000',
+    backgroundColor: theme.accent,
     borderRadius: 8,
     paddingHorizontal: 20,
     paddingVertical: 10,
   },
   resendButtonDisabled: {
-    backgroundColor: '#9CA3AF',
+    backgroundColor: theme.divider,
   },
   resendButtonText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#FFFFFF',
+    color: theme.onAccent,
   },
 });
