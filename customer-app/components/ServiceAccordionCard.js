@@ -52,7 +52,7 @@ export default function ServiceAccordionCard({
   navigation,
   fallbackImageSource,
   fallbackAddOns = [],
-  monthlyMode = 'custom',
+  monthlyMode = 'promo',
   hideOneTimeWash = false,
   hideAddServices = false,
   bookingServiceId,
@@ -145,8 +145,11 @@ export default function ServiceAccordionCard({
     navigation?.navigate('Cart', { addItem: item });
   };
 
-  const handleBookMonthlyCustom = () => {
-    if (!resolvedServiceId) return;
+  const handleOpenMonthlyPackages = () => {
+    navigation?.navigate('Packages');
+  };
+
+  const handleOpenDailyCleaning = () => {
     navigation?.navigate('PackageDetails', {
       serviceId: resolvedServiceId,
       serviceName: service?.name || serviceSummary?.name,
@@ -330,29 +333,19 @@ export default function ServiceAccordionCard({
             </View>
           ) : null}
 
-          <View style={styles.monthlySection}>
-            <View style={styles.monthlyHeader}>
-              <Text style={styles.monthlyTitle}>Monthly Packages</Text>
-              {maxOff > 0 ? (
-                <View style={styles.offPill}>
-                  <Text style={styles.offPillText}>UP TO {maxOff}% OFF</Text>
+          {monthlyMode === 'standard' ? (
+            <View style={styles.monthlySection}>
+              <View style={styles.monthlyHeader}>
+                <View style={styles.monthlyHeaderLeft}>
+                  <Text style={styles.monthlyTitle}>Monthly Packages</Text>
+                  {maxOff > 0 ? (
+                    <View style={styles.offPill}>
+                      <Text style={styles.offPillText}>UP TO {maxOff}% OFF</Text>
+                    </View>
+                  ) : null}
                 </View>
-              ) : null}
-            </View>
-
-            {monthlyMode === 'custom' ? (
-              <View style={styles.monthlyCard}>
-                <View style={styles.monthlyContent}>
-                  <Text style={styles.monthlyCustomSubtitle}>
-                    Customizable monthly plan for interior, exterior, and daily cleaning.
-                  </Text>
-                </View>
-                <TouchableOpacity style={styles.bookButtonSecondary} onPress={handleBookMonthlyCustom} activeOpacity={0.85}>
-                  <Text style={styles.bookTextSecondary}>Book</Text>
-                </TouchableOpacity>
               </View>
-            ) : (
-              monthlyPackages.map((pkg) => {
+              {monthlyPackages.map((pkg) => {
                 const addOnsForPackage = addOnsTotal * pkg.times;
                 const totalWithAddOns = pkg.price + addOnsForPackage;
                 const perWashWithAddOns = (pkg.price + addOnsForPackage) / pkg.times;
@@ -378,9 +371,43 @@ export default function ServiceAccordionCard({
                     </TouchableOpacity>
                   </View>
                 );
-              })
-            )}
-          </View>
+              })}
+            </View>
+          ) : (
+            <>
+              <View style={styles.monthlyCard}>
+                <View style={styles.monthlyContent}>
+                  <Text style={styles.oneTimeLabel}>Monthly Packages</Text>
+                  <Text style={styles.monthlyCustomSubtitle}>Save with a wash plan</Text>
+                </View>
+                <TouchableOpacity
+                  style={styles.bookButtonSecondary}
+                  onPress={handleOpenMonthlyPackages}
+                  activeOpacity={0.85}
+                  accessibilityRole="button"
+                  accessibilityLabel="Monthly packages"
+                >
+                  <Text style={styles.bookTextSecondary}>View</Text>
+                </TouchableOpacity>
+              </View>
+
+              <View style={styles.monthlyCard}>
+                <View style={styles.monthlyContent}>
+                  <Text style={styles.oneTimeLabel}>Daily Cleaning Services</Text>
+                  <Text style={styles.monthlyCustomSubtitle}>Interior, exterior & daily care</Text>
+                </View>
+                <TouchableOpacity
+                  style={styles.bookButtonSecondary}
+                  onPress={handleOpenDailyCleaning}
+                  activeOpacity={0.85}
+                  accessibilityRole="button"
+                  accessibilityLabel="Daily cleaning services"
+                >
+                  <Text style={styles.bookTextSecondary}>View</Text>
+                </TouchableOpacity>
+              </View>
+            </>
+          )}
         </View>
       ) : null}
       </View>

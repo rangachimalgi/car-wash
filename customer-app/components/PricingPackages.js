@@ -113,24 +113,6 @@ export default function PricingPackages({
   };
 
   const renderPackageItem = (pkg, section) => {
-    if (section === 'monthly') {
-      return (
-        <View key="monthly-custom-card" style={styles.monthlyCustomCard}>
-          <Text style={styles.monthlyCustomTitle}>Monthly Package</Text>
-          <Text style={styles.monthlyCustomSubtitle}>
-            Customizable monthly plan for interior, exterior, and daily cleaning.
-          </Text>
-          <TouchableOpacity
-            style={styles.monthlyBookButton}
-            activeOpacity={0.85}
-            onPress={() => navigation?.navigate('PackageDetails')}
-          >
-            <Text style={styles.monthlyBookButtonText}>Book</Text>
-          </TouchableOpacity>
-        </View>
-      );
-    }
-
     const isSelected = selectedPackage?.section === section && (
       selectedPackage?.id === pkg.id ||
       (selectedPackage?.times && pkg.times && Number(selectedPackage.times) === Number(pkg.times))
@@ -182,24 +164,37 @@ export default function PricingPackages({
 
       {!hideSubscriptions && (
         <>
-          {/* Monthly Packages */}
-          <TouchableOpacity 
-            style={styles.sectionHeader}
-            onPress={() => toggleSection('monthly')}
-            activeOpacity={0.7}
-          >
-            <Text style={styles.sectionTitle}>Monthly Packages</Text>
-            <MaterialCommunityIcons 
-              name={expandedSection === 'monthly' ? 'chevron-up' : 'chevron-down'} 
-              size={24} 
-              color={theme.textPrimary} 
-            />
-          </TouchableOpacity>
-          {expandedSection === 'monthly' && (
-            <View style={styles.packagesList}>
-              {renderPackageItem(monthlyPackages[0], 'monthly')}
+          <View style={styles.planNavCard}>
+            <View style={styles.planNavContent}>
+              <Text style={styles.planNavLabel}>Monthly Packages</Text>
+              <Text style={styles.planNavSubtitle}>Save with a wash plan</Text>
             </View>
-          )}
+            <TouchableOpacity
+              style={styles.planNavButton}
+              onPress={() => navigation?.navigate('Packages')}
+              activeOpacity={0.85}
+              accessibilityRole="button"
+              accessibilityLabel="Monthly packages"
+            >
+              <Text style={styles.planNavButtonText}>View</Text>
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.planNavCard}>
+            <View style={styles.planNavContent}>
+              <Text style={styles.planNavLabel}>Daily Cleaning Services</Text>
+              <Text style={styles.planNavSubtitle}>Interior, exterior & daily care</Text>
+            </View>
+            <TouchableOpacity
+              style={styles.planNavButton}
+              onPress={() => navigation?.navigate('PackageDetails')}
+              activeOpacity={0.85}
+              accessibilityRole="button"
+              accessibilityLabel="Daily cleaning services"
+            >
+              <Text style={styles.planNavButtonText}>View</Text>
+            </TouchableOpacity>
+          </View>
 
           {!showOnlyMonthly ? (
             <>
@@ -490,6 +485,45 @@ const createStyles = theme => StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
     color: '#0B0B0B',
+  },
+  planNavCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: theme.cardBackground,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: theme.cardBorder,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    marginBottom: 10,
+  },
+  planNavContent: {
+    flex: 1,
+    paddingRight: 12,
+  },
+  planNavLabel: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: theme.textPrimary,
+    marginBottom: 4,
+  },
+  planNavSubtitle: {
+    fontSize: 13,
+    lineHeight: 18,
+    fontWeight: '600',
+    color: theme.textSecondary,
+  },
+  planNavButton: {
+    backgroundColor: '#000000',
+    borderRadius: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+  },
+  planNavButtonText: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: '#ffffff',
   },
   monthlyCustomCard: {
     backgroundColor: theme.cardBackground,
