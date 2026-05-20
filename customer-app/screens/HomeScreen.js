@@ -310,8 +310,8 @@ export default function HomeScreen({ navigation }) {
                 <Image
                   source={
                     isLightMode
-                      ? require('../assets/carpicseven.png')
-                      : require('../assets/carpicseven-dark.png')
+                      ? require('../assets/carWashCare.png')
+                      : require('../assets/carWashCare.png')
                   }
                   style={styles.halfCardImage}
                   resizeMode="contain"
@@ -333,8 +333,8 @@ export default function HomeScreen({ navigation }) {
                 <Image
                   source={
                     isLightMode
-                      ? require('../assets/carpicnine.png')
-                      : require('../assets/carpicnine-dark.png')
+                      ? require('../assets/monthlyPackages.png')
+                      : require('../assets/monthlyPackages.png')
                   }
                   style={styles.halfCardImage}
                   resizeMode="contain"
@@ -356,8 +356,8 @@ export default function HomeScreen({ navigation }) {
                 <Image
                   source={
                     isLightMode
-                      ? require('../assets/carpiceight.png')
-                      : require('../assets/carpiceight-dark.png')
+                      ? require('../assets/bikeWashCare.png')
+                      : require('../assets/bikeWashCare.png')
                   }
                   style={styles.halfCardImage}
                   resizeMode="contain"

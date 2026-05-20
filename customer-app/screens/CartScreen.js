@@ -493,8 +493,8 @@ export default function CartScreen({ navigation, route }) {
                     <Image
                       source={
                         isLightMode
-                          ? require('../assets/carpicnine.png')
-                          : require('../assets/carpicnine-dark.png')
+                          ? require('../assets/monthlyPackages.png')
+                          : require('../assets/monthlyPackages.png')
                       }
                       style={styles.promoCardImage}
                       resizeMode="contain"
