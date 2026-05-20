@@ -310,8 +310,6 @@ export default function CartScreen({ navigation, route }) {
     const s = serviceDetailsById?.[serviceId];
     const list = s?.addOnServices || [];
     return list.map(addon => ({
-      imageUri: resolveAssetUrl(addon.image || ''),
-      imageSource: !addon.image ? FALLBACK_IMAGE : undefined,
       title: addon.name,
       price: addon.basePrice,
       _id: addon._id,
@@ -656,9 +654,6 @@ export default function CartScreen({ navigation, route }) {
                         <AddOnCard
                           title={item.title}
                           price={item.price}
-                          imageUri={item.imageUri}
-                          imageSource={item.imageSource}
-                          addOnId={item._id}
                           isSelected={selectedAddOnIds.includes(item._id)}
                           onToggle={() => handleToggleAddOn(currentItem, item._id)}
                         />
