@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Dimensions, Alert, FlatList, Modal } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Dimensions, Alert, FlatList, Modal, Platform } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import BackHeader from '../components/BackHeader';
@@ -32,7 +32,7 @@ export default function CartScreen({ navigation, route }) {
   const [showVehicleModal, setShowVehicleModal] = useState(false);
   const { theme, isLightMode } = useTheme();
   const insets = useSafeAreaInsets();
-  const styles = useMemo(() => createStyles(theme), [theme]);
+  const styles = useMemo(() => createStyles(theme, isLightMode), [theme, isLightMode]);
 
   const getCurrentItem = () => {
     if (!cartItems.length) return null;
@@ -493,7 +493,11 @@ export default function CartScreen({ navigation, route }) {
                   <Text style={styles.promoCardSubtitle}>Save with a wash plan</Text>
                   <View style={styles.promoCardImageWrap}>
                     <Image
-                      source={require('../assets/carpicnine.png')}
+                      source={
+                        isLightMode
+                          ? require('../assets/carpicnine.png')
+                          : require('../assets/carpicnine-dark.png')
+                      }
                       style={styles.promoCardImage}
                       resizeMode="contain"
                     />
@@ -544,7 +548,7 @@ export default function CartScreen({ navigation, route }) {
                       />
                     ) : (
                       <View style={styles.vehicleImagePlaceholder}>
-                        <MaterialCommunityIcons name="car-outline" size={22} color="#666666" />
+                        <MaterialCommunityIcons name="car-outline" size={22} color={theme.textSecondary} />
                       </View>
                     )}
                     <View style={styles.vehicleTextCol}>
@@ -621,7 +625,7 @@ export default function CartScreen({ navigation, route }) {
                       <MaterialCommunityIcons
                         name={washCollapsed ? 'chevron-down' : 'chevron-up'}
                         size={22}
-                        color="#000000"
+                        color={theme.textPrimary}
                       />
                     </TouchableOpacity>
                   </View>
@@ -680,12 +684,12 @@ export default function CartScreen({ navigation, route }) {
                   accessibilityRole="button"
                   accessibilityLabel="Edit delivery address"
                 >
-                  <MaterialCommunityIcons name="pencil-outline" size={20} color="#000000" />
+                  <MaterialCommunityIcons name="pencil-outline" size={20} color={theme.textPrimary} />
                 </TouchableOpacity>
               </View>
               {address ? (
                 <View style={styles.addressRow}>
-                  <MaterialCommunityIcons name="home" size={20} color="#000000" />
+                  <MaterialCommunityIcons name="home" size={20} color={theme.textPrimary} />
                   <Text style={styles.addressText}>{address.address}</Text>
                 </View>
               ) : (
@@ -816,10 +820,10 @@ export default function CartScreen({ navigation, route }) {
   );
 }
 
-const createStyles = theme => StyleSheet.create({
+const createStyles = (theme, isLightMode) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.background,
   },
   scrollView: {
     flex: 1,
@@ -848,17 +852,17 @@ const createStyles = theme => StyleSheet.create({
   continueShoppingText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#000000',
+    color: theme.onAccent,
   },
   deliverySection: {
     marginHorizontal: 16,
     marginTop: 8,
     marginBottom: 16,
     padding: 14,
-    backgroundColor: '#F8F9FA',
+    backgroundColor: theme.cardBackground,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#EEEEEE',
+    borderColor: theme.cardBorder,
   },
   deliveryHeader: {
     flexDirection: 'row',
@@ -869,15 +873,15 @@ const createStyles = theme => StyleSheet.create({
   deliveryLabel: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#000000',
+    color: theme.textPrimary,
   },
   addressEditButton: {
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.background,
     borderWidth: 1,
-    borderColor: '#E5E5E5',
+    borderColor: theme.cardBorder,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -889,7 +893,7 @@ const createStyles = theme => StyleSheet.create({
   addressText: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#000000',
+    color: theme.textPrimary,
     flex: 1,
   },
   addAddressButton: {
@@ -940,7 +944,7 @@ const createStyles = theme => StyleSheet.create({
   membershipCartPrice: {
     fontSize: 16,
     fontWeight: '800',
-    color: '#000000',
+    color: theme.textPrimary,
   },
   membershipRemoveTouch: {
     padding: 4,
@@ -952,10 +956,10 @@ const createStyles = theme => StyleSheet.create({
     marginHorizontal: 16,
     marginTop: 12,
     padding: 14,
-    backgroundColor: '#F8F9FA',
+    backgroundColor: theme.cardBackground,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#EEEEEE',
+    borderColor: theme.cardBorder,
   },
   vehicleInfo: {
     flexDirection: 'row',
@@ -971,29 +975,29 @@ const createStyles = theme => StyleSheet.create({
   vehicleLabel: {
     fontSize: 12,
     fontWeight: '500',
-    color: '#666666',
+    color: theme.textSecondary,
     marginBottom: 2,
   },
   vehicleImage: {
     width: 44,
     height: 44,
     borderRadius: 8,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.background,
   },
   vehicleImagePlaceholder: {
     width: 44,
     height: 44,
     borderRadius: 8,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.background,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: '#E5E5E5',
+    borderColor: theme.cardBorder,
   },
   vehicleName: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#000000',
+    color: theme.textPrimary,
   },
   changeButton: {
     paddingVertical: 4,
@@ -1002,16 +1006,16 @@ const createStyles = theme => StyleSheet.create({
   changeButtonText: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#000000',
+    color: theme.textPrimary,
   },
   serviceCard: {
     marginHorizontal: 16,
     marginTop: 12,
     padding: 14,
-    backgroundColor: '#F8F9FA',
+    backgroundColor: theme.cardBackground,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#EEEEEE',
+    borderColor: theme.cardBorder,
   },
   serviceCardHeader: {
     flexDirection: 'row',
@@ -1028,26 +1032,26 @@ const createStyles = theme => StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.background,
     borderWidth: 1,
-    borderColor: '#E5E5E5',
+    borderColor: theme.cardBorder,
     alignItems: 'center',
     justifyContent: 'center',
   },
   serviceCardTitle: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#000000',
+    color: theme.textPrimary,
   },
   serviceSummaryCard: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     justifyContent: 'space-between',
     padding: 12,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.background,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: '#EEEEEE',
+    borderColor: theme.cardBorder,
     gap: 12,
   },
   serviceSummaryMain: {
@@ -1057,7 +1061,7 @@ const createStyles = theme => StyleSheet.create({
   serviceSummaryType: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#666666',
+    color: theme.textSecondary,
     marginBottom: 4,
     textTransform: 'uppercase',
     letterSpacing: 0.3,
@@ -1065,13 +1069,13 @@ const createStyles = theme => StyleSheet.create({
   serviceSummaryName: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#000000',
+    color: theme.textPrimary,
     lineHeight: 20,
   },
   serviceSummaryPrice: {
     fontSize: 16,
     fontWeight: '800',
-    color: '#000000',
+    color: theme.textPrimary,
   },
   addOnsSection: {
     marginTop: 16,
@@ -1080,7 +1084,7 @@ const createStyles = theme => StyleSheet.create({
   addOnsTitle: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#000000',
+    color: theme.textPrimary,
     marginBottom: 12,
   },
   addOnsList: {
@@ -1142,9 +1146,9 @@ const createStyles = theme => StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.cardBackground,
     borderTopWidth: 1,
-    borderTopColor: '#E5E5E5',
+    borderTopColor: theme.cardBorder,
     paddingHorizontal: 16,
     paddingTop: 12,
     paddingBottom: 20,
@@ -1164,12 +1168,12 @@ const createStyles = theme => StyleSheet.create({
   durationText: {
     fontSize: 14,
     fontWeight: '500',
-    color: '#666666',
+    color: theme.textSecondary,
   },
   selectSlotButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#000000',
+    backgroundColor: isLightMode ? '#000000' : theme.accent,
     paddingVertical: 14,
     paddingHorizontal: 24,
     borderRadius: 8,
@@ -1178,7 +1182,7 @@ const createStyles = theme => StyleSheet.create({
   selectSlotText: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: isLightMode ? '#FFFFFF' : theme.onAccent,
   },
   modalOverlay: {
     flex: 1,

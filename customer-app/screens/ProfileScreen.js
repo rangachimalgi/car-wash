@@ -242,7 +242,7 @@ export default function ProfileScreen({ navigation }) {
                 {/*
                   Add Money button temporarily disabled – balance is controlled by admin top-ups only.
                   <TouchableOpacity style={styles.addMoneyButton}>
-                    <MaterialCommunityIcons name="plus" size={20} color="#000000" />
+                    <MaterialCommunityIcons name="plus" size={20} color={theme.onAccent} />
                     <Text style={styles.addMoneyText}>Add Money</Text>
                   </TouchableOpacity>
                 */}
@@ -251,17 +251,17 @@ export default function ProfileScreen({ navigation }) {
                 Send / Receive / History actions are commented out for now.
                 <View style={styles.walletFooter}>
                   <TouchableOpacity style={styles.walletAction}>
-                    <MaterialCommunityIcons name="arrow-up" size={18} color="#000000" />
+                    <MaterialCommunityIcons name="arrow-up" size={18} color={theme.textPrimary} />
                     <Text style={styles.walletActionText}>Send</Text>
                   </TouchableOpacity>
                   <View style={styles.divider} />
                   <TouchableOpacity style={styles.walletAction}>
-                    <MaterialCommunityIcons name="arrow-down" size={18} color="#000000" />
+                    <MaterialCommunityIcons name="arrow-down" size={18} color={theme.textPrimary} />
                     <Text style={styles.walletActionText}>Receive</Text>
                   </TouchableOpacity>
                   <View style={styles.divider} />
                   <TouchableOpacity style={styles.walletAction}>
-                    <MaterialCommunityIcons name="history" size={18} color="#000000" />
+                    <MaterialCommunityIcons name="history" size={18} color={theme.textPrimary} />
                     <Text style={styles.walletActionText}>History</Text>
                   </TouchableOpacity>
                 </View>
@@ -337,7 +337,7 @@ export default function ProfileScreen({ navigation }) {
                 }).catch(() => {});
               }}
             >
-              <MaterialCommunityIcons name="share-variant" size={18} color="#000000" />
+              <MaterialCommunityIcons name="share-variant" size={18} color={theme.onAccent} />
               <Text style={styles.referralShareText}>Share Invite Link</Text>
             </TouchableOpacity>
             <Text style={styles.referralStatsText}>
@@ -468,8 +468,6 @@ export default function ProfileScreen({ navigation }) {
           </View>
         </View>
 
-        {/*
-        // Appearance Section (temporarily hidden)
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <MaterialCommunityIcons name="theme-light-dark" size={24} color={theme.accent} />
@@ -482,15 +480,13 @@ export default function ProfileScreen({ navigation }) {
             </View>
             <Switch
               value={isLightMode}
-              // onValueChange={toggleColorScheme} // temporarily disabled
-              disabled
+              onValueChange={toggleColorScheme}
               trackColor={{ false: theme.cardBorder, true: theme.accent }}
               thumbColor={isLightMode ? '#FFFFFF' : theme.textSecondary}
               ios_backgroundColor={theme.cardBorder}
             />
           </View>
         </View>
-        */}
 
         {/* Help & Support */}
         <View style={styles.section}>
@@ -671,7 +667,7 @@ const createStyles = theme => StyleSheet.create({
   addMoneyText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#000000',
+    color: theme.onAccent,
   },
   walletFooter: {
     flexDirection: 'row',
@@ -687,7 +683,7 @@ const createStyles = theme => StyleSheet.create({
   },
   walletActionText: {
     fontSize: 14,
-    color: '#000000',
+    color: theme.textPrimary,
     fontWeight: '600',
   },
   divider: {
@@ -843,7 +839,7 @@ const createStyles = theme => StyleSheet.create({
     fontWeight: '600',
   },
   typeChipTextActive: {
-    color: '#000000',
+    color: theme.onAccent,
   },
   input: {
     backgroundColor: theme.background,
@@ -864,7 +860,7 @@ const createStyles = theme => StyleSheet.create({
     marginTop: 8,
   },
   saveVehicleText: {
-    color: '#000000',
+    color: theme.onAccent,
     fontWeight: '700',
     fontSize: 14,
   },
@@ -963,7 +959,7 @@ const createStyles = theme => StyleSheet.create({
     gap: 8,
   },
   referralShareText: {
-    color: '#000000',
+    color: theme.onAccent,
     fontWeight: '600',
     fontSize: 14,
   },

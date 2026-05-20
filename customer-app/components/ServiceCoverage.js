@@ -7,15 +7,15 @@ const LIGHT_BLUE = '#85E4FC';
 const SKY_BLUE_BG = '#E6F4FF';
 
 export default function ServiceCoverage({ included = [], notIncluded = [] }) {
-  const { theme } = useTheme();
-  const styles = useMemo(() => createStyles(theme), [theme]);
+  const { theme, isLightMode } = useTheme();
+  const styles = useMemo(() => createStyles(theme, isLightMode), [theme, isLightMode]);
 
   const renderItem = (item, isIncluded) => (
     <View key={item} style={[styles.itemRow, isIncluded && styles.includedItemRow]}>
       {isIncluded ? (
         <MaterialCommunityIcons name="check" size={18} color="#22C55E" style={styles.checkIcon} />
       ) : (
-        <MaterialCommunityIcons name="information" size={18} color="#6B7280" style={styles.infoIcon} />
+        <MaterialCommunityIcons name="information" size={18} color={theme.textSecondary} style={styles.infoIcon} />
       )}
       <Text style={styles.itemText}>{item}</Text>
     </View>
@@ -49,7 +49,7 @@ export default function ServiceCoverage({ included = [], notIncluded = [] }) {
         {/* Not Included Column */}
         <View style={[styles.column, styles.notIncludedColumn, { borderRightWidth: 0 }]}>
           <View style={[styles.columnHeader, styles.notIncludedHeader]}>
-            <MaterialCommunityIcons name="information" size={18} color="#6B7280" style={styles.headerInfoIcon} />
+            <MaterialCommunityIcons name="information" size={18} color={theme.textSecondary} style={styles.headerInfoIcon} />
             <Text style={styles.columnHeaderText}>Not Included</Text>
           </View>
           <View style={styles.itemsContainer}>
@@ -67,7 +67,7 @@ export default function ServiceCoverage({ included = [], notIncluded = [] }) {
   );
 }
 
-const createStyles = theme => StyleSheet.create({
+const createStyles = (theme, isLightMode) => StyleSheet.create({
   container: {
     marginTop: 24,
   },
@@ -84,7 +84,7 @@ const createStyles = theme => StyleSheet.create({
   },
   seeAllText: {
     fontSize: 14,
-    color: '#0B0B0B',
+    color: theme.textPrimary,
     fontWeight: '600',
   },
   tableContainer: {
@@ -93,18 +93,18 @@ const createStyles = theme => StyleSheet.create({
     borderRadius: 12,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: '#0B0B0B',
+    borderColor: theme.cardBorder,
   },
   column: {
     flex: 1,
     borderRightWidth: 1,
-    borderRightColor: '#0B0B0B',
+    borderRightColor: theme.cardBorder,
   },
   includedColumn: {
-    backgroundColor: SKY_BLUE_BG, // sky blue background for "What's Included" column
+    backgroundColor: isLightMode ? SKY_BLUE_BG : theme.accentSoft,
   },
   notIncludedColumn: {
-    backgroundColor: '#F1F5F9',
+    backgroundColor: isLightMode ? '#F1F5F9' : theme.background,
   },
   columnHeader: {
     flexDirection: 'row',
@@ -112,13 +112,13 @@ const createStyles = theme => StyleSheet.create({
     paddingVertical: 14,
     paddingHorizontal: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#0B0B0B',
+    borderBottomColor: theme.cardBorder,
   },
   includedHeader: {
-    backgroundColor: SKY_BLUE_BG,
+    backgroundColor: isLightMode ? SKY_BLUE_BG : theme.accentSoft,
   },
   notIncludedHeader: {
-    backgroundColor: '#F1F5F9',
+    backgroundColor: isLightMode ? '#F1F5F9' : theme.background,
   },
   headerCheckIcon: {
     marginRight: 8,
@@ -135,13 +135,13 @@ const createStyles = theme => StyleSheet.create({
   columnHeaderText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#000000',
+    color: theme.textPrimary,
   },
   itemsContainer: {
     backgroundColor: theme.cardBackground,
   },
   notIncludedItemsContainer: {
-    backgroundColor: '#F1F5F9',
+    backgroundColor: isLightMode ? '#F1F5F9' : theme.background,
   },
   itemRow: {
     flexDirection: 'row',
@@ -152,7 +152,7 @@ const createStyles = theme => StyleSheet.create({
     borderBottomColor: theme.cardBorder,
   },
   includedItemRow: {
-    backgroundColor: '#FFFFFF', // included rows as white bg
+    backgroundColor: isLightMode ? '#FFFFFF' : theme.cardBackground,
   },
   itemText: {
     flex: 1,

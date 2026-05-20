@@ -345,18 +345,18 @@ export default function SavedVehiclesModal({ visible, onClose, navigation, servi
           <Text style={[styles.modalTitle, { color: theme.textPrimary }]}>Select Vehicle</Text>
           <View style={styles.headerButtons}>
             <TouchableOpacity
-              style={styles.cantFindButton}
+              style={[styles.cantFindButton, { backgroundColor: theme.cardBackground, borderColor: theme.cardBorder }]}
               onPress={() => setShowCustomVehicleModal(true)}
               activeOpacity={0.7}
             >
-              <Text style={styles.cantFindButtonText}>Can't find?</Text>
+              <Text style={[styles.cantFindButtonText, { color: theme.textPrimary }]}>Can't find?</Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={styles.addButton}
+              style={[styles.addButton, { backgroundColor: theme.cardBackground, borderColor: theme.cardBorder }]}
               onPress={handleAddNewVehicle}
               activeOpacity={0.7}
             >
-              <Text style={styles.addButtonText}>+ Add New</Text>
+              <Text style={[styles.addButtonText, { color: theme.textPrimary }]}>+ Add New</Text>
             </TouchableOpacity>
           </View>
         </View>

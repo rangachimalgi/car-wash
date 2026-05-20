@@ -64,7 +64,7 @@ export default function HomeScreen({ navigation }) {
     () => ({ screenW, heroH: Math.round(screenW * (9 / 16)) }),
     [screenW]
   );
-  const styles = useMemo(() => createStyles(theme, layout), [theme, layout]);
+  const styles = useMemo(() => createStyles(theme, layout, isLightMode), [theme, layout, isLightMode]);
 
   const heroSlides = useMemo(() => {
     if (!publicMediaFetched) return HERO_LOADING_SLIDE;
@@ -355,7 +355,11 @@ export default function HomeScreen({ navigation }) {
               <Text style={styles.halfCardTitle}>& Care</Text>
               <View style={styles.halfCardImageWrap}>
                 <Image
-                  source={require('../assets/carpicseven.png')}
+                  source={
+                    isLightMode
+                      ? require('../assets/carpicseven.png')
+                      : require('../assets/carpicseven-dark.png')
+                  }
                   style={styles.halfCardImage}
                   resizeMode="contain"
                 />
@@ -374,7 +378,11 @@ export default function HomeScreen({ navigation }) {
               </View> */}
               <View style={styles.halfCardImageWrap}>
                 <Image
-                  source={require('../assets/carpicnine.png')}
+                  source={
+                    isLightMode
+                      ? require('../assets/carpicnine.png')
+                      : require('../assets/carpicnine-dark.png')
+                  }
                   style={styles.halfCardImage}
                   resizeMode="contain"
                 />
@@ -393,7 +401,11 @@ export default function HomeScreen({ navigation }) {
               <Text style={styles.halfCardTitle}>& Care</Text>
               <View style={styles.halfCardImageWrap}>
                 <Image
-                  source={require('../assets/carpiceight.png')}
+                  source={
+                    isLightMode
+                      ? require('../assets/carpiceight.png')
+                      : require('../assets/carpiceight-dark.png')
+                  }
                   style={styles.halfCardImage}
                   resizeMode="contain"
                 />
@@ -474,7 +486,7 @@ export default function HomeScreen({ navigation }) {
                   }).catch(() => {});
                 }}
               >
-                <MaterialCommunityIcons name="share-variant" size={16} color="#000000" />
+                <MaterialCommunityIcons name="share-variant" size={16} color={theme.onAccent} />
                 <Text style={styles.homeReferralShareText}>Invite</Text>
               </TouchableOpacity>
             </View>
@@ -520,7 +532,7 @@ export default function HomeScreen({ navigation }) {
   );
 }
 
-const createStyles = (theme, layout) => StyleSheet.create({
+const createStyles = (theme, layout, isLightMode) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: theme.background,
@@ -614,7 +626,7 @@ const createStyles = (theme, layout) => StyleSheet.create({
   homeReferralShareText: {
     fontSize: 13,
     fontWeight: '800',
-    color: '#000000',
+    color: theme.onAccent,
   },
   homeReferralCodeRow: {
     backgroundColor: theme.background,
@@ -956,15 +968,20 @@ const createStyles = (theme, layout) => StyleSheet.create({
     overflow: 'hidden',
     padding: 16,
     alignItems: 'center',
+    borderWidth: isLightMode ? 0 : 1,
+    borderColor: theme.cardBorder,
   },
   whyChooseCardBlue: {
-    backgroundColor: '#E6F4FF',
+    backgroundColor: isLightMode ? '#E6F4FF' : 'rgba(49, 197, 255, 0.14)',
+    borderColor: isLightMode ? theme.cardBorder : 'rgba(133, 228, 252, 0.28)',
   },
   whyChooseCardGreen: {
-    backgroundColor: '#E6FFE6',
+    backgroundColor: isLightMode ? '#E6FFE6' : 'rgba(34, 197, 94, 0.12)',
+    borderColor: isLightMode ? theme.cardBorder : 'rgba(34, 197, 94, 0.28)',
   },
   whyChooseCardPurple: {
-    backgroundColor: '#F0E6FF',
+    backgroundColor: isLightMode ? '#F0E6FF' : 'rgba(168, 85, 247, 0.12)',
+    borderColor: isLightMode ? theme.cardBorder : 'rgba(168, 85, 247, 0.28)',
   },
   whyChooseImage: {
     width: 120,
@@ -979,12 +996,12 @@ const createStyles = (theme, layout) => StyleSheet.create({
   whyChooseCardTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#000000',
+    color: theme.textPrimary,
     marginBottom: 8,
   },
   whyChooseCardDescription: {
     fontSize: 14,
-    color: '#333333',
+    color: theme.textSecondary,
     lineHeight: 20,
   },
   loadingContainer: {

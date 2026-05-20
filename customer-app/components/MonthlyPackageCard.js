@@ -90,7 +90,7 @@ const createStyles = (theme) =>
     title: {
       fontSize: 14,
       fontWeight: '700',
-      color: '#000000',
+      color: theme.textPrimary,
       lineHeight: 18,
       minHeight: 36,
     },
@@ -101,7 +101,7 @@ const createStyles = (theme) =>
     price: {
       fontSize: 18,
       fontWeight: '800',
-      color: '#000000',
+      color: theme.textPrimary,
     },
     perWashPrice: {
       marginTop: 2,
@@ -127,7 +127,7 @@ const createStyles = (theme) =>
     footerText: {
       fontSize: 12,
       fontWeight: '700',
-      color: '#000000',
+      color: theme.textPrimary,
     },
     footerTextSelected: {
       fontSize: 12,

@@ -6,18 +6,19 @@ import BackHeader from '../components/BackHeader';
 import { useTheme } from '../theme/ThemeContext';
 
 function PaymentOption({ title, subtitle, icon, onPress, styles }) {
+  const { theme } = useTheme();
   return (
     <TouchableOpacity style={styles.optionRow} activeOpacity={0.85} onPress={onPress}>
       <View style={styles.optionLeft}>
         <View style={styles.optionIconWrap}>
-          <MaterialCommunityIcons name={icon} size={22} color="#111111" />
+          <MaterialCommunityIcons name={icon} size={22} color={theme.textPrimary} />
         </View>
         <View style={styles.optionTextWrap}>
           <Text style={styles.optionTitle}>{title}</Text>
           <Text style={styles.optionSubtitle}>{subtitle}</Text>
         </View>
       </View>
-      <MaterialCommunityIcons name="chevron-right" size={24} color="#A1A1AA" />
+      <MaterialCommunityIcons name="chevron-right" size={24} color={theme.textSecondary} />
     </TouchableOpacity>
   );
 }
@@ -131,7 +132,7 @@ const createStyles = (theme) =>
       marginTop: 6,
       fontSize: 16,
       fontWeight: '700',
-      color: '#111111',
+      color: theme.textPrimary,
     },
     section: {
       backgroundColor: theme.cardBackground,
@@ -143,7 +144,7 @@ const createStyles = (theme) =>
     sectionTitle: {
       fontSize: 16,
       fontWeight: '600',
-      color: '#111111',
+      color: theme.textPrimary,
       paddingHorizontal: 16,
       paddingTop: 16,
       paddingBottom: 12,
@@ -181,7 +182,7 @@ const createStyles = (theme) =>
     optionTitle: {
       fontSize: 16,
       fontWeight: '600',
-      color: '#111111',
+      color: theme.textPrimary,
       marginBottom: 2,
     },
     optionSubtitle: {

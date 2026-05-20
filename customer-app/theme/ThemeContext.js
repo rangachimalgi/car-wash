@@ -14,6 +14,7 @@ const darkTheme = {
   dangerSoft: 'rgba(255, 82, 82, 0.15)',
   avatarBackground: '#1A1A1A',
   divider: '#333333',
+  onAccent: '#000000',
 };
 
 const lightTheme = {
@@ -29,6 +30,7 @@ const lightTheme = {
   dangerSoft: 'rgba(255, 82, 82, 0.12)',
   avatarBackground: '#EAEAEA',
   divider: '#E2E8F0',
+  onAccent: '#000000',
 };
 
 const ThemeContext = createContext({
@@ -48,12 +50,10 @@ export function ThemeProvider({ children }) {
   useEffect(() => {
     const loadTheme = async () => {
       try {
-        // Theme toggling is temporarily disabled; always use light mode by default.
-        // const storedTheme = await AsyncStorage.getItem('themePreference');
-        // if (storedTheme === 'light' || storedTheme === 'dark') {
-        //   setColorScheme(storedTheme);
-        // }
-        await AsyncStorage.getItem('themePreference');
+        const storedTheme = await AsyncStorage.getItem('themePreference');
+        if (storedTheme === 'light' || storedTheme === 'dark') {
+          setColorScheme(storedTheme);
+        }
       } catch (error) {
         console.error('Error loading theme preference:', error);
       } finally {
@@ -77,8 +77,7 @@ export function ThemeProvider({ children }) {
       isLightMode,
       colorScheme,
       setColorScheme,
-      // toggleColorScheme: () => setColorScheme(prev => (prev === 'light' ? 'dark' : 'light')),
-      toggleColorScheme: () => {},
+      toggleColorScheme: () => setColorScheme(prev => (prev === 'light' ? 'dark' : 'light')),
       isLoaded,
     };
   }, [colorScheme, isLoaded]);

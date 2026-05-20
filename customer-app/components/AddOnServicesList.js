@@ -172,7 +172,7 @@ const createStyles = theme => StyleSheet.create({
   moreText: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#007AFF', // Blue color
+    color: theme.accent,
     letterSpacing: 0.2,
   },
 });

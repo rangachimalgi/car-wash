@@ -271,6 +271,6 @@ const createStyles = theme => StyleSheet.create({
   bookText: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#000000',
+    color: theme.onAccent,
   },
 });

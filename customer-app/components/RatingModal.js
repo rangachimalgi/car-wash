@@ -209,6 +209,6 @@ const createStyles = (theme) =>
     submitButtonText: {
       fontSize: 16,
       fontWeight: '700',
-      color: '#000',
+      color: theme.onAccent,
     },
   });

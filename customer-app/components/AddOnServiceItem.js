@@ -70,13 +70,13 @@ const createStyles = theme => StyleSheet.create({
   title: {
     fontSize: 14,
     fontWeight: '800',
-    color: '#000000',
+    color: theme.textPrimary,
     marginBottom: 2,
   },
   price: {
     fontSize: 14,
     fontWeight: '800',
-    color: '#000000',
+    color: theme.textPrimary,
   },
   addButton: {
     backgroundColor: '#000000',

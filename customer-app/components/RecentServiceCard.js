@@ -215,7 +215,7 @@ const createStyles = theme => StyleSheet.create({
   rateButtonText: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#000',
+    color: theme.textPrimary,
   },
   footerRow: {
     flexDirection: 'row',

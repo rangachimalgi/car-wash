@@ -19,22 +19,22 @@ const TIME_SLOTS = ['7:00 AM - 8:00 AM', '8:00 AM - 9:00 AM', '10:00 AM - 11:00 
 const PILL_MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 const PILL_WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
-function SelectChips({ options, selected, onSelect, multi = false }) {
+function SelectChips({ options, selected, onSelect, multi = false, chipStyles }) {
   return (
-    <View style={stylesGlobal.chipsWrap}>
+    <View style={chipStyles.chipsWrap}>
       {options.map((option) => {
         const active = multi ? selected.includes(option) : selected === option;
         return (
           <TouchableOpacity
             key={option}
             style={[
-              stylesGlobal.chip,
-              active && stylesGlobal.chipActive,
+              chipStyles.chip,
+              active && chipStyles.chipActive,
             ]}
             onPress={() => onSelect(option)}
             activeOpacity={0.85}
           >
-            <Text style={[stylesGlobal.chipText, active && stylesGlobal.chipTextActive]}>{option}</Text>
+            <Text style={[chipStyles.chipText, active && chipStyles.chipTextActive]}>{option}</Text>
           </TouchableOpacity>
         );
       })}
@@ -43,13 +43,13 @@ function SelectChips({ options, selected, onSelect, multi = false }) {
 }
 
 /** Read-only strip: same date + day pills as interior/exterior; highlights days included for daily cleaning. */
-function DatePillPreviewRow({ title, monthDates, includedKeys, styles, dateKey, formatDatePill }) {
+function DatePillPreviewRow({ title, monthDates, includedKeys, styles, dateKey, formatDatePill, iconColor }) {
   const included = useMemo(() => new Set(includedKeys), [includedKeys]);
   return (
     <View style={styles.dateRowBlock}>
       <View style={styles.dateRowHeader}>
         <View style={styles.dateRowHeaderLeft}>
-          <MaterialCommunityIcons name="calendar-month-outline" size={18} color="#6B7280" />
+          <MaterialCommunityIcons name="calendar-month-outline" size={18} color={iconColor} />
           <Text style={styles.dateRowTitle}>{title}</Text>
         </View>
       </View>
@@ -89,12 +89,13 @@ function DatePillRow({
   styles,
   dateKey,
   formatDatePill,
+  iconColor,
 }) {
   return (
     <View style={styles.dateRowBlock}>
       <View style={styles.dateRowHeader}>
         <View style={styles.dateRowHeaderLeft}>
-          <MaterialCommunityIcons name="calendar-month-outline" size={18} color="#6B7280" />
+          <MaterialCommunityIcons name="calendar-month-outline" size={18} color={iconColor} />
           <Text style={styles.dateRowTitle}>{title} ({selectedDates.length}/2)</Text>
         </View>
         <TouchableOpacity onPress={onReset} activeOpacity={0.8}>
@@ -129,38 +130,40 @@ function DatePillRow({
   );
 }
 
-const stylesGlobal = StyleSheet.create({
-  chipsWrap: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  chip: {
-    borderWidth: 1,
-    borderRadius: 999,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderColor: '#D4D4D8',
-    backgroundColor: '#FFFFFF',
-  },
-  chipActive: {
-    backgroundColor: '#E6F3FF',
-    borderColor: '#007AFF',
-  },
-  chipText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#444444',
-  },
-  chipTextActive: {
-    color: '#007AFF',
-    fontWeight: '700',
-  },
-});
+const createChipStyles = (theme, isLightMode) =>
+  StyleSheet.create({
+    chipsWrap: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 8,
+    },
+    chip: {
+      borderWidth: 1,
+      borderRadius: 999,
+      paddingHorizontal: 12,
+      paddingVertical: 8,
+      borderColor: theme.cardBorder,
+      backgroundColor: theme.cardBackground,
+    },
+    chipActive: {
+      backgroundColor: isLightMode ? '#E6F3FF' : theme.accentSoft,
+      borderColor: theme.accent,
+    },
+    chipText: {
+      fontSize: 12,
+      fontWeight: '600',
+      color: theme.textSecondary,
+    },
+    chipTextActive: {
+      color: theme.accent,
+      fontWeight: '700',
+    },
+  });
 
 export default function PackageDetailsScreen({ navigation, route }) {
   const { theme, isLightMode } = useTheme();
-  const styles = useMemo(() => createStyles(theme), [theme]);
+  const styles = useMemo(() => createStyles(theme, isLightMode), [theme, isLightMode]);
+  const chipStyles = useMemo(() => createChipStyles(theme, isLightMode), [theme, isLightMode]);
 
   const [packageStartDate, setPackageStartDate] = useState(new Date());
   const [showStartDatePicker, setShowStartDatePicker] = useState(false);
@@ -354,7 +357,12 @@ export default function PackageDetailsScreen({ navigation, route }) {
           </TouchableOpacity>
 
           <Text style={styles.label}>Time slot</Text>
-          <SelectChips options={availableTimeSlots} selected={packageTimeSlot} onSelect={setPackageTimeSlot} />
+          <SelectChips
+            options={availableTimeSlots}
+            selected={packageTimeSlot}
+            onSelect={setPackageTimeSlot}
+            chipStyles={chipStyles}
+          />
           {showStartDatePicker && (
             <DateTimePicker
               value={packageStartDate}
@@ -387,6 +395,7 @@ export default function PackageDetailsScreen({ navigation, route }) {
             styles={styles}
             dateKey={dateKey}
             formatDatePill={formatDatePill}
+            iconColor={theme.textSecondary}
           />
         </View>
 
@@ -402,6 +411,7 @@ export default function PackageDetailsScreen({ navigation, route }) {
             styles={styles}
             dateKey={dateKey}
             formatDatePill={formatDatePill}
+            iconColor={theme.textSecondary}
           />
         </View>
 
@@ -411,7 +421,12 @@ export default function PackageDetailsScreen({ navigation, route }) {
             Choose how often daily cleaning runs. Highlighted pills match your mode for this {packageDurationDays}-day
             window (same calendar strip as above).
           </Text>
-          <SelectChips options={DAILY_CLEANING_OPTIONS} selected={dailyMode} onSelect={setDailyMode} />
+          <SelectChips
+            options={DAILY_CLEANING_OPTIONS}
+            selected={dailyMode}
+            onSelect={setDailyMode}
+            chipStyles={chipStyles}
+          />
           <DatePillPreviewRow
             title="Daily cleaning dates"
             monthDates={monthDates}
@@ -419,6 +434,7 @@ export default function PackageDetailsScreen({ navigation, route }) {
             styles={styles}
             dateKey={dateKey}
             formatDatePill={formatDatePill}
+            iconColor={theme.textSecondary}
           />
         </View>
       </ScrollView>
@@ -498,7 +514,7 @@ export default function PackageDetailsScreen({ navigation, route }) {
   );
 }
 
-const createStyles = (theme) => StyleSheet.create({
+const createStyles = (theme, isLightMode) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: theme.background,
@@ -583,7 +599,7 @@ const createStyles = (theme) => StyleSheet.create({
   resetText: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#2F8EDC',
+    color: theme.accent,
     textDecorationLine: 'underline',
   },
   datePillsScrollContent: {
@@ -594,49 +610,49 @@ const createStyles = (theme) => StyleSheet.create({
     minWidth: 78,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
-    backgroundColor: '#F8FAFC',
+    borderColor: theme.cardBorder,
+    backgroundColor: isLightMode ? '#F8FAFC' : theme.cardBackground,
     paddingVertical: 8,
     paddingHorizontal: 10,
     alignItems: 'center',
     justifyContent: 'center',
   },
   datePillActive: {
-    backgroundColor: '#2F8EDC',
-    borderColor: '#2F8EDC',
+    backgroundColor: isLightMode ? '#2F8EDC' : theme.accent,
+    borderColor: isLightMode ? '#2F8EDC' : theme.accent,
   },
   datePillPreviewMuted: {
     opacity: 0.55,
-    backgroundColor: '#F1F5F9',
-    borderColor: '#E2E8F0',
+    backgroundColor: isLightMode ? '#F1F5F9' : theme.background,
+    borderColor: theme.cardBorder,
   },
   datePillMonth: {
     fontSize: 11,
     fontWeight: '800',
-    color: '#64748B',
+    color: theme.textSecondary,
     letterSpacing: 0.4,
     marginBottom: 2,
   },
   datePillMonthActive: {
-    color: '#DBEAFE',
+    color: isLightMode ? '#DBEAFE' : theme.onAccent,
   },
   datePillDate: {
     fontSize: 24,
     fontWeight: '700',
-    color: '#6B7280',
+    color: theme.textSecondary,
     lineHeight: 26,
   },
   datePillDateActive: {
-    color: '#FFFFFF',
+    color: isLightMode ? '#FFFFFF' : theme.onAccent,
   },
   datePillDay: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#94A3B8',
+    color: theme.textSecondary,
     marginTop: 2,
   },
   datePillDayActive: {
-    color: '#DBEAFE',
+    color: isLightMode ? '#DBEAFE' : theme.onAccent,
   },
   label: {
     fontSize: 13,
@@ -646,8 +662,8 @@ const createStyles = (theme) => StyleSheet.create({
   },
   dateSelectorCard: {
     borderWidth: 1,
-    borderColor: '#C6E4FF',
-    backgroundColor: '#F2F8FF',
+    borderColor: isLightMode ? '#C6E4FF' : theme.cardBorder,
+    backgroundColor: isLightMode ? '#F2F8FF' : theme.accentSoft,
     borderRadius: 18,
     paddingVertical: 12,
     paddingHorizontal: 12,
@@ -665,7 +681,7 @@ const createStyles = (theme) => StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 12,
-    backgroundColor: '#4EA9FF',
+    backgroundColor: theme.accent,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -685,9 +701,9 @@ const createStyles = (theme) => StyleSheet.create({
     width: 34,
     height: 34,
     borderRadius: 10,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.cardBackground,
     borderWidth: 1,
-    borderColor: '#DBEAFE',
+    borderColor: theme.cardBorder,
     alignItems: 'center',
     justifyContent: 'center',
     marginLeft: 10,
@@ -752,7 +768,7 @@ const createStyles = (theme) => StyleSheet.create({
     opacity: 0.4,
   },
   continueButtonText: {
-    color: '#000000',
+    color: theme.onAccent,
     fontWeight: '800',
     fontSize: 15,
   },

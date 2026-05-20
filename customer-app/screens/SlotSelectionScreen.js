@@ -39,7 +39,7 @@ export default function SlotSelectionScreen({ navigation, route }) {
   const [slotsError, setSlotsError] = useState(null);
   
   const { theme, isLightMode } = useTheme();
-  const styles = useMemo(() => createStyles(theme), [theme]);
+  const styles = useMemo(() => createStyles(theme, isLightMode), [theme, isLightMode]);
 
   useEffect(() => {
     const loadSavedAddress = async () => {
@@ -767,7 +767,7 @@ export default function SlotSelectionScreen({ navigation, route }) {
   );
 }
 
-const createStyles = theme => StyleSheet.create({
+const createStyles = (theme, isLightMode) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: theme.background,
@@ -863,8 +863,8 @@ const createStyles = theme => StyleSheet.create({
     paddingTop: 8,
   },
   dateCardSelected: {
-    backgroundColor: '#000000',
-    borderColor: '#000000',
+    backgroundColor: isLightMode ? '#000000' : theme.accent,
+    borderColor: isLightMode ? '#000000' : theme.accent,
   },
   dateDay: {
     fontSize: 12,
@@ -901,7 +901,7 @@ const createStyles = theme => StyleSheet.create({
   },
   todayBadgeText: {
     fontSize: 8,
-    color: '#000000',
+    color: theme.onAccent,
     fontWeight: '600',
   },
   timeSlotsSection: {
@@ -926,8 +926,8 @@ const createStyles = theme => StyleSheet.create({
     justifyContent: 'center',
   },
   timeSlotCardSelected: {
-    backgroundColor: '#000000',
-    borderColor: '#000000',
+    backgroundColor: isLightMode ? '#000000' : theme.accent,
+    borderColor: isLightMode ? '#000000' : theme.accent,
   },
   timeSlotText: {
     fontSize: 14,
@@ -965,7 +965,7 @@ const createStyles = theme => StyleSheet.create({
   slotNumberText: {
     fontSize: 14,
     fontWeight: 'bold',
-    color: '#000000',
+    color: theme.onAccent,
   },
   slotInfo: {
     flex: 1,
@@ -1010,8 +1010,8 @@ const createStyles = theme => StyleSheet.create({
     backgroundColor: theme.cardBackground,
   },
   editDateCardSelected: {
-    backgroundColor: '#000000',
-    borderColor: '#000000',
+    backgroundColor: isLightMode ? '#000000' : theme.accent,
+    borderColor: isLightMode ? '#000000' : theme.accent,
   },
   editDateCardDisabled: {
     opacity: 0.4,
@@ -1040,8 +1040,8 @@ const createStyles = theme => StyleSheet.create({
     backgroundColor: theme.cardBackground,
   },
   editTimeSlotCardSelected: {
-    backgroundColor: '#000000',
-    borderColor: '#000000',
+    backgroundColor: isLightMode ? '#000000' : theme.accent,
+    borderColor: isLightMode ? '#000000' : theme.accent,
   },
   editTimeSlotText: {
     fontSize: 12,
@@ -1123,7 +1123,7 @@ const createStyles = theme => StyleSheet.create({
   },
   checkoutButton: {
     flexDirection: 'row',
-    backgroundColor: '#000000',
+    backgroundColor: isLightMode ? '#000000' : theme.accent,
     paddingVertical: 16,
     borderRadius: 12,
     justifyContent: 'center',

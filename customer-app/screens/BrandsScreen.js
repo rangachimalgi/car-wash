@@ -640,7 +640,7 @@ const styles = StyleSheet.create({
   cantFindButtonText: {
     fontSize: 10,
     fontWeight: '600',
-    color: '#000000',
+    color: '#1A1A1A',
     textAlign: 'center',
   },
   searchContainer: {

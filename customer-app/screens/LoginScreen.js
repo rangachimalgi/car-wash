@@ -310,7 +310,7 @@ export default function LoginScreen({ navigation }) {
                   style={styles.backButton}
                   onPress={() => setOtpSent(false)}
                 >
-                  <MaterialCommunityIcons name="arrow-left" size={24} color="#1A1A1A" />
+                  <MaterialCommunityIcons name="arrow-left" size={24} color={theme.textPrimary} />
                   <Text style={styles.backButtonText}>Back</Text>
                 </TouchableOpacity>
               </View>
@@ -461,7 +461,7 @@ const createStyles = theme => StyleSheet.create({
   },
   appDescriptionBottom: {
     fontSize: 24,
-    color: '#1A1A1A',
+    color: theme.textPrimary,
     fontWeight: 'bold',
     letterSpacing: 0.5,
     textAlign: 'center',
@@ -504,7 +504,7 @@ const createStyles = theme => StyleSheet.create({
   input: {
     flex: 1,
     fontSize: 16,
-    color: '#1A1A1A',
+    color: theme.textPrimary,
     paddingVertical: 18,
   },
   errorText: {
@@ -596,13 +596,13 @@ const createStyles = theme => StyleSheet.create({
   },
   backButtonText: {
     fontSize: 16,
-    color: '#1A1A1A',
+    color: theme.textPrimary,
     fontWeight: '500',
   },
   otpTitle: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: '#1A1A1A',
+    color: theme.textPrimary,
     marginBottom: 16,
     textAlign: 'center',
   },
@@ -624,7 +624,7 @@ const createStyles = theme => StyleSheet.create({
   },
   phoneNumberText: {
     fontSize: 16,
-    color: '#1A1A1A',
+    color: theme.textPrimary,
     fontWeight: '600',
     textDecorationLine: 'underline',
   },
@@ -652,7 +652,7 @@ const createStyles = theme => StyleSheet.create({
     borderRadius: 8,
     fontSize: 22,
     fontWeight: '600',
-    color: '#1A1A1A',
+    color: theme.textPrimary,
     backgroundColor: '#FFFFFF',
     textAlign: 'center',
   },

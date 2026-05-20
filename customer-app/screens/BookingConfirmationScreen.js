@@ -117,7 +117,7 @@ const createStyles = (theme) =>
       marginTop: 10,
       fontSize: 14,
       fontWeight: '700',
-      color: theme.primary,
+      color: theme.accent,
     },
     subtitle: {
       marginTop: 10,

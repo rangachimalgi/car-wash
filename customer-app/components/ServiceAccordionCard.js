@@ -62,8 +62,8 @@ export default function ServiceAccordionCard({
 }) {
   const resolvedServiceId = bookingServiceId || service?._id || serviceSummary?._id;
   const [imageError, setImageError] = useState(false);
-  const { theme } = useTheme();
-  const styles = useMemo(() => createStyles(theme), [theme]);
+  const { theme, isLightMode } = useTheme();
+  const styles = useMemo(() => createStyles(theme, isLightMode), [theme, isLightMode]);
 
   const service = serviceDetails || serviceSummary || {};
   const title = toTitleCase(serviceSummary?.name || service?.name);
@@ -276,7 +276,7 @@ export default function ServiceAccordionCard({
             </Text>
             <TouchableOpacity style={styles.viewDetailsButton} onPress={onViewDetails} activeOpacity={0.85}>
               <Text style={styles.viewDetailsText}>View Details</Text>
-              <MaterialCommunityIcons name="arrow-right" size={14} color="#0B0B0B" />
+              <MaterialCommunityIcons name="arrow-right" size={14} color={isLightMode ? '#FFFFFF' : theme.onAccent} />
             </TouchableOpacity>
           </View>
 
@@ -433,7 +433,7 @@ export default function ServiceAccordionCard({
   );
 }
 
-const createStyles = (theme) =>
+const createStyles = (theme, isLightMode) =>
   StyleSheet.create({
     cardWrapper: {
       marginHorizontal: 16,
@@ -463,11 +463,11 @@ const createStyles = (theme) =>
       paddingHorizontal: 16,
       paddingTop: 16,
       paddingBottom: 12,
-      backgroundColor: '#e8f4fc',
+      backgroundColor: isLightMode ? '#e8f4fc' : theme.accentSoft,
       borderTopLeftRadius: 16,
       borderTopRightRadius: 16,
       borderBottomWidth: 1,
-      borderBottomColor: '#d4e8f7',
+      borderBottomColor: isLightMode ? '#d4e8f7' : theme.cardBorder,
     },
     cardHeaderRow: {
       flexDirection: 'row',
@@ -479,7 +479,7 @@ const createStyles = (theme) =>
       flex: 1,
       fontSize: 18,
       fontWeight: '700',
-      color: '#122E54',
+      color: isLightMode ? '#122E54' : theme.textPrimary,
       letterSpacing:-0.2,
     },
     wooshGreenPromoStrip: {
@@ -523,7 +523,7 @@ const createStyles = (theme) =>
       borderRadius: 0,
       overflow: 'hidden',
       height: 200,
-      backgroundColor: '#FFFFFF',
+      backgroundColor: theme.cardBackground,
       justifyContent: 'center',
       alignItems: 'center',
     },
@@ -541,14 +541,14 @@ const createStyles = (theme) =>
       flexDirection: 'row',
       alignItems: 'stretch',
       minHeight: 76,
-      backgroundColor: '#FFFFFF',
+      backgroundColor: theme.cardBackground,
       overflow: 'hidden',
     },
     ratingSection: {
       flex: 1,
       flexDirection: 'row',
       alignItems: 'center',
-      backgroundColor: '#FFFFFF',
+      backgroundColor: theme.cardBackground,
       paddingHorizontal: 14,
       paddingVertical: 12,
       gap: 6,
@@ -557,24 +557,24 @@ const createStyles = (theme) =>
     ratingValue: {
       fontSize: 16,
       fontWeight: '700',
-      color: '#1E293B',
+      color: theme.textPrimary,
     },
     ratingDot: {
       width: 4,
       height: 4,
       borderRadius: 2,
-      backgroundColor: '#666666',
+      backgroundColor: theme.textSecondary,
     },
     ratingsCount: {
       fontSize: 13,
       fontWeight: '500',
-      color: '#64748B',
+      color: theme.textSecondary,
       flexShrink: 1,
     },
     priceBadge: {
       flex: 1,
       maxWidth: '52%',
-      backgroundColor: '#F0F7FD', // Matches the subtle, premium light blue panel tint
+      backgroundColor: isLightMode ? '#F0F7FD' : theme.accentSoft,
       borderTopLeftRadius: 100, // Large organic wave radius curving beautifully inward
       borderBottomLeftRadius: 0,
       paddingTop: 16,
@@ -592,17 +592,17 @@ const createStyles = (theme) =>
     cardPricePrefix: {
       fontSize: 14,
       fontWeight: '600',
-      color: '#1a3d6b',
+      color: isLightMode ? '#1a3d6b' : theme.textPrimary,
     },
     cardPriceValue: {
       fontSize: 17,
       fontWeight: '900',
-      color: '#1a3d6b',
+      color: isLightMode ? '#1a3d6b' : theme.textPrimary,
     },
     cardPriceStrike: {
       fontSize: 14,
       fontWeight: '600',
-      color: '#4a6f94',
+      color: isLightMode ? '#4a6f94' : theme.textSecondary,
       textDecorationLine: 'line-through',
     },
     memberPriceHint: {
@@ -644,7 +644,7 @@ const createStyles = (theme) =>
       flexDirection: 'row',
       alignItems: 'center',
       gap: 6,
-      backgroundColor: '#000000',
+      backgroundColor: isLightMode ? '#000000' : theme.accent,
       paddingVertical: 10,
       paddingHorizontal: 16,
       borderRadius: 10,
@@ -657,7 +657,7 @@ const createStyles = (theme) =>
     viewDetailsText: {
       fontSize: 13,
       fontWeight: '800',
-      color: '#ffffff',
+      color: isLightMode ? '#FFFFFF' : theme.onAccent,
       letterSpacing: 0.2,
     },
     loadingRow: {
@@ -745,7 +745,7 @@ const createStyles = (theme) =>
       marginBottom: 2,
     },
     bookButtonPrimary: {
-      backgroundColor: '#000000',
+      backgroundColor: isLightMode ? '#000000' : theme.accent,
       borderRadius: 8,
       paddingVertical: 10,
       paddingHorizontal: 20,
@@ -753,7 +753,7 @@ const createStyles = (theme) =>
     bookTextPrimary: {
       fontSize: 14,
       fontWeight: '800',
-      color: '#ffffff',
+      color: isLightMode ? '#FFFFFF' : theme.onAccent,
     },
     monthlySection: {
       marginTop: 8,
@@ -830,7 +830,7 @@ const createStyles = (theme) =>
       paddingRight: 12,
     },
     bookButtonSecondary: {
-      backgroundColor: '#000000',
+      backgroundColor: isLightMode ? '#000000' : theme.accent,
       borderRadius: 8,
       paddingVertical: 10,
       paddingHorizontal: 20,
@@ -838,7 +838,7 @@ const createStyles = (theme) =>
     bookTextSecondary: {
       fontSize: 14,
       fontWeight: '800',
-      color: '#ffffff',
+      color: isLightMode ? '#FFFFFF' : theme.onAccent,
     },
     addOnsPriceText: {
       fontSize: 11,

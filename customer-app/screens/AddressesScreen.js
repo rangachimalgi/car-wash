@@ -1289,7 +1289,7 @@ const createStyles = theme => StyleSheet.create({
     borderRadius: 10,
   },
   saveButtonText: {
-    color: '#000000',
+    color: theme.onAccent,
     fontWeight: '700',
   },
   modalContainer: {

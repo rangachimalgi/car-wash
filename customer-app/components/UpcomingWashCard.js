@@ -203,7 +203,7 @@ const createStyles = theme => StyleSheet.create({
     fontWeight: '600',
   },
   statusTextPending: {
-    color: '#000000',
+    color: theme.textPrimary,
   },
   serviceName: {
     fontSize: 16,
@@ -268,7 +268,7 @@ const createStyles = theme => StyleSheet.create({
   priceText: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#000000',
+    color: theme.textPrimary,
   },
   viewLocationButton: {
     flexDirection: 'row',

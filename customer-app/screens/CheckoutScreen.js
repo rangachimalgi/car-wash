@@ -75,7 +75,7 @@ export default function CheckoutScreen({ navigation, route }) {
     perReferralRewardReferred: 100,
   });
   const { theme, isLightMode } = useTheme();
-  const styles = useMemo(() => createStyles(theme), [theme]);
+  const styles = useMemo(() => createStyles(theme, isLightMode), [theme, isLightMode]);
   // Load address and vehicle data
   const loadAddressAndVehicle = useCallback(async () => {
     try {
@@ -717,7 +717,7 @@ export default function CheckoutScreen({ navigation, route }) {
                   }).catch(() => {});
                 }}
               >
-                <MaterialCommunityIcons name="share-variant" size={16} color="#000000" />
+                <MaterialCommunityIcons name="share-variant" size={16} color={theme.onAccent} />
                 <Text style={styles.checkoutReferralShareText}>Invite</Text>
               </TouchableOpacity>
             </View>
@@ -771,7 +771,7 @@ export default function CheckoutScreen({ navigation, route }) {
           onPress={handlePayNow}
         >
           <Text style={styles.payNowButtonText}>Book Now</Text>
-          <MaterialCommunityIcons name="arrow-right" size={20} color="#000000" />
+          <MaterialCommunityIcons name="arrow-right" size={20} color="#FFFFFF" />
         </TouchableOpacity>
       </View>
 
@@ -788,7 +788,7 @@ export default function CheckoutScreen({ navigation, route }) {
   );
 }
 
-const createStyles = theme => StyleSheet.create({
+const createStyles = (theme, isLightMode) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: theme.background,
@@ -930,7 +930,7 @@ const createStyles = theme => StyleSheet.create({
     color: theme.textPrimary,
   },
   applyButton: {
-    backgroundColor: '#000000',
+    backgroundColor: isLightMode ? '#000000' : theme.accent,
     borderLeftWidth: 1,
     borderLeftColor: theme.cardBorder,
     paddingHorizontal: 24,
@@ -1065,7 +1065,7 @@ const createStyles = theme => StyleSheet.create({
   checkoutReferralShareText: {
     fontSize: 13,
     fontWeight: '800',
-    color: '#000000',
+    color: theme.onAccent,
   },
   paymentSummarySection: {
     marginTop: 24,
@@ -1138,11 +1138,11 @@ const createStyles = theme => StyleSheet.create({
   amountValue: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#0B0B0B',
+    color: theme.textPrimary,
   },
   payNowButton: {
     flexDirection: 'row',
-    backgroundColor: '#000000',
+    backgroundColor: isLightMode ? '#000000' : theme.accent,
     paddingVertical: 16,
     borderRadius: 12,
     justifyContent: 'center',
@@ -1294,8 +1294,8 @@ const createStyles = theme => StyleSheet.create({
     backgroundColor: theme.background,
   },
   walletToggleActive: {
-    borderColor: LIGHT_BLUE,
-    backgroundColor: '#E0F7FF',
+    borderColor: theme.accent,
+    backgroundColor: theme.accentSoft,
   },
   walletToggleText: {
     fontSize: 12,
@@ -1303,7 +1303,7 @@ const createStyles = theme => StyleSheet.create({
     color: theme.textSecondary,
   },
   walletToggleTextActive: {
-    color: '#000000',
+    color: theme.textPrimary,
   },
   walletAppliedRow: {
     flexDirection: 'row',

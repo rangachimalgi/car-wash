@@ -27,8 +27,8 @@ export default function PricingPackages({
 }) {
   const [expandedSection, setExpandedSection] = useState(showOnlyMonthly ? 'monthly' : null);
   const [selectedPackage, setSelectedPackage] = useState(initialSelectedPackage ?? 'oneTime'); // Default to one time wash
-  const { theme } = useTheme();
-  const styles = useMemo(() => createStyles(theme), [theme]);
+  const { theme, isLightMode } = useTheme();
+  const styles = useMemo(() => createStyles(theme, isLightMode), [theme, isLightMode]);
 
   useEffect(() => {
     if (forceOneTime) {
@@ -260,8 +260,8 @@ export function AddToCartButton({
   action = 'select_slot', // 'select_slot' | 'add_to_cart'
   membershipDiscountPercent = 0,
 }) {
-  const { theme } = useTheme();
-  const styles = useMemo(() => createStyles(theme), [theme]);
+  const { theme, isLightMode } = useTheme();
+  const styles = useMemo(() => createStyles(theme, isLightMode), [theme, isLightMode]);
   const memberPct = Math.min(100, Math.max(0, Number(membershipDiscountPercent) || 0));
 
   // Use totalPrice if provided, otherwise calculate from base price
@@ -378,13 +378,13 @@ export function AddToCartButton({
         <Text style={styles.addToCartButtonText}>
           {action === 'add_to_cart' ? 'Add to Cart' : 'Select Slot'}
         </Text>
-        <MaterialCommunityIcons name="arrow-right" size={20} color="#000000" />
+        <MaterialCommunityIcons name="arrow-right" size={20} color={theme.onAccent} />
       </TouchableOpacity>
     </View>
   );
 }
 
-const createStyles = theme => StyleSheet.create({
+const createStyles = (theme, isLightMode) => StyleSheet.create({
   container: {
     marginTop: 24,
   },
@@ -413,13 +413,13 @@ const createStyles = theme => StyleSheet.create({
   },
   oneTimeLabel: {
     fontSize: 14,
-    color: '#0B0B0B',
+    color: theme.textPrimary,
     marginBottom: 4,
   },
   oneTimePrice: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#0B0B0B',
+    color: theme.textPrimary,
   },
   sectionHeader: {
     flexDirection: 'row',
@@ -478,13 +478,13 @@ const createStyles = theme => StyleSheet.create({
   packagePerWash: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#0B0B0B',
+    color: theme.textPrimary,
     marginBottom: 4,
   },
   packageTotal: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#0B0B0B',
+    color: theme.textPrimary,
   },
   planNavCard: {
     flexDirection: 'row',
@@ -515,7 +515,7 @@ const createStyles = theme => StyleSheet.create({
     color: theme.textSecondary,
   },
   planNavButton: {
-    backgroundColor: '#000000',
+    backgroundColor: isLightMode ? '#000000' : theme.accent,
     borderRadius: 8,
     paddingVertical: 10,
     paddingHorizontal: 20,
@@ -523,7 +523,7 @@ const createStyles = theme => StyleSheet.create({
   planNavButtonText: {
     fontSize: 14,
     fontWeight: '800',
-    color: '#ffffff',
+    color: isLightMode ? '#FFFFFF' : theme.onAccent,
   },
   monthlyCustomCard: {
     backgroundColor: theme.cardBackground,
@@ -553,7 +553,7 @@ const createStyles = theme => StyleSheet.create({
     marginTop: 2,
   },
   monthlyBookButtonText: {
-    color: '#000000',
+    color: theme.onAccent,
     fontSize: 13,
     fontWeight: '800',
   },
@@ -573,7 +573,7 @@ const createStyles = theme => StyleSheet.create({
   addToCartPrice: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#0B0B0B',
+    color: theme.textPrimary,
     marginBottom: 4,
   },
   addToCartPriceStrike: {
@@ -596,7 +596,7 @@ const createStyles = theme => StyleSheet.create({
   addToCartButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#000000',
+    backgroundColor: isLightMode ? '#000000' : theme.accent,
     borderRadius: 8,
     paddingVertical: 14,
     paddingHorizontal: 24,
@@ -605,6 +605,6 @@ const createStyles = theme => StyleSheet.create({
   addToCartButtonText: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#ffffff',
+    color: isLightMode ? '#FFFFFF' : theme.onAccent,
   },
 });

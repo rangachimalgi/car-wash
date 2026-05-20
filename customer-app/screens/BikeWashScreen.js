@@ -562,7 +562,7 @@ const createStyles = theme => StyleSheet.create({
   retryButtonText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#000000',
+    color: theme.onAccent,
   },
   emptyContainer: {
     alignItems: 'center',

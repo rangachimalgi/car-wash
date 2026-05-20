@@ -217,7 +217,7 @@ export default function RegisterScreen({ navigation }) {
             activeOpacity={0.8}
           >
             <Text style={styles.registerButtonText}>Sign Up</Text>
-            <MaterialCommunityIcons name="arrow-right" size={20} color="#000000" />
+            <MaterialCommunityIcons name="arrow-right" size={20} color={theme.onAccent} />
           </TouchableOpacity>
 
           {/* Divider */}
@@ -353,7 +353,7 @@ const createStyles = theme => StyleSheet.create({
   registerButtonText: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#000000',
+    color: theme.onAccent,
   },
   dividerContainer: {
     flexDirection: 'row',
