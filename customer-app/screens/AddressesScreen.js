@@ -3,7 +3,7 @@ import { ActivityIndicator, Alert, FlatList, Modal, ScrollView, StyleSheet, Text
 import { StatusBar } from 'expo-status-bar';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { WebView } from 'react-native-webview';
-import BackHeader from '../components/BackHeader';
+import MinimalBackHeader from '../components/MinimalBackHeader';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Location from 'expo-location';
 import { getAddressKeys } from '../services/addressStorage';
@@ -103,7 +103,6 @@ export default function AddressesScreen({ navigation, route }) {
   const [pickedCoords, setPickedCoords] = useState(null);
   const [pickedAddress, setPickedAddress] = useState('');
   const [pickedAddressTitle, setPickedAddressTitle] = useState('');
-  const [currentAddressText, setCurrentAddressText] = useState('');
   const [resolvingAddress, setResolvingAddress] = useState(false);
   const [mapSearchQuery, setMapSearchQuery] = useState('');
   const [mapSearchSuggestions, setMapSearchSuggestions] = useState([]);
@@ -161,15 +160,9 @@ export default function AddressesScreen({ navigation, route }) {
     const loadAddresses = async () => {
       try {
         const keys = await getAddressKeys();
-        const [stored, current] = await Promise.all([
-          AsyncStorage.getItem(keys.savedAddresses),
-          AsyncStorage.getItem(keys.currentAddress),
-        ]);
+        const stored = await AsyncStorage.getItem(keys.savedAddresses);
         if (stored) {
           setSavedAddresses(JSON.parse(stored));
-        }
-        if (current) {
-          setCurrentAddressText(current);
         }
       } catch (error) {
         console.warn('Failed to load addresses:', error);
@@ -278,7 +271,6 @@ export default function AddressesScreen({ navigation, route }) {
     try {
       const keys = await getAddressKeys();
       await AsyncStorage.setItem(keys.currentAddress, fullAddress);
-      setCurrentAddressText(fullAddress);
       const hasCoords = typeof address.latitude === 'number' && typeof address.longitude === 'number';
       if (hasCoords) {
         await AsyncStorage.setItem(keys.currentLat, String(address.latitude));
@@ -552,11 +544,7 @@ export default function AddressesScreen({ navigation, route }) {
   return (
     <View style={styles.container}>
       <StatusBar style={isLightMode ? 'dark' : 'light'} />
-      <BackHeader
-        navigation={navigation}
-        title="Select Address"
-        subtitle={currentAddressText || undefined}
-      />
+      <MinimalBackHeader navigation={navigation} />
 
       <ScrollView 
         style={styles.scrollView}

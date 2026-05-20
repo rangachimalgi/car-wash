@@ -1,5 +1,17 @@
 import React, { useEffect, useMemo, useState, useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Switch, Share, Linking } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  Alert,
+  Switch,
+  Share,
+  Linking,
+  useWindowDimensions,
+} from 'react-native';
+import Constants from 'expo-constants';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -8,9 +20,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getVehicleKeys } from '../services/addressStorage';
 import { getVehicles } from '../services/vehicleApi';
 import { getWallet, getReferralInfo } from '../services/walletApi';
-import { getMyMembership } from '../services/membershipApi';
 import { useTheme } from '../theme/ThemeContext';
-import { wooshGreen } from '../theme/wooshGreen';
 import { useFocusEffect } from '@react-navigation/native';
 import SavedVehiclesModal from '../components/SavedVehiclesModal';
 import { isSessionStillValid, logoutUser } from '../services/authSession';
@@ -21,7 +31,9 @@ const SUPPORT_WHATSAPP_NUMBER = process.env.EXPO_PUBLIC_SUPPORT_WHATSAPP || '918
 export default function ProfileScreen({ navigation }) {
   const insets = useSafeAreaInsets();
   const { theme, isLightMode, toggleColorScheme } = useTheme();
-  const styles = useMemo(() => createStyles(theme), [theme]);
+  const { width: screenW } = useWindowDimensions();
+  const styles = useMemo(() => createStyles(theme, isLightMode), [theme, isLightMode]);
+  const appVersion = Constants.expoConfig?.version ?? '1.0.0';
   
   const [userData, setUserData] = useState({
     name: 'John Doe',
@@ -40,8 +52,6 @@ export default function ProfileScreen({ navigation }) {
     perReferralRewardReferrer: 100,
     perReferralRewardReferred: 100,
   });
-  const [membershipInfo, setMembershipInfo] = useState(null);
-
   useEffect(() => {
     const loadProfile = async () => {
       try {
@@ -57,28 +67,6 @@ export default function ProfileScreen({ navigation }) {
           if (wallet.walletBalance && wallet.walletBalance > 0) {
             walletBalance = wooshCoinsLabel(wallet.walletBalance);
           }
-          try {
-            const token = await AsyncStorage.getItem('authToken');
-            if (token) {
-              const mem = await getMyMembership();
-              if (mem?.success && mem.data?.active && mem.data?.membership) {
-                const m = mem.data.membership;
-                setMembershipInfo({
-                  planLabel: m.planLabel || 'Woosh Green',
-                  discountPercent: Number(m.discountPercent) || 0,
-                  endsAt: m.endsAt,
-                });
-              } else {
-                setMembershipInfo(null);
-              }
-            } else {
-              setMembershipInfo(null);
-            }
-          } catch {
-            setMembershipInfo(null);
-          }
-        } else {
-          setMembershipInfo(null);
         }
 
         setUserData(prev => ({
@@ -155,23 +143,6 @@ export default function ProfileScreen({ navigation }) {
               perReferralRewardReferred: referral.perReferralRewardReferred ?? prev.perReferralRewardReferred,
             }));
           }
-          try {
-            if (!(await isSessionStillValid(storedPhone))) return;
-            const mem = await getMyMembership();
-            if (!isActive || !(await isSessionStillValid(storedPhone))) return;
-            if (mem?.success && mem.data?.active && mem.data?.membership) {
-              const m = mem.data.membership;
-              setMembershipInfo({
-                planLabel: m.planLabel || 'Woosh Green',
-                discountPercent: Number(m.discountPercent) || 0,
-                endsAt: m.endsAt,
-              });
-            } else {
-              setMembershipInfo(null);
-            }
-          } catch {
-            if (isActive) setMembershipInfo(null);
-          }
         } catch (error) {
           if (isActive) console.warn('Failed to refresh vehicle:', error);
         }
@@ -212,13 +183,8 @@ export default function ProfileScreen({ navigation }) {
       >
         {/* Profile Header */}
         <View style={styles.profileHeader}>
-          <View style={styles.avatarContainer}>
-            <View style={styles.avatar}>
-              <MaterialCommunityIcons name="account" size={48} color={theme.textPrimary} />
-            </View>
-            <TouchableOpacity style={styles.editAvatarButton}>
-              <MaterialCommunityIcons name="camera" size={16} color={theme.textPrimary} />
-            </TouchableOpacity>
+          <View style={styles.avatar}>
+            <MaterialCommunityIcons name="account" size={48} color={theme.textPrimary} />
           </View>
           <Text style={styles.userName}>{userData.name}</Text>
           <Text style={styles.userEmail}>{userData.phone ? `+91 ${userData.phone}` : 'Phone not set'}</Text>
@@ -270,201 +236,94 @@ export default function ProfileScreen({ navigation }) {
           </View>
         )}
 
-        {membershipInfo ? (
-          <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <MaterialCommunityIcons name="crown-outline" size={24} color={wooshGreen.primary} />
-              <Text style={styles.sectionTitle}>Membership</Text>
-            </View>
-            <View style={styles.membershipCard}>
-              <Text style={styles.membershipTitle}>Active {membershipInfo.planLabel}</Text>
-              {membershipInfo.discountPercent > 0 ? (
-                <Text style={styles.membershipLine}>
-                  {membershipInfo.discountPercent}% off car, bike and auto washes while your plan is active.
-                </Text>
-              ) : (
-                <Text style={styles.membershipLine}>Your member benefits apply at checkout on wash services.</Text>
-              )}
-              {membershipInfo.discountPercent > 0 ? (
-                <Text style={styles.membershipPriceHint}>
-                  Woosh Green discount {membershipInfo.discountPercent}%
-                </Text>
-              ) : null}
-              {membershipInfo.endsAt ? (
-                <Text style={styles.membershipSub}>
-                  Valid through{' '}
-                  {new Date(membershipInfo.endsAt).toLocaleDateString('en-IN', {
-                    day: 'numeric',
-                    month: 'short',
-                    year: 'numeric',
-                  })}
-                </Text>
-              ) : null}
-            </View>
-          </View>
-        ) : null}
+        {/* Quick actions — square grid */}
+        <View style={[styles.quickGridRow, { gap: 10 }]}>
+          <TouchableOpacity
+            style={[styles.gridCard, { width: (screenW - 40 - 20) / 3 }]}
+            activeOpacity={0.85}
+            onPress={() => navigation.navigate('MainTabs', { screen: 'Bookings' })}
+          >
+            <MaterialCommunityIcons name="clipboard-text-outline" size={28} color={theme.textPrimary} />
+            <Text style={styles.gridCardLabel}>My Bookings</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.gridCard, { width: (screenW - 40 - 20) / 3 }]}
+            activeOpacity={0.85}
+            onPress={() => setShowVehiclesModal(true)}
+          >
+            <MaterialCommunityIcons name="car-outline" size={28} color={theme.textPrimary} />
+            <Text style={styles.gridCardLabel}>My Vehicles</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.gridCard, { width: (screenW - 40 - 20) / 3 }]}
+            activeOpacity={0.85}
+            onPress={handleWhatsAppHelp}
+          >
+            <MaterialCommunityIcons name="headset" size={28} color={theme.textPrimary} />
+            <Text style={styles.gridCardLabel}>Help &amp; Support</Text>
+          </TouchableOpacity>
+        </View>
 
-        {/* Refer & Earn Section */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <MaterialCommunityIcons name="gift" size={24} color={theme.accent} />
-            <Text style={styles.sectionTitle}>Refer &amp; Earn</Text>
-            <View style={styles.referralBadge}>
-              <Text style={styles.referralBadgeText}>
-                Get {referralInfo.perReferralRewardReferrer || 100} Woosh Coins
+        {/* Saved addresses & subscriptions */}
+        <View style={styles.menuListCard}>
+          <TouchableOpacity
+            style={styles.menuListRow}
+            activeOpacity={0.8}
+            onPress={() => navigation.navigate('Addresses')}
+          >
+            <MaterialCommunityIcons name="map-marker-outline" size={22} color={theme.textSecondary} />
+            <Text style={styles.menuListLabel}>Saved Addresses</Text>
+            <MaterialCommunityIcons name="chevron-right" size={22} color={theme.textPrimary} />
+          </TouchableOpacity>
+          <View style={styles.menuListDivider} />
+          <TouchableOpacity
+            style={styles.menuListRow}
+            activeOpacity={0.8}
+            onPress={() => navigation.navigate('MySubscriptions')}
+          >
+            <MaterialCommunityIcons name="calendar-month-outline" size={22} color={theme.textSecondary} />
+            <Text style={styles.menuListLabel}>My Subscriptions</Text>
+            <MaterialCommunityIcons name="chevron-right" size={22} color={theme.textPrimary} />
+          </TouchableOpacity>
+        </View>
+
+        {/* Refer & Earn — same layout as Home */}
+        <View style={styles.homeReferralSection}>
+          <View style={styles.homeReferralBanner}>
+            <View style={styles.homeReferralLeft}>
+              <View style={styles.homeReferralTitleWrap}>
+                <MaterialCommunityIcons name="gift-outline" size={18} color={theme.accent} />
+                <Text style={styles.homeReferralTitle}>Refer &amp; Earn</Text>
+              </View>
+              <Text style={styles.homeReferralSubtitle}>
+                Invite friends and both of you get {referralInfo.perReferralRewardReferred || 100} Woosh Coins in wallet.
+              </Text>
+              <View style={styles.homeReferralCodeChip}>
+                <Text style={styles.homeReferralCodeChipLabel}>Code</Text>
+                <Text style={styles.homeReferralCodeChipValue}>{referralInfo.code || 'COMINGSOON'}</Text>
+              </View>
+              <Text style={styles.homeReferralStats}>
+                {referralInfo.totalReferrals} joined  |  {referralInfo.totalEarnings} Woosh Coins earned
               </Text>
             </View>
-          </View>
-          <View style={styles.referralCard}>
-            <Text style={styles.referralSubtitle}>
-              Invite friends and you both get {referralInfo.perReferralRewardReferred || 100} Woosh Coins in wallet on their first order.
-            </Text>
-            <View style={styles.referralRow}>
-              <View>
-                <Text style={styles.referralLabel}>Your code</Text>
-                <Text style={styles.referralCode}>
-                  {referralInfo.code || 'Coming soon'}
-                </Text>
+            <View style={styles.homeReferralRight}>
+              <View style={styles.homeReferralIconWrap}>
+                <MaterialCommunityIcons name="gift" size={24} color={theme.accent} />
               </View>
-            </View>
-            <TouchableOpacity
-              style={styles.referralShareButton}
-              activeOpacity={0.8}
-              onPress={() => {
-                const codeText = referralInfo.code || 'your Woosh referral code';
-                Share.share({
-                  message: `Use my Woosh referral code ${codeText} and you and I both get ${referralInfo.perReferralRewardReferred || 100} Woosh Coins in wallet on your first order!`,
-                }).catch(() => {});
-              }}
-            >
-              <MaterialCommunityIcons name="share-variant" size={18} color={theme.onAccent} />
-              <Text style={styles.referralShareText}>Share Invite Link</Text>
-            </TouchableOpacity>
-            <Text style={styles.referralStatsText}>
-              Friends joined: {referralInfo.totalReferrals} · Rewards earned: {referralInfo.totalEarnings} Woosh Coins
-            </Text>
-          </View>
-        </View>
-
-        {/* Personal Information Section */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <MaterialCommunityIcons name="account-circle" size={24} color={theme.accent} />
-            <Text style={styles.sectionTitle}>Personal Information</Text>
-          </View>
-          
-          {/* Name */}
-          <TouchableOpacity style={styles.infoCard} activeOpacity={0.7}>
-            <View style={styles.infoContent}>
-              <MaterialCommunityIcons name="account" size={20} color={theme.textSecondary} />
-              <View style={styles.infoTextContainer}>
-                <Text style={styles.infoLabel}>Name</Text>
-                <Text style={styles.infoValue}>{userData.name}</Text>
-              </View>
-            </View>
-            <MaterialCommunityIcons name="chevron-right" size={24} color={theme.textSecondary} />
-          </TouchableOpacity>
-
-          {/* Phone */}
-          <TouchableOpacity style={styles.infoCard} activeOpacity={0.7}>
-            <View style={styles.infoContent}>
-              <MaterialCommunityIcons name="phone" size={20} color={theme.textSecondary} />
-              <View style={styles.infoTextContainer}>
-                <Text style={styles.infoLabel}>Phone</Text>
-                <Text style={styles.infoValue}>{userData.phone ? `+91 ${userData.phone}` : '-'}</Text>
-              </View>
-            </View>
-            <MaterialCommunityIcons name="chevron-right" size={24} color={theme.textSecondary} />
-          </TouchableOpacity>
-        </View>
-
-        {/* Addresses Section */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <MaterialCommunityIcons name="map-marker" size={24} color={theme.accent} />
-            <Text style={styles.sectionTitle}>Addresses</Text>
-            <TouchableOpacity 
-              style={styles.addButton}
-              onPress={() => navigation.navigate('Addresses')}
-            >
-              <MaterialCommunityIcons name="plus" size={20} color={theme.accent} />
-            </TouchableOpacity>
-          </View>
-          
-          {userData.addresses.length === 0 ? (
-            <Text style={styles.emptyText}>No saved addresses yet.</Text>
-          ) : (
-            userData.addresses.map((address) => (
-              <TouchableOpacity key={address.id} style={styles.addressCard} activeOpacity={0.7}>
-                <View style={styles.addressHeader}>
-                  <View style={styles.addressTypeBadge}>
-                    <MaterialCommunityIcons 
-                      name={address.type === 'Home' ? 'home' : 'briefcase'} 
-                      size={16} 
-                      color={theme.accent} 
-                    />
-                    <Text style={styles.addressTypeText}>{address.type}</Text>
-                    {address.isDefault && (
-                      <View style={styles.defaultBadge}>
-                        <Text style={styles.defaultBadgeText}>Default</Text>
-                      </View>
-                    )}
-                  </View>
-                  <TouchableOpacity>
-                    <MaterialCommunityIcons name="pencil" size={18} color={theme.textSecondary} />
-                  </TouchableOpacity>
-                </View>
-                <Text style={styles.addressText}>{address.address}</Text>
-                <Text style={styles.addressCity}>{address.city} - {address.pincode}</Text>
+              <TouchableOpacity
+                style={styles.homeReferralShareBtn}
+                activeOpacity={0.85}
+                onPress={() => {
+                  const codeText = referralInfo.code || 'your Woosh referral code';
+                  Share.share({
+                    message: `Use my Woosh referral code ${codeText} and we both get ${referralInfo.perReferralRewardReferred || 100} Woosh Coins in wallet on your first order!`,
+                  }).catch(() => {});
+                }}
+              >
+                <MaterialCommunityIcons name="share-variant" size={16} color={theme.onAccent} />
+                <Text style={styles.homeReferralShareText}>Invite</Text>
               </TouchableOpacity>
-            ))
-          )}
-        </View>
-
-        {/* My Vehicle Section */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <MaterialCommunityIcons name="car" size={24} color={theme.accent} />
-            <Text style={styles.sectionTitle}>My Vehicle</Text>
-            {vehicleCount > 0 && (
-              <View style={styles.vehicleCountBadge}>
-                <Text style={styles.vehicleCountText}>
-                  {vehicleCount} {vehicleCount === 1 ? 'Vehicle' : 'Vehicles'}
-                </Text>
-              </View>
-            )}
-            <TouchableOpacity style={styles.addButton} onPress={() => navigation.navigate('SelectVehicle')}>
-              <MaterialCommunityIcons name="pencil" size={20} color={theme.accent} />
-            </TouchableOpacity>
-          </View>
-          <View style={styles.vehicleCard}>
-            <View style={styles.vehicleHeader}>
-              <View style={styles.vehicleIconContainer}>
-                <MaterialCommunityIcons name="car" size={32} color={theme.accent} />
-              </View>
-              <View style={styles.vehicleInfo}>
-                <View style={styles.vehicleTitleRow}>
-                  <Text style={styles.vehicleName}>
-                    {vehicleType ? `${vehicleType}` : 'Vehicle not set'}
-                  </Text>
-                </View>
-                <Text style={styles.vehicleDetails}>
-                  {vehicleModel || 'Add your vehicle model'}
-                </Text>
-              </View>
             </View>
-            <TouchableOpacity
-              style={styles.saveVehicleButton}
-              onPress={() => navigation.navigate('SelectVehicle')}
-            >
-              <Text style={styles.saveVehicleText}>Edit Vehicle</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.viewVehiclesButton}
-              onPress={() => setShowVehiclesModal(true)}
-            >
-              <Text style={styles.viewVehiclesText}>View All Vehicles</Text>
-            </TouchableOpacity>
           </View>
         </View>
 
@@ -488,25 +347,7 @@ export default function ProfileScreen({ navigation }) {
           </View>
         </View>
 
-        {/* Help & Support */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <MaterialCommunityIcons name="lifebuoy" size={24} color={theme.accent} />
-            <Text style={styles.sectionTitle}>Help &amp; Support</Text>
-          </View>
-          <TouchableOpacity style={styles.infoCard} activeOpacity={0.8} onPress={handleWhatsAppHelp}>
-            <View style={styles.infoContent}>
-              <MaterialCommunityIcons name="whatsapp" size={20} color="#25D366" />
-              <View style={styles.infoTextContainer}>
-                <Text style={styles.infoLabel}>Need help?</Text>
-                <Text style={styles.infoValue}>Chat with us on WhatsApp</Text>
-              </View>
-            </View>
-            <MaterialCommunityIcons name="chevron-right" size={24} color={theme.textSecondary} />
-          </TouchableOpacity>
-        </View>
-
-        {/* Logout Button */}
+        {/* Logout */}
         <View style={styles.logoutSection}>
           <TouchableOpacity 
             style={styles.logoutButton}
@@ -540,9 +381,9 @@ export default function ProfileScreen({ navigation }) {
             }}
             activeOpacity={0.8}
           >
-            <MaterialCommunityIcons name="logout" size={20} color={theme.danger} />
-            <Text style={styles.logoutButtonText}>Logout</Text>
+            <Text style={styles.logoutButtonText}>Log Out</Text>
           </TouchableOpacity>
+          <Text style={styles.versionText}>App Version {appVersion}</Text>
         </View>
       </ScrollView>
       <SavedVehiclesModal
@@ -554,7 +395,7 @@ export default function ProfileScreen({ navigation }) {
   );
 }
 
-const createStyles = theme => StyleSheet.create({
+const createStyles = (theme, isLightMode) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: theme.background,
@@ -571,10 +412,6 @@ const createStyles = theme => StyleSheet.create({
     marginBottom: 32,
     paddingTop: 20,
   },
-  avatarContainer: {
-    position: 'relative',
-    marginBottom: 16,
-  },
   avatar: {
     width: 100,
     height: 100,
@@ -584,19 +421,7 @@ const createStyles = theme => StyleSheet.create({
     justifyContent: 'center',
     borderWidth: 3,
     borderColor: theme.accent,
-  },
-  editAvatarButton: {
-    position: 'absolute',
-    bottom: 0,
-    right: 0,
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: theme.accent,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 3,
-    borderColor: theme.background,
+    marginBottom: 16,
   },
   userName: {
     fontSize: 24,
@@ -607,6 +432,55 @@ const createStyles = theme => StyleSheet.create({
   userEmail: {
     fontSize: 14,
     color: theme.textSecondary,
+  },
+  quickGridRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+  },
+  gridCard: {
+    aspectRatio: 1,
+    backgroundColor: isLightMode ? '#FFFFFF' : theme.cardBackground,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: theme.cardBorder,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 6,
+    gap: 10,
+  },
+  gridCardLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: theme.textPrimary,
+    textAlign: 'center',
+    lineHeight: 14,
+  },
+  menuListCard: {
+    backgroundColor: isLightMode ? '#FFFFFF' : theme.cardBackground,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: theme.cardBorder,
+    marginBottom: 24,
+    overflow: 'hidden',
+  },
+  menuListRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 16,
+    paddingHorizontal: 16,
+    gap: 12,
+  },
+  menuListLabel: {
+    flex: 1,
+    fontSize: 15,
+    fontWeight: '600',
+    color: theme.textPrimary,
+  },
+  menuListDivider: {
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: theme.cardBorder,
+    marginHorizontal: 16,
   },
   section: {
     marginBottom: 32,
@@ -889,95 +763,94 @@ const createStyles = theme => StyleSheet.create({
     fontWeight: '600',
     color: theme.accent,
   },
-  referralCard: {
+  homeReferralSection: {
+    marginBottom: 24,
+  },
+  homeReferralBanner: {
     backgroundColor: theme.cardBackground,
-    borderRadius: 16,
-    padding: 16,
+    borderRadius: 18,
     borderWidth: 1,
     borderColor: theme.cardBorder,
-  },
-  membershipCard: {
-    backgroundColor: wooshGreen.soft,
-    borderRadius: 16,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: wooshGreen.softBorder,
-  },
-  membershipTitle: {
-    fontSize: 17,
-    fontWeight: '800',
-    color: wooshGreen.deep,
-    marginBottom: 8,
-  },
-  membershipLine: {
-    fontSize: 14,
-    lineHeight: 20,
-    color: theme.textSecondary,
-    marginBottom: 8,
-  },
-  membershipPriceHint: {
-    fontSize: 13,
-    lineHeight: 19,
-    color: wooshGreen.medium,
-    fontWeight: '600',
-    marginBottom: 8,
-  },
-  membershipSub: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: theme.textPrimary,
-  },
-  referralSubtitle: {
-    fontSize: 13,
-    color: theme.textSecondary,
-    marginBottom: 12,
-  },
-  referralRow: {
+    padding: 14,
     flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  homeReferralLeft: {
+    flex: 1,
+  },
+  homeReferralRight: {
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 12,
+    minHeight: 118,
+    paddingVertical: 2,
   },
-  referralLabel: {
-    fontSize: 12,
-    color: theme.textSecondary,
-    marginBottom: 4,
-  },
-  referralCode: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: theme.textPrimary,
-  },
-  referralShareButton: {
-    marginTop: 4,
-    backgroundColor: theme.accent,
-    borderRadius: 12,
-    paddingVertical: 10,
+  homeReferralIconWrap: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: theme.accentSoft,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  homeReferralTitleWrap: {
     flexDirection: 'row',
-    gap: 8,
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 4,
   },
-  referralShareText: {
-    color: theme.onAccent,
-    fontWeight: '600',
-    fontSize: 14,
+  homeReferralTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: theme.textPrimary,
   },
-  referralStatsText: {
-    marginTop: 10,
+  homeReferralSubtitle: {
     fontSize: 12,
     color: theme.textSecondary,
+    lineHeight: 17,
+    marginBottom: 8,
   },
-  referralBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
+  homeReferralCodeChip: {
     backgroundColor: theme.accentSoft,
+    borderRadius: 999,
+    alignSelf: 'flex-start',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    marginBottom: 7,
   },
-  referralBadgeText: {
-    fontSize: 12,
-    fontWeight: '600',
+  homeReferralCodeChipLabel: {
+    fontSize: 11,
+    fontWeight: '700',
     color: theme.accent,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  homeReferralCodeChipValue: {
+    fontSize: 12,
+    fontWeight: '900',
+    color: theme.textPrimary,
+    letterSpacing: 0.5,
+  },
+  homeReferralStats: {
+    fontSize: 11,
+    color: theme.textSecondary,
+  },
+  homeReferralShareBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: theme.accent,
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  homeReferralShareText: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: theme.onAccent,
   },
   settingCard: {
     backgroundColor: theme.cardBackground,
@@ -1004,23 +877,29 @@ const createStyles = theme => StyleSheet.create({
     color: theme.textSecondary,
   },
   logoutSection: {
-    marginTop: 32,
-    marginBottom: 32,
+    marginTop: 8,
+    marginBottom: 24,
+    alignItems: 'center',
   },
   logoutButton: {
-    flexDirection: 'row',
+    alignSelf: 'stretch',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: theme.dangerSoft,
+    backgroundColor: isLightMode ? '#FFFFFF' : theme.cardBackground,
     borderRadius: 12,
-    paddingVertical: 16,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 82, 82, 0.3)',
-    gap: 12,
+    paddingVertical: 14,
+    borderWidth: 1.5,
+    borderColor: theme.textPrimary,
   },
   logoutButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: theme.danger,
+    fontSize: 15,
+    fontWeight: '800',
+    color: theme.textPrimary,
+  },
+  versionText: {
+    marginTop: 12,
+    fontSize: 12,
+    color: theme.textSecondary,
+    textAlign: 'center',
   },
 });

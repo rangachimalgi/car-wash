@@ -23,6 +23,7 @@ import ModelSelectionScreen from '../screens/ModelSelectionScreen';
 import PaymentMethodsScreen from '../screens/PaymentMethodsScreen';
 import PackageDetailsScreen from '../screens/PackageDetailsScreen';
 import PackagesScreen from '../screens/PackagesScreen';
+import MySubscriptionsScreen from '../screens/MySubscriptionsScreen';
 import OrderUpsellScreen from '../screens/OrderUpsellScreen';
 
 const Stack = createStackNavigator();
@@ -174,6 +175,11 @@ export default function HeaderNavigator() {
       <Stack.Screen
         name="Packages"
         component={PackagesScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="MySubscriptions"
+        component={MySubscriptionsScreen}
         options={{ headerShown: false }}
       />
       <Stack.Screen
