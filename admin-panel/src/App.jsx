@@ -71,6 +71,7 @@ function App() {
     basePrice: '',
     duration: '30 mins',
     image: '',
+    panelImage: '',
     listPrice: '',
     membershipDurationMonths: '12',
     membershipDiscountPercent: '20',
@@ -128,6 +129,7 @@ function App() {
   const [editingServiceId, setEditingServiceId] = useState(null) // Track which service is being edited
   const [servicesError, setServicesError] = useState('')
   const [uploadingMainImage, setUploadingMainImage] = useState(false)
+  const [uploadingPanelImage, setUploadingPanelImage] = useState(false)
   const [uploadingPackageImage, setUploadingPackageImage] = useState(false)
   const [authToken, setAuthToken] = useState(() => localStorage.getItem('adminAuthToken') || '')
   
@@ -1982,6 +1984,26 @@ function App() {
     }
   }
 
+  const handlePanelImageUpload = async (e) => {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file) return
+    setUploadingPanelImage(true)
+    try {
+      const [uploadedUrl] = await uploadServiceImageFiles([file])
+      setFormData((prev) => ({ ...prev, panelImage: uploadedUrl || '' }))
+      setMessage({ type: 'success', text: 'Panel image uploaded' })
+    } catch (error) {
+      setMessage({ type: 'error', text: error.message || 'Failed to upload panel image' })
+    } finally {
+      setUploadingPanelImage(false)
+    }
+  }
+
+  const handleClearPanelImage = () => {
+    setFormData((prev) => ({ ...prev, panelImage: '' }))
+  }
+
   const handlePackageImageUpload = async (e) => {
     const file = e.target.files?.[0]
     e.target.value = ''
@@ -2165,6 +2187,7 @@ function App() {
           basePrice: String(service.basePrice || ''),
           duration: service.duration || '30 mins',
           image: service.image || '',
+          panelImage: service.panelImage || '',
           listPrice: String(service.listPrice ?? ''),
           membershipDurationMonths: String(service.membershipDurationMonths ?? '12'),
           membershipDiscountPercent: String(service.membershipDiscountPercent ?? '0'),
@@ -2216,6 +2239,7 @@ function App() {
       basePrice: '',
       duration: serviceFilter === 'membership' ? '' : '30 mins',
       image: '',
+      panelImage: '',
       listPrice: '',
       membershipDurationMonths: '12',
       membershipDiscountPercent: '20',
@@ -2273,6 +2297,7 @@ function App() {
           basePrice: parseFloat(formData.basePrice),
           duration: (formData.duration || '').trim(),
           image: formData.image,
+          panelImage: formData.panelImage || '',
           images: [],
           specifications: { coverage: [], notIncluded: [] },
           addOnServices: [],
@@ -2305,6 +2330,7 @@ function App() {
           basePrice: parseFloat(formData.basePrice),
           duration: formData.duration,
           image: formData.image,
+          panelImage: formData.panelImage || '',
           images: [],
           specifications: {
             coverage: coverage,
@@ -3410,6 +3436,9 @@ function App() {
 
               <div className="form-group">
                 <label>Main Image</label>
+                <small className="help-text" style={{ display: 'block', marginBottom: 8 }}>
+                  Collapsed card photo on Car / Bike / Auto wash screens.
+                </small>
                 <div className="service-upload-row">
                   <label className="service-upload-button">
                     <input type="file" accept="image/*" onChange={handleMainImageUpload} disabled={uploadingMainImage} />
@@ -3417,8 +3446,44 @@ function App() {
                   </label>
                   {formData.image ? <span className="service-upload-status">Uploaded</span> : <span className="service-upload-status muted">No image</span>}
                 </div>
-                {formData.image ? <small className="help-text">{formData.image}</small> : null}
+                {formData.image ? (
+                  <div className="package-image-preview-wrap">
+                    <img src={resolveUploadOrAbsoluteUrl(formData.image)} alt="" className="package-image-preview" />
+                    <small className="help-text">{formData.image}</small>
+                  </div>
+                ) : null}
               </div>
+
+              {(formData.category === 'CarWash' || formData.category === 'BikeWash' || formData.category === 'AutoWash') && (
+                <div className="form-group">
+                  <label>Panel Image (expanded card)</label>
+                  <small className="help-text" style={{ display: 'block', marginBottom: 8 }}>
+                    Tall image beside Add Services when the customer expands the service card.
+                  </small>
+                  <div className="service-upload-row">
+                    <label className="service-upload-button">
+                      <input type="file" accept="image/*" onChange={handlePanelImageUpload} disabled={uploadingPanelImage} />
+                      {uploadingPanelImage ? 'Uploading...' : 'Upload Panel Image'}
+                    </label>
+                    {formData.panelImage ? (
+                      <span className="service-upload-status">Uploaded</span>
+                    ) : (
+                      <span className="service-upload-status muted">No image</span>
+                    )}
+                  </div>
+                  {formData.panelImage ? (
+                    <>
+                      <div className="package-image-preview-wrap">
+                        <img src={resolveUploadOrAbsoluteUrl(formData.panelImage)} alt="" className="package-image-preview" />
+                        <small className="help-text">{formData.panelImage}</small>
+                      </div>
+                      <button type="button" className="secondary-button" onClick={handleClearPanelImage} style={{ marginTop: 8 }}>
+                        Clear panel image
+                      </button>
+                    </>
+                  ) : null}
+                </div>
+              )}
 
               {(formData.category === 'CarWash' || formData.category === 'BikeWash' || formData.category === 'AutoWash') && (
                 <div className="form-group service-coverage-group">

@@ -68,10 +68,15 @@ export default function ServiceAccordionCard({
   const service = serviceDetails || serviceSummary || {};
   const title = toTitleCase(serviceSummary?.name || service?.name);
   const durationLabel = normalizeDuration(service?.duration);
-  const resolvedMainImage =
-    resolveAssetUrl(service?.image || serviceSummary?.image || '') ||
+  const serviceImageFromApi = resolveAssetUrl(service?.image || serviceSummary?.image || '');
+  const hasServiceImage = Boolean(serviceImageFromApi);
+  const panelImageFromApi = resolveAssetUrl(
+    service?.panelImage || serviceSummary?.panelImage || ''
+  );
+  const hasPanelImage = Boolean(panelImageFromApi);
+  const imageUri =
+    serviceImageFromApi ||
     'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=800&h=600&fit=crop&auto=format';
-  const imageUri = resolvedMainImage;
 
   const addOnServices =
     (service?.addOnServices || []).map((addon) => ({
@@ -211,9 +216,9 @@ export default function ServiceAccordionCard({
               {!imageError ? (
                 <Image
                   source={
-                    fallbackImageSource && !service?.image && !serviceSummary?.image
-                      ? fallbackImageSource
-                      : { uri: imageUri }
+                    hasServiceImage
+                      ? { uri: serviceImageFromApi }
+                      : fallbackImageSource || { uri: imageUri }
                   }
                   style={styles.serviceImage}
                   resizeMode="cover"
@@ -294,6 +299,8 @@ export default function ServiceAccordionCard({
                 buttonVariant="plus"
                 containerStyle={styles.addOnsInline}
                 fallbackImageSource={fallbackImageSource}
+                serviceImageUri={hasPanelImage ? panelImageFromApi : null}
+                serviceImageSource={!hasPanelImage ? fallbackImageSource : null}
               />
 
               <View style={styles.sectionRule} />

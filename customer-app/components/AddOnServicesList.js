@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import AddOnServiceItem from './AddOnServiceItem';
@@ -12,6 +12,10 @@ export default function AddOnServicesList({
   buttonVariant = 'text',
   containerStyle,
   fallbackImageSource,
+  /** Main wash service image from admin (R2 / uploads URL). */
+  serviceImageUri = null,
+  /** Local fallback when the service has no admin image. */
+  serviceImageSource = null,
 }) {
   const [showAll, setShowAll] = useState(false);
   const [imageError, setImageError] = useState(false);
@@ -20,11 +24,22 @@ export default function AddOnServicesList({
   
   const visibleServices = showAll ? services : services.slice(0, maxVisible);
   const remainingCount = services.length - maxVisible;
-  
-  // Get image from first service or fallback
-  const displayImage = services.length > 0 
-    ? (services[0].imageUri || (services[0].imageSource ? services[0].imageSource : null))
-    : (fallbackImageSource || null);
+
+  const displayImage = (() => {
+    const uri = String(serviceImageUri || '').trim();
+    if (uri) return uri;
+    if (serviceImageSource) return serviceImageSource;
+    if (services.length > 0) {
+      const first = services[0];
+      if (first.imageUri) return first.imageUri;
+      if (first.imageSource) return first.imageSource;
+    }
+    return fallbackImageSource || null;
+  })();
+
+  useEffect(() => {
+    setImageError(false);
+  }, [displayImage]);
 
   return (
     <View style={[styles.container, containerStyle]}>

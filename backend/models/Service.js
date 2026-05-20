@@ -42,6 +42,11 @@ const serviceSchema = new mongoose.Schema({
     type: String,
     default: '',
   },
+  /** Tall image beside add-ons when the wash card is expanded (customer app). */
+  panelImage: {
+    type: String,
+    default: '',
+  },
   images: {
     type: [String],
     default: [],
