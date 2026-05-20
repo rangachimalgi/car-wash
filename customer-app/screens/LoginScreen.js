@@ -1,5 +1,6 @@
 import React, { useMemo, useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, Alert, Image, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, Alert, Dimensions } from 'react-native';
+import { Image } from 'expo-image';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -12,6 +13,7 @@ import { getMedia } from '../config/api';
 const { width } = Dimensions.get('window');
 const OTP_LENGTH = 6;
 const DEFAULT_LOGIN_BANNER = require('../assets/carpicfour.jpeg');
+const LOGIN_BANNER_CACHE_KEY = 'cachedLoginBannerUri';
 
 export default function LoginScreen({ navigation }) {
   const insets = useSafeAreaInsets();
@@ -25,22 +27,53 @@ export default function LoginScreen({ navigation }) {
   const [errors, setErrors] = useState({});
   const [resendTimer, setResendTimer] = useState(60);
   const [canResend, setCanResend] = useState(false);
-  const [loginBannerUri, setLoginBannerUri] = useState('');
+  const [loginBannerUri, setLoginBannerUri] = useState(null);
+  const [loginBannerFetchDone, setLoginBannerFetchDone] = useState(false);
   const [loginBannerFailed, setLoginBannerFailed] = useState(false);
   const otpInputRefs = useRef([]);
+
+  const showRemoteBanner = Boolean(loginBannerUri && !loginBannerFailed);
+  const showFallbackBanner = loginBannerFetchDone && !showRemoteBanner;
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
+      let hadCachedUri = false;
+      try {
+        const cached = await AsyncStorage.getItem(LOGIN_BANNER_CACHE_KEY);
+        const cachedUri = cached?.trim() || '';
+        if (!cancelled && cachedUri) {
+          hadCachedUri = true;
+          setLoginBannerUri(cachedUri);
+          setLoginBannerFailed(false);
+          Image.prefetch(cachedUri, { cachePolicy: 'memory-disk' }).catch(() => {});
+        }
+      } catch (_) {
+        /* ignore cache read errors */
+      }
+
       try {
         const data = await getMedia();
         const first = (data.loginBanner || []).find((m) => m?.url && String(m.url).trim());
-        if (!cancelled && first?.url) {
-          setLoginBannerUri(String(first.url).trim());
-          setLoginBannerFailed(false);
+        const remoteUri = first?.url ? String(first.url).trim() : '';
+        if (!cancelled) {
+          if (remoteUri) {
+            setLoginBannerUri(remoteUri);
+            setLoginBannerFailed(false);
+            AsyncStorage.setItem(LOGIN_BANNER_CACHE_KEY, remoteUri).catch(() => {});
+            Image.prefetch(remoteUri, { cachePolicy: 'memory-disk' }).catch(() => {});
+          } else if (!hadCachedUri) {
+            setLoginBannerUri('');
+          }
         }
       } catch (_) {
-        /* keep bundled banner */
+        if (!cancelled && !hadCachedUri) {
+          setLoginBannerUri('');
+        }
+      } finally {
+        if (!cancelled) {
+          setLoginBannerFetchDone(true);
+        }
       }
     })();
     return () => {
@@ -206,17 +239,24 @@ export default function LoginScreen({ navigation }) {
           <>
             {/* Banner Section with Image */}
             <View style={styles.bannerContainer}>
-              <Image
-                source={
-                  loginBannerUri && !loginBannerFailed
-                    ? { uri: loginBannerUri }
-                    : DEFAULT_LOGIN_BANNER
-                }
-                style={styles.bannerImage}
-                resizeMode="cover"
-                onError={() => setLoginBannerFailed(true)}
-              />
-              
+              {showRemoteBanner ? (
+                <Image
+                  source={{ uri: loginBannerUri }}
+                  style={styles.bannerImage}
+                  contentFit="cover"
+                  cachePolicy="memory-disk"
+                  transition={200}
+                  onError={() => setLoginBannerFailed(true)}
+                />
+              ) : showFallbackBanner ? (
+                <Image
+                  source={DEFAULT_LOGIN_BANNER}
+                  style={styles.bannerImage}
+                  contentFit="cover"
+                />
+              ) : (
+                <View style={styles.bannerPlaceholder} />
+              )}
             </View>
 
             {/* App Description */}
@@ -404,14 +444,19 @@ const createStyles = theme => StyleSheet.create({
   },
   bannerContainer: {
     width: width,
-    height: width * 0.85,
-    position: 'relative',
+    height: width * 0.72,
+    overflow: 'hidden',
     marginBottom: 32,
+    backgroundColor: theme.background,
   },
   bannerImage: {
     width: '100%',
     height: '100%',
-    resizeMode: 'contain', 
+  },
+  bannerPlaceholder: {
+    width: '100%',
+    height: '100%',
+    backgroundColor: theme.background,
   },
   bannerOverlay: {
     position: 'absolute',
