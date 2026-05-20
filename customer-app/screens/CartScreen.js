@@ -4,7 +4,6 @@ import { StatusBar } from 'expo-status-bar';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import BackHeader from '../components/BackHeader';
 import AddOnCard from '../components/AddOnCard';
-import MonthlyPackageCard from '../components/MonthlyPackageCard';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTheme } from '../theme/ThemeContext';
 import { wooshGreen } from '../theme/wooshGreen';
@@ -371,48 +370,6 @@ export default function CartScreen({ navigation, route }) {
     }));
   };
 
-  const handlePackageSelectionChange = (item, packageData) => {
-    if (!item?.id || !item?.serviceId) return;
-
-    const serviceDetails = serviceDetailsById?.[item.serviceId];
-    const serviceName = getServiceName(item);
-    const addOns = Array.isArray(item.addOns) ? item.addOns : [];
-    const addOnsTotal = getAddOnsTotal(item);
-
-    const nextPackageType = packageData.type || 'OneTime';
-    const nextPackageTimes = Number(packageData.times || 1);
-    const nextBasePrice = packageData.type === 'OneTime'
-      ? Number(serviceDetails?.basePrice ?? getBasePrice(item))
-      : Math.round(Number(packageData.price ?? (serviceDetails?.basePrice || 0) * nextPackageTimes));
-
-    const nextTitle = nextPackageType === 'OneTime'
-      ? `${serviceName} - 1 Time Wash`
-      : `${serviceName} - ${nextPackageType} (${nextPackageTimes}x/month)`;
-
-    const updatedItem = {
-      ...item,
-      serviceName,
-      title: nextTitle,
-      packageType: nextPackageType,
-      packageTimes: nextPackageTimes,
-      basePrice: nextBasePrice,
-      addOns,
-      price: Math.round(nextBasePrice + addOnsTotal),
-      selectedDate: undefined,
-      selectedTimeSlot: undefined,
-      scheduledSlots: undefined,
-      startDate: undefined,
-      startTimeSlot: undefined,
-    };
-
-    setCartItems(prev => prev.map(ci => (ci.id === item.id ? updatedItem : ci)));
-
-    navigation.navigate('SlotSelection', {
-      pendingItem: updatedItem,
-      editingItemId: item.id,
-    });
-  };
-
   const isScheduleComplete = (item) => {
     if (item?.packageType === 'Membership') return true;
     const type = item?.packageType || 'OneTime';
@@ -441,14 +398,6 @@ export default function CartScreen({ navigation, route }) {
     setExpandedServiceId(prev => prev === itemId ? null : itemId);
   };
 
-  const getMonthlyPackages = (serviceId) => {
-    const s = serviceDetailsById?.[serviceId];
-    if (!s?.packages?.monthly) return [];
-    return s.packages.monthly.map((pkg, index) => ({
-      id: `m${index + 1}`,
-      ...pkg,
-    }));
-  };
   const serviceDetails = currentItem ? serviceDetailsById?.[currentItem.serviceId] : null;
 
   // Filter vehicles based on service category
@@ -541,10 +490,7 @@ export default function CartScreen({ navigation, route }) {
   };
   const mappedAddOns = currentItem ? getMappedAddOns(currentItem.serviceId) : [];
   const selectedAddOnIds = currentItem ? (currentItem?.addOns || []).map(a => a?._id || a).filter(Boolean) : [];
-  const monthlyPackages = currentItem ? getMonthlyPackages(currentItem.serviceId) : [];
-  const oneTimePrice = currentItem ? Number(serviceDetails?.basePrice ?? getBasePrice(currentItem) ?? 0) : 0;
   const currentPackageType = currentItem?.packageType || 'OneTime';
-  const currentPackageTimes = currentItem?.packageTimes || 1;
 
   const subtotal = cartItems.reduce((sum, item) => sum + Number(item.price || 0) * Number(item.quantity || 1), 0);
   const tax = subtotal * 0.18;
@@ -585,43 +531,46 @@ export default function CartScreen({ navigation, route }) {
           </View>
         ) : (
           <>
-            {currentItem && monthlyPackages.length > 0 && (
-              <View style={styles.packagesCard}>
-                <View style={styles.packagesHeader}>
-                  <Text style={styles.packagesTitle}>Monthly packages</Text>
-                  <Text style={styles.packagesSubtitle}>Save more with a plan</Text>
-                </View>
-                <FlatList
-                  data={monthlyPackages}
-                  horizontal
-                  showsHorizontalScrollIndicator={false}
-                  keyExtractor={(item) => item.id}
-                  renderItem={({ item }) => {
-                    const isSelected =
-                      currentPackageType === 'Monthly' && currentPackageTimes === item.times;
-                    return (
-                      <MonthlyPackageCard
-                        title={`${item.times}x wash / month`}
-                        price={item.price}
-                        perWashPrice={item.perWash}
-                        times={item.times}
-                        discount={item.discount}
-                        packageId={item.id}
-                        isSelected={isSelected}
-                        onSelect={() =>
-                          handlePackageSelectionChange(currentItem, {
-                            type: 'Monthly',
-                            times: item.times,
-                            price: item.price,
-                          })
-                        }
-                      />
-                    );
-                  }}
-                  contentContainerStyle={styles.packagesList}
-                />
+            <View style={styles.promoSection}>
+              <Text style={styles.promoSectionTitle}>Explore more services</Text>
+              <View style={styles.promoRow}>
+                <TouchableOpacity
+                  style={styles.promoHalfCard}
+                  onPress={() => navigation.navigate('Packages')}
+                  activeOpacity={0.9}
+                  accessibilityRole="button"
+                  accessibilityLabel="Monthly packages"
+                >
+                  <Text style={styles.promoCardTitle}>Monthly Packages</Text>
+                  <Text style={styles.promoCardSubtitle}>Save with a wash plan</Text>
+                  <View style={styles.promoCardImageWrap}>
+                    <Image
+                      source={require('../assets/carpicnine.png')}
+                      style={styles.promoCardImage}
+                      resizeMode="contain"
+                    />
+                  </View>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={styles.promoHalfCard}
+                  onPress={() => navigation.navigate('PackageDetails')}
+                  activeOpacity={0.9}
+                  accessibilityRole="button"
+                  accessibilityLabel="Daily cleaning services"
+                >
+                  <Text style={styles.promoCardTitle}>Daily Cleaning</Text>
+                  <Text style={styles.promoCardSubtitle}>Interior, exterior & daily care</Text>
+                  <View style={styles.promoCardImageWrap}>
+                    <Image
+                      source={require('../assets/dailyService.png')}
+                      style={styles.promoDailyImage}
+                      resizeMode="contain"
+                    />
+                  </View>
+                </TouchableOpacity>
               </View>
-            )}
+            </View>
 
             {/* Vehicle */}
             {(() => {
@@ -1186,32 +1135,56 @@ const createStyles = theme => StyleSheet.create({
   addOnsList: {
     paddingRight: 16,
   },
-  packagesCard: {
+  promoSection: {
     marginHorizontal: 16,
     marginTop: 12,
-    padding: 14,
-    backgroundColor: '#F8F9FA',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#EEEEEE',
   },
-  packagesHeader: {
-    marginBottom: 12,
-  },
-  packagesTitle: {
+  promoSectionTitle: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#000000',
+    color: theme.textPrimary,
+    marginBottom: 10,
   },
-  packagesSubtitle: {
-    marginTop: 2,
-    fontSize: 12,
-    fontWeight: '500',
-    color: '#666666',
+  promoRow: {
+    flexDirection: 'row',
+    gap: 12,
   },
-  packagesList: {
-    paddingRight: 4,
-    gap: 10,
+  promoHalfCard: {
+    flex: 1,
+    backgroundColor: theme.cardBackground,
+    borderRadius: 16,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: theme.cardBorder,
+    overflow: 'hidden',
+    minHeight: 168,
+  },
+  promoCardTitle: {
+    fontSize: 15,
+    fontWeight: '900',
+    color: theme.textPrimary,
+    letterSpacing: 0.2,
+  },
+  promoCardSubtitle: {
+    marginTop: 4,
+    fontSize: 11,
+    fontWeight: '600',
+    color: theme.textSecondary,
+    lineHeight: 15,
+  },
+  promoCardImageWrap: {
+    flex: 1,
+    marginTop: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  promoCardImage: {
+    width: '115%',
+    height: 88,
+  },
+  promoDailyImage: {
+    width: '100%',
+    height: 72,
   },
   bottomBar: {
     position: 'absolute',
