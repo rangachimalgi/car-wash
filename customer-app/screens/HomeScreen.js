@@ -7,6 +7,7 @@ import CustomHeader from '../components/CustomHeader';
 import CustomerTestimonials from '../components/CustomerTestimonials';
 import SeeTheDifference from '../components/SeeTheDifference';
 import SeeTheTransformations from '../components/SeeTheTransformations';
+import WhyChooseWoosh from '../components/WhyChooseWoosh';
 import { useTheme } from '../theme/ThemeContext';
 import { backfillMediaPosters, getMedia } from '../config/api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -17,27 +18,6 @@ import { getReferralInfo } from '../services/walletApi';
 const HERO_LOADING_SLIDE = [{ key: 'hero-loading', kind: 'loading' }];
 /** After fetch: no homeSliders from admin — neutral strip (not hardcoded marketing photos). */
 const HERO_EMPTY_SLIDE = [{ key: 'hero-empty', kind: 'empty' }];
-
-const DEFAULT_WHY_CHOOSE_CARDS = [
-  {
-    title: 'Car Wash at Your Home',
-    description: 'No waiting, No travel — we come to you.',
-    source: require('../assets/whychoose.jpeg'),
-    imageKey: 'whyChoose1',
-  },
-  {
-    title: 'Professional Service',
-    description: 'Expert team with top-quality equipment and products.',
-    source: require('../assets/whychooseone.jpeg'),
-    imageKey: 'whyChoose2',
-  },
-  {
-    title: 'Affordable Pricing',
-    description: 'Best value for money with transparent pricing.',
-    source: require('../assets/whychoose.jpeg'),
-    imageKey: 'whyChoose3',
-  },
-];
 
 export default function HomeScreen({ navigation }) {
   const [imageErrors, setImageErrors] = useState({});
@@ -79,33 +59,6 @@ export default function HomeScreen({ navigation }) {
     }
     return HERO_EMPTY_SLIDE;
   }, [media.homeSliders, publicMediaFetched]);
-
-  const whyChooseCards = useMemo(() => {
-    const raw = media.whyChooseUs || [];
-    const fromApi = raw.filter(
-      (m) => m?.url && String(m.url).trim() && String(m.title || '').trim()
-    );
-    if (fromApi.length > 0) {
-      return fromApi.map((m, i) => ({
-        key: String(m._id ?? m.url ?? `why-${m.order ?? i}`),
-        title: String(m.title || '').trim(),
-        description: String(m.description || '').trim(),
-        uri: String(m.url).trim(),
-        imageKey: `whyChoose-api-${i}`,
-        colorIndex: i % 3,
-      }));
-    }
-    return DEFAULT_WHY_CHOOSE_CARDS.map((c, i) => ({
-      ...c,
-      key: `why-default-${i}`,
-      colorIndex: i % 3,
-    }));
-  }, [media.whyChooseUs]);
-
-  const whyChooseCardBgStyles = useMemo(
-    () => [styles.whyChooseCardBlue, styles.whyChooseCardGreen, styles.whyChooseCardPurple],
-    [styles]
-  );
 
   const handleImageError = (key) => {
     setImageErrors(prev => ({ ...prev, [key]: true }));
@@ -493,36 +446,7 @@ export default function HomeScreen({ navigation }) {
           </View>
         </View>
 
-        {/* Why Choose Woosh Section */}
-        <View style={styles.whyChooseSection}>
-          <Text style={styles.whyChooseTitle}>Why Choose Woosh</Text>
-          <ScrollView 
-            horizontal 
-            showsHorizontalScrollIndicator={false}
-            style={styles.whyChooseScrollView}
-            contentContainerStyle={styles.whyChooseScrollContent}
-          >
-            {whyChooseCards.map((card) => (
-              <View
-                key={card.key}
-                style={[styles.whyChooseCard, whyChooseCardBgStyles[card.colorIndex]]}
-              >
-                <ServiceImage
-                  source={card.source}
-                  uri={card.uri}
-                  style={styles.whyChooseImage}
-                  imageKey={card.imageKey}
-                />
-                <View style={styles.whyChooseTextContent}>
-                  <Text style={styles.whyChooseCardTitle}>{card.title}</Text>
-                  {card.description ? (
-                    <Text style={styles.whyChooseCardDescription}>{card.description}</Text>
-                  ) : null}
-                </View>
-              </View>
-            ))}
-          </ScrollView>
-        </View>
+        <WhyChooseWoosh items={media.whyChooseUs.length ? media.whyChooseUs : undefined} />
 
         <CustomerTestimonials items={media.testimonials.length ? media.testimonials : undefined} />
         <SeeTheDifference slides={media.seeTheDifference.length ? media.seeTheDifference : undefined} />
@@ -941,68 +865,6 @@ const createStyles = (theme, layout, isLightMode) => StyleSheet.create({
     color: theme.textPrimary,
     textAlign: 'center',
     paddingHorizontal: 4,
-  },
-  whyChooseSection: {
-    paddingHorizontal: 16,
-    paddingTop: 8,
-    paddingBottom: 20,
-  },
-  whyChooseTitle: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    color: theme.textPrimary,
-    marginBottom: 16,
-  },
-  whyChooseScrollView: {
-    marginHorizontal: -16,
-  },
-  whyChooseScrollContent: {
-    paddingHorizontal: 16,
-  },
-  whyChooseCard: {
-    width: layout.screenW - 64,
-    height: 120,
-    borderRadius: 20,
-    marginRight: 16,
-    flexDirection: 'row',
-    overflow: 'hidden',
-    padding: 16,
-    alignItems: 'center',
-    borderWidth: isLightMode ? 0 : 1,
-    borderColor: theme.cardBorder,
-  },
-  whyChooseCardBlue: {
-    backgroundColor: isLightMode ? '#E6F4FF' : 'rgba(49, 197, 255, 0.14)',
-    borderColor: isLightMode ? theme.cardBorder : 'rgba(133, 228, 252, 0.28)',
-  },
-  whyChooseCardGreen: {
-    backgroundColor: isLightMode ? '#E6FFE6' : 'rgba(34, 197, 94, 0.12)',
-    borderColor: isLightMode ? theme.cardBorder : 'rgba(34, 197, 94, 0.28)',
-  },
-  whyChooseCardPurple: {
-    backgroundColor: isLightMode ? '#F0E6FF' : 'rgba(168, 85, 247, 0.12)',
-    borderColor: isLightMode ? theme.cardBorder : 'rgba(168, 85, 247, 0.28)',
-  },
-  whyChooseImage: {
-    width: 120,
-    height: 120,
-    borderRadius: 12,
-    marginRight: 16,
-  },
-  whyChooseTextContent: {
-    flex: 1,
-    justifyContent: 'center',
-  },
-  whyChooseCardTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: theme.textPrimary,
-    marginBottom: 8,
-  },
-  whyChooseCardDescription: {
-    fontSize: 14,
-    color: theme.textSecondary,
-    lineHeight: 20,
   },
   loadingContainer: {
     paddingVertical: 20,
