@@ -13,6 +13,7 @@ import { useTheme } from '../theme/ThemeContext';
 import { useFocusEffect } from '@react-navigation/native';
 import { getServiceById } from '../services/serviceApi';
 import { isVehicleValidForService } from '../utils/vehicleServiceMatch';
+import { wooshCoinsLabel } from '../utils/wooshCoins';
 
 const { width } = Dimensions.get('window');
 const LIGHT_BLUE = '#85E4FC';
@@ -649,18 +650,18 @@ export default function CheckoutScreen({ navigation, route }) {
           )}
         </View>
 
-        {/* Wallet Section */}
+        {/* Woosh Coins (wallet balance) */}
         {walletBalance > 0 && (
           <View style={styles.walletSection}>
             <View style={styles.walletHeader}>
-              <MaterialCommunityIcons name="wallet" size={20} color={LIGHT_BLUE} />
-              <Text style={styles.sectionTitle}>Wallet</Text>
+              <MaterialCommunityIcons name="circle-multiple" size={20} color={LIGHT_BLUE} />
+              <Text style={styles.sectionTitle}>Woosh Coins</Text>
             </View>
             <View style={styles.walletCard}>
               <View style={styles.walletRow}>
                 <View>
                   <Text style={styles.walletBalanceLabel}>Available balance</Text>
-                  <Text style={styles.walletBalanceValue}>₹{walletBalance.toFixed(2)}</Text>
+                  <Text style={styles.walletBalanceValue}>{wooshCoinsLabel(walletBalance)}</Text>
                 </View>
                 <TouchableOpacity
                   style={[styles.walletToggle, useWallet && styles.walletToggleActive]}
@@ -669,14 +670,14 @@ export default function CheckoutScreen({ navigation, route }) {
                   activeOpacity={0.8}
                 >
                   <Text style={[styles.walletToggleText, useWallet && styles.walletToggleTextActive]}>
-                    {useWallet ? 'Using wallet' : 'Use wallet'}
+                    {useWallet ? 'Using coins' : 'Use coins'}
                   </Text>
                 </TouchableOpacity>
               </View>
               {useWallet && walletUsable > 0 && (
                 <View style={styles.walletAppliedRow}>
-                  <Text style={styles.walletAppliedLabel}>Wallet applied</Text>
-                  <Text style={styles.walletAppliedValue}>-₹{walletUsable.toFixed(2)}</Text>
+                  <Text style={styles.walletAppliedLabel}>Woosh Coins applied</Text>
+                  <Text style={styles.walletAppliedValue}>-{wooshCoinsLabel(walletUsable)}</Text>
                 </View>
               )}
             </View>
@@ -745,9 +746,9 @@ export default function CheckoutScreen({ navigation, route }) {
             )}
             {walletUsable > 0 && (
               <View style={styles.summaryRow}>
-                <Text style={styles.summaryLabel}>Wallet used</Text>
+                <Text style={styles.summaryLabel}>Woosh Coins used</Text>
                 <Text style={[styles.summaryValue, styles.discountValue]}>
-                  -₹{walletUsable.toFixed(2)}
+                  -{wooshCoinsLabel(walletUsable)}
                 </Text>
               </View>
             )}
@@ -1279,9 +1280,10 @@ const createStyles = theme => StyleSheet.create({
     marginBottom: 4,
   },
   walletBalanceValue: {
-    fontSize: 18,
-    fontWeight: '700',
+    fontSize: 16,
+    fontWeight: '600',
     color: theme.textPrimary,
+    lineHeight: 21,
   },
   walletToggle: {
     paddingHorizontal: 14,
@@ -1314,7 +1316,7 @@ const createStyles = theme => StyleSheet.create({
     color: theme.textSecondary,
   },
   walletAppliedValue: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '600',
     color: LIGHT_BLUE,
   },

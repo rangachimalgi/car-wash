@@ -14,6 +14,7 @@ import { wooshGreen } from '../theme/wooshGreen';
 import { useFocusEffect } from '@react-navigation/native';
 import SavedVehiclesModal from '../components/SavedVehiclesModal';
 import { isSessionStillValid, logoutUser } from '../services/authSession';
+import { wooshCoinsLabel } from '../utils/wooshCoins';
 
 const SUPPORT_WHATSAPP_NUMBER = process.env.EXPO_PUBLIC_SUPPORT_WHATSAPP || '918744050709';
 
@@ -54,7 +55,7 @@ export default function ProfileScreen({ navigation }) {
           const wallet = await getWallet();
           // Only show if positive balance
           if (wallet.walletBalance && wallet.walletBalance > 0) {
-            walletBalance = `₹${wallet.walletBalance}`;
+            walletBalance = wooshCoinsLabel(wallet.walletBalance);
           }
           try {
             const token = await AsyncStorage.getItem('authToken');
@@ -223,18 +224,20 @@ export default function ProfileScreen({ navigation }) {
           <Text style={styles.userEmail}>{userData.phone ? `+91 ${userData.phone}` : 'Phone not set'}</Text>
         </View>
 
-        {/* Wallet Section - show only when balance is available (set from admin) */}
+        {/* Woosh Coins — show only when balance is available */}
         {userData.walletBalance != null && userData.walletBalance !== '' && (
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
-              <MaterialCommunityIcons name="wallet" size={24} color={theme.accent} />
-              <Text style={styles.sectionTitle}>Wallet</Text>
+              <MaterialCommunityIcons name="circle-multiple" size={24} color={theme.accent} />
+              <Text style={styles.sectionTitle}>Woosh Coins</Text>
             </View>
             <View style={styles.walletCard}>
               <View style={styles.walletContent}>
                 <View>
-                  <Text style={styles.walletLabel}>Balance</Text>
-                  <Text style={styles.walletBalance}>{userData.walletBalance}</Text>
+                  <Text style={styles.walletLabel}>Available balance</Text>
+                  <Text style={styles.walletBalance} numberOfLines={2}>
+                    {userData.walletBalance}
+                  </Text>
                 </View>
                 {/*
                   Add Money button temporarily disabled – balance is controlled by admin top-ups only.
@@ -651,9 +654,10 @@ const createStyles = theme => StyleSheet.create({
     marginBottom: 4,
   },
   walletBalance: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    color: '#000000',
+    fontSize: 17,
+    fontWeight: '700',
+    color: theme.textPrimary,
+    lineHeight: 22,
   },
   addMoneyButton: {
     flexDirection: 'row',
