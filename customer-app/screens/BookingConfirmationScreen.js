@@ -1,5 +1,13 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Animated } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  Animated,
+  ScrollView,
+  Image,
+} from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -7,7 +15,7 @@ import { useTheme } from '../theme/ThemeContext';
 
 export default function BookingConfirmationScreen({ navigation, route }) {
   const { theme, isLightMode } = useTheme();
-  const styles = useMemo(() => createStyles(theme), [theme]);
+  const styles = useMemo(() => createStyles(theme, isLightMode), [theme, isLightMode]);
   const insets = useSafeAreaInsets();
   const toastAnim = useRef(new Animated.Value(0)).current;
   const [showToast, setShowToast] = useState(true);
@@ -76,33 +84,91 @@ export default function BookingConfirmationScreen({ navigation, route }) {
         </Animated.View>
       )}
 
-      <View style={styles.content}>
-        <View style={styles.iconWrap}>
-          <MaterialCommunityIcons name="check-circle" size={70} color="#16A34A" />
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 24 }]}
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={styles.confirmBlock}>
+          <View style={styles.iconWrap}>
+            <MaterialCommunityIcons name="check-circle" size={70} color="#16A34A" />
+          </View>
+          <Text style={styles.title}>Yes, booking is confirmed!</Text>
+          {!!orderId && <Text style={styles.orderText}>{orderId}</Text>}
+          <Text style={styles.subtitle}>We will assign a professional and notify you shortly.</Text>
         </View>
-        <Text style={styles.title}>Yes, booking is confirmed!</Text>
-        {!!orderId && <Text style={styles.orderText}>{orderId}</Text>}
-        <Text style={styles.subtitle}>We will assign a professional and notify you shortly.</Text>
+
+        <View style={styles.promoSection}>
+          <Text style={styles.promoSectionTitle}>Explore more services</Text>
+          <View style={styles.promoRow}>
+            <TouchableOpacity
+              style={styles.promoHalfCard}
+              onPress={() => navigation.navigate('Packages')}
+              activeOpacity={0.9}
+              accessibilityRole="button"
+              accessibilityLabel="Monthly packages"
+            >
+              <Text style={styles.promoCardTitle}>Monthly Packages</Text>
+              <Text style={styles.promoCardSubtitle}>Save with a wash plan</Text>
+              <View style={styles.promoCardImageWrap}>
+                <Image
+                  source={
+                    isLightMode
+                      ? require('../assets/carpicnine.png')
+                      : require('../assets/carpicnine-dark.png')
+                  }
+                  style={styles.promoCardImage}
+                  resizeMode="contain"
+                />
+              </View>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.promoHalfCard}
+              onPress={() => navigation.navigate('PackageDetails')}
+              activeOpacity={0.9}
+              accessibilityRole="button"
+              accessibilityLabel="Daily cleaning services"
+            >
+              <Text style={styles.promoCardTitle}>Daily Cleaning</Text>
+              <Text style={styles.promoCardSubtitle}>Interior, exterior & daily care</Text>
+              <View style={styles.promoCardImageWrap}>
+                <Image
+                  source={require('../assets/dailyService.png')}
+                  style={styles.promoDailyImage}
+                  resizeMode="contain"
+                />
+              </View>
+            </TouchableOpacity>
+          </View>
+        </View>
 
         <TouchableOpacity style={styles.homeButton} onPress={goHome} activeOpacity={0.85}>
           <Text style={styles.homeButtonText}>Go to Home</Text>
         </TouchableOpacity>
-      </View>
+      </ScrollView>
     </View>
   );
 }
 
-const createStyles = (theme) =>
+const createStyles = (theme, isLightMode) =>
   StyleSheet.create({
     container: {
       flex: 1,
       backgroundColor: theme.background,
     },
-    content: {
+    scrollView: {
       flex: 1,
+    },
+    scrollContent: {
+      paddingHorizontal: 16,
+      paddingTop: 24,
+    },
+    confirmBlock: {
       alignItems: 'center',
-      justifyContent: 'center',
-      paddingHorizontal: 24,
+      paddingHorizontal: 8,
+      paddingTop: 32,
+      paddingBottom: 28,
     },
     iconWrap: {
       marginBottom: 16,
@@ -127,12 +193,64 @@ const createStyles = (theme) =>
       lineHeight: 20,
       maxWidth: 320,
     },
+    promoSection: {
+      marginTop: 8,
+      marginBottom: 20,
+    },
+    promoSectionTitle: {
+      fontSize: 15,
+      fontWeight: '700',
+      color: theme.textPrimary,
+      marginBottom: 10,
+    },
+    promoRow: {
+      flexDirection: 'row',
+      gap: 12,
+    },
+    promoHalfCard: {
+      flex: 1,
+      backgroundColor: theme.cardBackground,
+      borderRadius: 16,
+      padding: 12,
+      borderWidth: 1,
+      borderColor: theme.cardBorder,
+      overflow: 'hidden',
+      minHeight: 168,
+    },
+    promoCardTitle: {
+      fontSize: 15,
+      fontWeight: '900',
+      color: theme.textPrimary,
+      letterSpacing: 0.2,
+    },
+    promoCardSubtitle: {
+      marginTop: 4,
+      fontSize: 11,
+      fontWeight: '600',
+      color: theme.textSecondary,
+      lineHeight: 15,
+    },
+    promoCardImageWrap: {
+      flex: 1,
+      marginTop: 8,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    promoCardImage: {
+      width: '115%',
+      height: 88,
+    },
+    promoDailyImage: {
+      width: '100%',
+      height: 72,
+    },
     homeButton: {
-      marginTop: 24,
+      alignSelf: 'center',
       backgroundColor: theme.textPrimary,
       borderRadius: 999,
       paddingVertical: 12,
-      paddingHorizontal: 24,
+      paddingHorizontal: 28,
+      marginBottom: 8,
     },
     homeButtonText: {
       color: theme.background,
