@@ -3,7 +3,7 @@ import { Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from '
 import { StatusBar } from 'expo-status-bar';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import BackHeader from '../components/BackHeader';
+import MinimalBackHeader from '../components/MinimalBackHeader';
 import { useTheme } from '../theme/ThemeContext';
 import { wooshGreen } from '../theme/wooshGreen';
 import { getPackagePricing } from '../services/packagePricingApi';
@@ -316,7 +316,7 @@ export default function PackageDetailsScreen({ navigation, route }) {
   return (
     <View style={styles.container}>
       <StatusBar style={isLightMode ? 'dark' : 'light'} />
-      <BackHeader navigation={navigation} title="Monthly Package" subtitle="Set your cleaning plan" />
+      <MinimalBackHeader navigation={navigation} title="Daily Cleaning Services" />
 
       <ScrollView
         style={styles.scrollView}

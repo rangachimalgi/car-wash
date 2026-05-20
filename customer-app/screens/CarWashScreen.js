@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator
 import { StatusBar } from 'expo-status-bar';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
-import BackHeader from '../components/BackHeader';
+import MinimalBackHeader from '../components/MinimalBackHeader';
 import ServiceAccordionCard from '../components/ServiceAccordionCard';
 import ServiceDetailsBottomSheet from '../components/ServiceDetailsBottomSheet';
 import AddOnServicesList from '../components/AddOnServicesList';
@@ -33,7 +33,7 @@ export default function CarWashScreen({ navigation, route }) {
   const screenCategory = String(route?.params?.category || 'CarWash');
   const isBike = screenCategory === 'BikeWash';
   const isAuto = screenCategory === 'AutoWash';
-  const screenTitle = isBike ? 'Bike Wash' : isAuto ? 'Auto Wash' : 'Car Wash';
+  const screenTitle = isAuto ? 'Auto Wash & Care' : 'Car Wash & Care';
   const emptyIcon = isBike ? 'motorbike' : 'car-wash';
   const emptySubtext = isBike
     ? 'Check back later for bike wash services'
@@ -257,7 +257,7 @@ export default function CarWashScreen({ navigation, route }) {
     return (
       <View style={styles.container}>
         <StatusBar style={isLightMode ? 'dark' : 'light'} />
-        <BackHeader navigation={navigation} title={screenTitle} />
+        <MinimalBackHeader navigation={navigation} title={screenTitle} />
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={theme.accent} />
           <Text style={styles.loadingText}>Loading services...</Text>
@@ -270,7 +270,7 @@ export default function CarWashScreen({ navigation, route }) {
     return (
       <View style={styles.container}>
         <StatusBar style={isLightMode ? 'dark' : 'light'} />
-        <BackHeader navigation={navigation} title={screenTitle} />
+        <MinimalBackHeader navigation={navigation} title={screenTitle} />
         <View style={styles.errorContainer}>
           <MaterialCommunityIcons name="alert-circle" size={64} color={theme.danger} />
           <Text style={styles.errorText}>Failed to load services</Text>
@@ -286,7 +286,7 @@ export default function CarWashScreen({ navigation, route }) {
   return (
     <View style={styles.container}>
       <StatusBar style={isLightMode ? 'dark' : 'light'} />
-      <BackHeader navigation={navigation} title={screenTitle} />
+      <MinimalBackHeader navigation={navigation} title={screenTitle} />
       <ScrollView 
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}

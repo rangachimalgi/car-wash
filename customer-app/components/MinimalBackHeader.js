@@ -1,10 +1,10 @@
 import React, { useMemo } from 'react';
-import { View, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../theme/ThemeContext';
 
-export default function MinimalBackHeader({ navigation }) {
+export default function MinimalBackHeader({ navigation, title }) {
   const insets = useSafeAreaInsets();
   const { theme, isLightMode } = useTheme();
   const styles = useMemo(() => createStyles(theme, isLightMode), [theme, isLightMode]);
@@ -21,6 +21,11 @@ export default function MinimalBackHeader({ navigation }) {
       >
         <MaterialCommunityIcons name="arrow-left" size={22} color={theme.textPrimary} />
       </TouchableOpacity>
+      {title ? (
+        <Text style={styles.title} numberOfLines={1}>
+          {title}
+        </Text>
+      ) : null}
     </View>
   );
 }
@@ -28,8 +33,17 @@ export default function MinimalBackHeader({ navigation }) {
 const createStyles = (theme, isLightMode) =>
   StyleSheet.create({
     wrap: {
+      flexDirection: 'row',
+      alignItems: 'center',
       paddingHorizontal: 16,
-      paddingBottom: 6,
+      paddingBottom: 10,
+      gap: 12,
+    },
+    title: {
+      flex: 1,
+      fontSize: 20,
+      fontWeight: '800',
+      color: theme.textPrimary,
     },
     backButton: {
       width: 44,

@@ -3800,7 +3800,10 @@ function App() {
                       <small className="help-text">{newPackageCard.image}</small>
                     </div>
                   ) : (
-                    <small className="help-text">Shown on the customer app package card. Stored in R2 like service images.</small>
+                    <small className="help-text">
+                      Shown full-width on Monthly Packages cards (16:9 crop). Recommended upload:{' '}
+                      <strong>1200×675 px</strong> (or 1600×900). JPG/WebP, subject centered — edges may crop on small phones.
+                    </small>
                   )}
                 </div>
                 <div className="form-row">

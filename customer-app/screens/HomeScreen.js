@@ -314,7 +314,7 @@ export default function HomeScreen({ navigation }) {
                       : require('../assets/carWashCare.png')
                   }
                   style={styles.halfCardImage}
-                  resizeMode="contain"
+                  resizeMode="cover"
                 />
               </View>
             </TouchableOpacity>
@@ -337,7 +337,7 @@ export default function HomeScreen({ navigation }) {
                       : require('../assets/monthlyPackages.png')
                   }
                   style={styles.halfCardImage}
-                  resizeMode="contain"
+                  resizeMode="cover"
                 />
               </View>
             </TouchableOpacity>
@@ -360,7 +360,7 @@ export default function HomeScreen({ navigation }) {
                       : require('../assets/bikeWashCare.png')
                   }
                   style={styles.halfCardImage}
-                  resizeMode="contain"
+                  resizeMode="cover"
                 />
               </View>
             </TouchableOpacity>
@@ -376,7 +376,7 @@ export default function HomeScreen({ navigation }) {
                 <Image
                   source={require('../assets/auto.png')}
                   style={styles.halfCardImage}
-                  resizeMode="contain"
+                  resizeMode="cover"
                 />
               </View>
             </TouchableOpacity>
@@ -762,12 +762,12 @@ const createStyles = (theme, layout, isLightMode) => StyleSheet.create({
   halfCardImageWrap: {
     flex: 1,
     marginTop: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
+    minHeight: 96,
+    overflow: 'hidden',
   },
   halfCardImage: {
-    width: '120%',
-    height: 140,
+    width: '100%',
+    height: '100%',
   },
   wideBikeCard: {
     marginTop: 14,

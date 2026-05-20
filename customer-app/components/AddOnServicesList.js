@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { Image } from 'expo-image';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import AddOnServiceItem from './AddOnServiceItem';
 import { useTheme } from '../theme/ThemeContext';
@@ -91,7 +92,8 @@ export default function AddOnServicesList({
               <Image
                 source={typeof displayImage === 'string' ? { uri: displayImage } : displayImage}
                 style={styles.image}
-                resizeMode="cover"
+                contentFit="cover"
+                cachePolicy="memory-disk"
                 onError={() => setImageError(true)}
               />
             ) : (
@@ -137,6 +139,7 @@ const createStyles = theme => StyleSheet.create({
     width: 150,
     height: 280,
     marginTop: 0,
+    position: 'relative',
     borderRadius: 12,
     overflow: 'hidden',
     backgroundColor: theme.cardBackground,
@@ -149,8 +152,7 @@ const createStyles = theme => StyleSheet.create({
     elevation: 3,
   },
   image: {
-    width: '100%',
-    height: '100%',
+    ...StyleSheet.absoluteFillObject,
   },
   imagePlaceholder: {
     width: '100%',

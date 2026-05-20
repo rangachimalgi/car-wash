@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { resolveAssetUrl } from '../config/api';
@@ -10,6 +11,10 @@ import {
   applyWooshMembershipDiscount,
   scaleLineItemsToDiscountedGross,
 } from '../utils/membershipPricing';
+
+/** Collapsed card banner — keep uploads at this ratio (see admin Package Image help). */
+export const PACKAGE_CARD_IMAGE_ASPECT = 16 / 9;
+export const PACKAGE_CARD_IMAGE_UPLOAD_PX = { width: 1200, height: 675 };
 
 function toTitleCase(value) {
   const s = String(value || '').trim();
@@ -124,6 +129,7 @@ export default function ServiceAccordionCard({
   const addOnsTotal = calculateAddOnsTotal();
 
   const memberPct = Math.min(100, Math.max(0, Number(membershipDiscountPercent) || 0));
+  const isMonthlyPackagesOnly = hideOneTimeWash && hideAddServices;
 
   const handleBookOneTime = () => {
     if (!resolvedServiceId) return;
@@ -221,7 +227,8 @@ export default function ServiceAccordionCard({
                       : fallbackImageSource || { uri: imageUri }
                   }
                   style={styles.serviceImage}
-                  resizeMode="cover"
+                  contentFit="cover"
+                  cachePolicy="memory-disk"
                   onError={() => setImageError(true)}
                 />
               ) : (
@@ -280,7 +287,7 @@ export default function ServiceAccordionCard({
             </TouchableOpacity>
           </View>
 
-          <View style={styles.sectionRule} />
+          {!isMonthlyPackagesOnly ? <View style={styles.sectionRule} /> : null}
 
           {isLoadingDetails ? (
             <View style={styles.loadingRow}>
@@ -307,11 +314,13 @@ export default function ServiceAccordionCard({
             </>
           ) : null}
 
-          <View style={styles.sectionDivider}>
-            <View style={styles.dividerLine} />
-            <Text style={styles.dividerText}>Pricing</Text>
-            <View style={styles.dividerLine} />
-          </View>
+          {!hideOneTimeWash ? (
+            <View style={styles.sectionDivider}>
+              <View style={styles.dividerLine} />
+              <Text style={styles.dividerText}>Pricing</Text>
+              <View style={styles.dividerLine} />
+            </View>
+          ) : null}
 
           {memberPct > 0 ? (
             <Text style={styles.memberDiscountCaption}>Woosh Green discount {memberPct}%</Text>
@@ -341,7 +350,7 @@ export default function ServiceAccordionCard({
           ) : null}
 
           {monthlyMode === 'standard' ? (
-            <View style={styles.monthlySection}>
+            <View style={[styles.monthlySection, isMonthlyPackagesOnly && styles.monthlySectionCompact]}>
               <View style={styles.monthlyHeader}>
                 <View style={styles.monthlyHeaderLeft}>
                   <Text style={styles.monthlyTitle}>Monthly Packages</Text>
@@ -517,19 +526,13 @@ const createStyles = (theme, isLightMode) =>
       fontWeight: '700',
     },
     imageContainer: {
-      position: 'relative',
-      marginHorizontal: 0,
-      marginBottom: 0,
-      borderRadius: 0,
+      width: '100%',
+      aspectRatio: PACKAGE_CARD_IMAGE_ASPECT,
       overflow: 'hidden',
-      height: 200,
       backgroundColor: theme.cardBackground,
-      justifyContent: 'center',
-      alignItems: 'center',
     },
     serviceImage: {
-      width: '100%',
-      height: '100%',
+      ...StyleSheet.absoluteFillObject,
     },
     placeholderImage: {
       backgroundColor: theme.accentSoft,
@@ -757,6 +760,9 @@ const createStyles = (theme, isLightMode) =>
     },
     monthlySection: {
       marginTop: 8,
+    },
+    monthlySectionCompact: {
+      marginTop: 4,
     },
     monthlyHeader: {
       flexDirection: 'row',

@@ -3,7 +3,7 @@ import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, Text, Toucha
 import { StatusBar } from 'expo-status-bar';
 import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import BackHeader from '../components/BackHeader';
+import MinimalBackHeader from '../components/MinimalBackHeader';
 import PackageAccordionCard from '../components/PackageAccordionCard';
 import ServiceDetailsBottomSheet from '../components/ServiceDetailsBottomSheet';
 import AddOnServicesList from '../components/AddOnServicesList';
@@ -147,7 +147,7 @@ export default function PackagesScreen({ navigation }) {
   return (
     <View style={styles.container}>
       <StatusBar style={isLightMode ? 'dark' : 'light'} />
-      <BackHeader navigation={navigation} title="Monthly Packages" />
+      <MinimalBackHeader navigation={navigation} title="Monthly Packages" />
 
       <ScrollView
         style={styles.scrollView}

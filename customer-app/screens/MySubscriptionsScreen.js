@@ -227,9 +227,7 @@ export default function MySubscriptionsScreen({ navigation }) {
   return (
     <View style={styles.container}>
       <StatusBar style={isLightMode ? 'dark' : 'light'} />
-      <MinimalBackHeader navigation={navigation} />
-
-      <Text style={styles.screenTitle}>My Subscriptions</Text>
+      <MinimalBackHeader navigation={navigation} title="My Subscriptions" />
 
       <View style={styles.tabBar}>
         <TouchableOpacity
@@ -278,14 +276,6 @@ const createStyles = (theme, isLightMode) =>
     container: {
       flex: 1,
       backgroundColor: theme.background,
-    },
-    screenTitle: {
-      fontSize: 22,
-      fontWeight: '800',
-      color: theme.textPrimary,
-      paddingHorizontal: 16,
-      marginTop: 4,
-      marginBottom: 4,
     },
     tabBar: {
       flexDirection: 'row',
