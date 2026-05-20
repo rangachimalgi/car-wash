@@ -39,7 +39,7 @@ export default function SlotSelectionScreen({ navigation, route }) {
   const [slotsError, setSlotsError] = useState(null);
   
   const { theme, isLightMode } = useTheme();
-  const styles = useMemo(() => createStyles(theme, isLightMode), [theme, isLightMode]);
+  const styles = useMemo(() => createStyles(theme), [theme]);
 
   useEffect(() => {
     const loadSavedAddress = async () => {
@@ -767,7 +767,7 @@ export default function SlotSelectionScreen({ navigation, route }) {
   );
 }
 
-const createStyles = (theme, isLightMode) => StyleSheet.create({
+const createStyles = (theme) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: theme.background,
@@ -863,8 +863,8 @@ const createStyles = (theme, isLightMode) => StyleSheet.create({
     paddingTop: 8,
   },
   dateCardSelected: {
-    backgroundColor: isLightMode ? '#000000' : theme.accent,
-    borderColor: isLightMode ? '#000000' : theme.accent,
+    backgroundColor: theme.accent,
+    borderColor: theme.accent,
   },
   dateDay: {
     fontSize: 12,
@@ -872,7 +872,7 @@ const createStyles = (theme, isLightMode) => StyleSheet.create({
     marginBottom: 4,
   },
   dateDaySelected: {
-    color: '#FFFFFF',
+    color: '#000000',
   },
   dateNumber: {
     fontSize: 20,
@@ -881,14 +881,14 @@ const createStyles = (theme, isLightMode) => StyleSheet.create({
     marginBottom: 2,
   },
   dateNumberSelected: {
-    color: '#FFFFFF',
+    color: '#000000',
   },
   dateMonth: {
     fontSize: 11,
     color: theme.textSecondary,
   },
   dateMonthSelected: {
-    color: '#FFFFFF',
+    color: '#000000',
   },
   todayBadge: {
     position: 'absolute',
@@ -926,8 +926,8 @@ const createStyles = (theme, isLightMode) => StyleSheet.create({
     justifyContent: 'center',
   },
   timeSlotCardSelected: {
-    backgroundColor: isLightMode ? '#000000' : theme.accent,
-    borderColor: isLightMode ? '#000000' : theme.accent,
+    backgroundColor: theme.accent,
+    borderColor: theme.accent,
   },
   timeSlotText: {
     fontSize: 14,
@@ -935,7 +935,7 @@ const createStyles = (theme, isLightMode) => StyleSheet.create({
     color: theme.textPrimary,
   },
   timeSlotTextSelected: {
-    color: '#FFFFFF',
+    color: '#000000',
   },
   generatedSlotsSection: {
     marginTop: 24,
@@ -1010,8 +1010,8 @@ const createStyles = (theme, isLightMode) => StyleSheet.create({
     backgroundColor: theme.cardBackground,
   },
   editDateCardSelected: {
-    backgroundColor: isLightMode ? '#000000' : theme.accent,
-    borderColor: isLightMode ? '#000000' : theme.accent,
+    backgroundColor: theme.accent,
+    borderColor: theme.accent,
   },
   editDateCardDisabled: {
     opacity: 0.4,
@@ -1022,7 +1022,7 @@ const createStyles = (theme, isLightMode) => StyleSheet.create({
     color: theme.textPrimary,
   },
   editDateTextSelected: {
-    color: '#FFFFFF',
+    color: '#000000',
   },
   editTimeSlotsGrid: {
     flexDirection: 'row',
@@ -1040,8 +1040,8 @@ const createStyles = (theme, isLightMode) => StyleSheet.create({
     backgroundColor: theme.cardBackground,
   },
   editTimeSlotCardSelected: {
-    backgroundColor: isLightMode ? '#000000' : theme.accent,
-    borderColor: isLightMode ? '#000000' : theme.accent,
+    backgroundColor: theme.accent,
+    borderColor: theme.accent,
   },
   editTimeSlotText: {
     fontSize: 12,
@@ -1049,7 +1049,7 @@ const createStyles = (theme, isLightMode) => StyleSheet.create({
     color: theme.textPrimary,
   },
   editTimeSlotTextSelected: {
-    color: '#FFFFFF',
+    color: '#000000',
   },
   loadingContainer: {
     padding: 20,
@@ -1123,7 +1123,7 @@ const createStyles = (theme, isLightMode) => StyleSheet.create({
   },
   checkoutButton: {
     flexDirection: 'row',
-    backgroundColor: isLightMode ? '#000000' : theme.accent,
+    backgroundColor: theme.accent,
     paddingVertical: 16,
     borderRadius: 12,
     justifyContent: 'center',
@@ -1135,7 +1135,7 @@ const createStyles = (theme, isLightMode) => StyleSheet.create({
   checkoutButtonText: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#ffffff',
+    color: '#000000',
     marginRight: 8,
   },
   checkoutButtonTextDisabled: {

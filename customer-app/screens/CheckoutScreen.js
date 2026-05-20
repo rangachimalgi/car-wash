@@ -18,6 +18,13 @@ import { wooshCoinsLabel } from '../utils/wooshCoins';
 const { width } = Dimensions.get('window');
 const LIGHT_BLUE = '#85E4FC';
 
+const getVehicleImage = (vehicleType) => {
+  if (vehicleType === 'Bike' || vehicleType?.toLowerCase().includes('bike')) {
+    return require('../assets/fallbackBike.png');
+  }
+  return require('../assets/fallback.png');
+};
+
 export default function CheckoutScreen({ navigation, route }) {
   const [checkoutCartItems, setCheckoutCartItems] = useState(() => route?.params?.cartItems || []);
 
@@ -524,35 +531,52 @@ export default function CheckoutScreen({ navigation, route }) {
           )}
         </View>
 
-        {/* Vehicle Section */}
-        <View style={styles.infoSection}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Vehicle Details</Text>
-            <TouchableOpacity
-              onPress={() => setShowVehiclesModal(true)}
-            >
-              <Text style={styles.editButtonText}>
-                {vehicle ? 'Change' : 'Add'}
-              </Text>
-            </TouchableOpacity>
-          </View>
-          {vehicle ? (
-            <View style={styles.infoCard}>
-              <MaterialCommunityIcons name="car" size={20} color={LIGHT_BLUE} />
-              <Text style={styles.infoText}>
-                {vehicle.type} - {vehicle.model}
-              </Text>
+        {/* Vehicle — same card layout as Cart */}
+        {(() => {
+          const shouldShowVehicle =
+            vehicle &&
+            (!serviceCategory ||
+              isVehicleValidForService(vehicle.type, serviceCategory, vehicle.model));
+          const vehiclePlaceholder =
+            serviceCategory === 'CarWash' || serviceCategory === 'AutoWash'
+              ? 'Select a car'
+              : serviceCategory === 'BikeWash'
+                ? 'Select a bike'
+                : 'Select a vehicle';
+
+          return (
+            <View style={styles.vehicleCard}>
+              <View style={styles.vehicleInfo}>
+                {shouldShowVehicle ? (
+                  <Image
+                    source={getVehicleImage(vehicle.type)}
+                    style={styles.vehicleImage}
+                    resizeMode="contain"
+                  />
+                ) : (
+                  <View style={styles.vehicleImagePlaceholder}>
+                    <MaterialCommunityIcons name="car-outline" size={22} color={theme.textSecondary} />
+                  </View>
+                )}
+                <View style={styles.vehicleTextCol}>
+                  <Text style={styles.vehicleLabel}>Vehicle</Text>
+                  <Text style={styles.vehicleName} numberOfLines={2}>
+                    {shouldShowVehicle ? vehicle.model || vehicle.type : vehiclePlaceholder}
+                  </Text>
+                </View>
+              </View>
+              <TouchableOpacity
+                style={styles.changeButton}
+                onPress={() => setShowVehiclesModal(true)}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
+                <Text style={styles.editButtonText}>
+                  {shouldShowVehicle ? 'Change' : 'Add'}
+                </Text>
+              </TouchableOpacity>
             </View>
-          ) : (
-            <TouchableOpacity
-              style={styles.addInfoCard}
-              onPress={() => setShowVehiclesModal(true)}
-            >
-              <MaterialCommunityIcons name="plus-circle" size={24} color={LIGHT_BLUE} />
-              <Text style={styles.addInfoText}>Add Vehicle Details</Text>
-            </TouchableOpacity>
-          )}
-        </View>
+          );
+        })()}
 
         {/* Items Section */}
         <View style={styles.itemsSection}>
@@ -771,7 +795,7 @@ export default function CheckoutScreen({ navigation, route }) {
           onPress={handlePayNow}
         >
           <Text style={styles.payNowButtonText}>Book Now</Text>
-          <MaterialCommunityIcons name="arrow-right" size={20} color="#FFFFFF" />
+          <MaterialCommunityIcons name="arrow-right" size={20} color="#000000" />
         </TouchableOpacity>
       </View>
 
@@ -829,7 +853,7 @@ const createStyles = (theme, isLightMode) => StyleSheet.create({
     marginBottom: 16,
   },
   itemsContainer: {
-    backgroundColor: theme.cardBackground,
+    backgroundColor: '#1A1A1A',
     borderRadius: 12,
     borderWidth: 1,
     borderColor: theme.cardBorder,
@@ -840,7 +864,7 @@ const createStyles = (theme, isLightMode) => StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: theme.cardBorder,
+    borderBottomColor: 'rgba(255,255,255,0.12)',
   },
   itemImage: {
     width: 60,
@@ -854,17 +878,17 @@ const createStyles = (theme, isLightMode) => StyleSheet.create({
   itemTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: theme.textPrimary,
+    color: '#FFFFFF',
     marginBottom: 4,
   },
   itemQuantity: {
     fontSize: 12,
-    color: theme.textSecondary,
+    color: 'rgba(255,255,255,0.72)',
   },
   itemPrice: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#0B0B0B',
+    color: '#FFFFFF',
   },
   itemRowRight: {
     flexDirection: 'row',
@@ -930,7 +954,7 @@ const createStyles = (theme, isLightMode) => StyleSheet.create({
     color: theme.textPrimary,
   },
   applyButton: {
-    backgroundColor: isLightMode ? '#000000' : theme.accent,
+    backgroundColor: theme.accent,
     borderLeftWidth: 1,
     borderLeftColor: theme.cardBorder,
     paddingHorizontal: 24,
@@ -940,7 +964,7 @@ const createStyles = (theme, isLightMode) => StyleSheet.create({
   applyButtonText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#ffffff',
+    color: '#000000',
   },
   appliedCouponContainer: {
     backgroundColor: theme.cardBackground,
@@ -1111,14 +1135,14 @@ const createStyles = (theme, isLightMode) => StyleSheet.create({
   totalValue: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#0B0B0B',
+    color: theme.textPrimary,
   },
   payNowContainer: {
     position: 'absolute',
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: theme.background,
+    backgroundColor: '#1A1A1A',
     borderTopWidth: 1,
     borderTopColor: theme.cardBorder,
     paddingHorizontal: 16,
@@ -1133,16 +1157,16 @@ const createStyles = (theme, isLightMode) => StyleSheet.create({
   },
   amountLabel: {
     fontSize: 16,
-    color: theme.textSecondary,
+    color: 'rgba(255,255,255,0.75)',
   },
   amountValue: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: theme.textPrimary,
+    color: '#FFFFFF',
   },
   payNowButton: {
     flexDirection: 'row',
-    backgroundColor: isLightMode ? '#000000' : theme.accent,
+    backgroundColor: theme.accent,
     paddingVertical: 16,
     borderRadius: 12,
     justifyContent: 'center',
@@ -1151,7 +1175,7 @@ const createStyles = (theme, isLightMode) => StyleSheet.create({
   payNowButtonText: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#ffffff',
+    color: '#000000',
     marginRight: 8,
   },
   toastContainer: {
@@ -1209,6 +1233,60 @@ const createStyles = (theme, isLightMode) => StyleSheet.create({
     marginTop: 24,
     paddingHorizontal: 16,
   },
+  vehicleCard: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginHorizontal: 16,
+    marginTop: 12,
+    padding: 14,
+    backgroundColor: theme.cardBackground,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: theme.cardBorder,
+  },
+  vehicleInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    marginRight: 12,
+    gap: 12,
+  },
+  vehicleTextCol: {
+    flex: 1,
+    minWidth: 0,
+  },
+  vehicleLabel: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: theme.textSecondary,
+    marginBottom: 2,
+  },
+  vehicleImage: {
+    width: 44,
+    height: 44,
+    borderRadius: 8,
+    backgroundColor: theme.background,
+  },
+  vehicleImagePlaceholder: {
+    width: 44,
+    height: 44,
+    borderRadius: 8,
+    backgroundColor: theme.background,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: theme.cardBorder,
+  },
+  vehicleName: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: theme.textPrimary,
+  },
+  changeButton: {
+    paddingVertical: 4,
+    paddingHorizontal: 2,
+  },
   sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -1218,7 +1296,7 @@ const createStyles = (theme, isLightMode) => StyleSheet.create({
   editButtonText: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#0B0B0B',
+    color: isLightMode ? theme.accent : '#FFFFFF',
   },
   infoCard: {
     flexDirection: 'row',
