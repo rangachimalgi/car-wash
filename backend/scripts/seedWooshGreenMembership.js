@@ -41,7 +41,7 @@ async function run() {
     listPrice: 1200,
     duration: '12 months',
     membershipDurationMonths: 12,
-    membershipDiscountPercent: 40,
+    membershipDiscountPercent: 20,
     isActive: true,
     image: '',
     rating: 0,

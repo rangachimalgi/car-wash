@@ -308,15 +308,13 @@ export default function ProfileScreen({ navigation }) {
             <Text style={styles.sectionTitle}>Refer &amp; Earn</Text>
             <View style={styles.referralBadge}>
               <Text style={styles.referralBadgeText}>
-                Get ₹{referralInfo.perReferralRewardReferrer || 100}
+                Get {referralInfo.perReferralRewardReferrer || 100} Woosh Coins
               </Text>
             </View>
           </View>
           <View style={styles.referralCard}>
             <Text style={styles.referralSubtitle}>
-              Invite friends and you both get ₹
-              {referralInfo.perReferralRewardReferred || 100}
-              {' '}in wallet on their first order.
+              Invite friends and you both get {referralInfo.perReferralRewardReferred || 100} Woosh Coins in wallet on their first order.
             </Text>
             <View style={styles.referralRow}>
               <View>
@@ -332,7 +330,7 @@ export default function ProfileScreen({ navigation }) {
               onPress={() => {
                 const codeText = referralInfo.code || 'your Woosh referral code';
                 Share.share({
-                  message: `Use my Woosh referral code ${codeText} and you and I both get ₹${referralInfo.perReferralRewardReferred || 100} in wallet on your first order!`,
+                  message: `Use my Woosh referral code ${codeText} and you and I both get ${referralInfo.perReferralRewardReferred || 100} Woosh Coins in wallet on your first order!`,
                 }).catch(() => {});
               }}
             >
@@ -340,7 +338,7 @@ export default function ProfileScreen({ navigation }) {
               <Text style={styles.referralShareText}>Share Invite Link</Text>
             </TouchableOpacity>
             <Text style={styles.referralStatsText}>
-              Friends joined: {referralInfo.totalReferrals} · Rewards earned: ₹{referralInfo.totalEarnings}
+              Friends joined: {referralInfo.totalReferrals} · Rewards earned: {referralInfo.totalEarnings} Woosh Coins
             </Text>
           </View>
         </View>

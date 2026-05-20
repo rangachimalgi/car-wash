@@ -57,6 +57,8 @@ export default function ServiceAccordionCard({
   hideAddServices = false,
   bookingServiceId,
   membershipDiscountPercent = 0,
+  showWooshGreenPromo = true,
+  wooshGreenPromoPercent = 20,
 }) {
   const resolvedServiceId = bookingServiceId || service?._id || serviceSummary?._id;
   const [imageError, setImageError] = useState(false);
@@ -184,7 +186,8 @@ export default function ServiceAccordionCard({
   const hardcodedRatingsCount = 2530;
 
   return (
-    <View style={styles.serviceCard}>
+    <View style={styles.cardWrapper}>
+      <View style={[styles.serviceCard, showWooshGreenPromo && wooshGreenPromoPercent > 0 && styles.serviceCardWithPromo]}>
       <TouchableOpacity onPress={onToggle} activeOpacity={0.9}>
         <View style={styles.cardHeader}>
           <View style={styles.cardHeaderRow}>
@@ -380,18 +383,32 @@ export default function ServiceAccordionCard({
           </View>
         </View>
       ) : null}
+      </View>
+
+      {showWooshGreenPromo && wooshGreenPromoPercent > 0 ? (
+        <View style={styles.wooshGreenPromoStrip}>
+          <Text style={styles.wooshGreenPromoText} numberOfLines={2}>
+            Save upto <Text style={styles.wooshGreenPromoHighlight}>{wooshGreenPromoPercent}%</Text> on every service{' '}
+            <Text style={styles.wooshGreenPromoDot}>●</Text>{' '}
+            <Text style={styles.wooshGreenPromoBrand}>WOOSH </Text>
+            <Text style={styles.wooshGreenPromoGreen}>GREEN</Text>
+          </Text>
+        </View>
+      ) : null}
     </View>
   );
 }
 
 const createStyles = (theme) =>
   StyleSheet.create({
+    cardWrapper: {
+      marginHorizontal: 16,
+      marginBottom: 12,
+    },
     // Match ServiceCard look & feel
     serviceCard: {
       backgroundColor: theme.cardBackground,
       borderRadius: 16,
-      marginHorizontal: 16,
-      marginBottom: 12,
       borderWidth: 1,
       borderColor: theme.cardBorder,
       overflow: 'hidden',
@@ -400,6 +417,13 @@ const createStyles = (theme) =>
       shadowOpacity: 0.3,
       shadowRadius: 4,
       elevation: 5,
+    },
+    serviceCardWithPromo: {
+      borderBottomLeftRadius: 0,
+      borderBottomRightRadius: 0,
+      borderBottomWidth: 0,
+      marginBottom: 0,
+      elevation: 3,
     },
     cardHeader: {
       paddingHorizontal: 16,
@@ -423,6 +447,40 @@ const createStyles = (theme) =>
       fontWeight: '700',
       color: '#122E54',
       letterSpacing:-0.2,
+    },
+    wooshGreenPromoStrip: {
+      backgroundColor: wooshGreen.deep,
+      borderWidth: 1,
+      borderTopWidth: 0,
+      borderColor: wooshGreen.softBorder,
+      borderBottomLeftRadius: 12,
+      borderBottomRightRadius: 12,
+      paddingVertical: 8,
+      paddingHorizontal: 12,
+    },
+    wooshGreenPromoText: {
+      fontSize: 11,
+      color: 'rgba(255,255,255,0.92)',
+      fontWeight: '500',
+      textAlign: 'center',
+      lineHeight: 15,
+    },
+    wooshGreenPromoHighlight: {
+      color: wooshGreen.light,
+      fontWeight: '800',
+    },
+    wooshGreenPromoDot: {
+      color: wooshGreen.light,
+      fontSize: 10,
+    },
+    wooshGreenPromoBrand: {
+      color: '#fff',
+      fontWeight: '700',
+    },
+    wooshGreenPromoGreen: {
+      color: wooshGreen.light,
+      fontStyle: 'italic',
+      fontWeight: '700',
     },
     imageContainer: {
       position: 'relative',

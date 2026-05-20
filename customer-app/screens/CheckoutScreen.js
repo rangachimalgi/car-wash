@@ -626,14 +626,14 @@ export default function CheckoutScreen({ navigation, route }) {
                 <Text style={styles.checkoutReferralTitle}>Refer &amp; Earn</Text>
               </View>
               <Text style={styles.checkoutReferralSubtitle}>
-                Invite friends and both of you get ₹{referralInfo.perReferralRewardReferred || 100} in wallet.
+                Invite friends and both of you get {referralInfo.perReferralRewardReferred || 100} Woosh Coins in wallet.
               </Text>
               <View style={styles.checkoutReferralCodeChip}>
                 <Text style={styles.checkoutReferralCodeChipLabel}>Code</Text>
                 <Text style={styles.checkoutReferralCodeChipValue}>{referralInfo.code || 'COMINGSOON'}</Text>
               </View>
               <Text style={styles.checkoutReferralStats}>
-                {referralInfo.totalReferrals} joined  |  ₹{referralInfo.totalEarnings} earned
+                {referralInfo.totalReferrals} joined  |  {referralInfo.totalEarnings} Woosh Coins earned
               </Text>
             </View>
             <View style={styles.checkoutReferralRight}>
@@ -646,7 +646,7 @@ export default function CheckoutScreen({ navigation, route }) {
                 onPress={() => {
                   const codeText = referralInfo.code || 'your Woosh referral code';
                   Share.share({
-                    message: `Use my Woosh referral code ${codeText} and we both get ₹${referralInfo.perReferralRewardReferred || 100} in wallet on your first order!`,
+                    message: `Use my Woosh referral code ${codeText} and we both get ${referralInfo.perReferralRewardReferred || 100} Woosh Coins in wallet on your first order!`,
                   }).catch(() => {});
                 }}
               >

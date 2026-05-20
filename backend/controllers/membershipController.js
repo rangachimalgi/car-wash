@@ -1,5 +1,6 @@
 import Service from '../models/Service.js';
 import Membership from '../models/Membership.js';
+import { getActiveMembershipWashDiscountPercent } from '../services/membershipService.js';
 
 const DEFAULT_PLAN_ID = 'woosh_green';
 const LEGACY_PLAN_ID = 'woosh_black';
@@ -62,6 +63,8 @@ export const getMyMembership = async (req, res) => {
           ? planId.replace(/_/g, ' ')
           : 'Woosh membership';
 
+    const discountPercent = await getActiveMembershipWashDiscountPercent(userId);
+
     res.status(200).json({
       success: true,
       data: {
@@ -71,7 +74,7 @@ export const getMyMembership = async (req, res) => {
           planLabel,
           startsAt: active.startsAt,
           endsAt: active.endsAt,
-          discountPercent: active.discountPercent,
+          discountPercent,
         },
       },
     });

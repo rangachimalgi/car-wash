@@ -73,7 +73,7 @@ function App() {
     image: '',
     listPrice: '',
     membershipDurationMonths: '12',
-    membershipDiscountPercent: '40',
+    membershipDiscountPercent: '20',
     packages: {
       monthly: [],
       quarterly: [],
@@ -2218,7 +2218,7 @@ function App() {
       image: '',
       listPrice: '',
       membershipDurationMonths: '12',
-      membershipDiscountPercent: '40',
+      membershipDiscountPercent: '20',
       packages: {
         monthly: [],
         quarterly: [],

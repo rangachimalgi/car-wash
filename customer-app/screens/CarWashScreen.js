@@ -14,7 +14,7 @@ import { resolveAssetUrl } from '../config/api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
 import { getServiceById, getServicesByCategory } from '../services/serviceApi';
-import { getMyMembership } from '../services/membershipApi';
+import { getMyMembership, getMembershipPlans } from '../services/membershipApi';
 import { useTheme } from '../theme/ThemeContext';
 
 const { height } = Dimensions.get('window');
@@ -59,11 +59,23 @@ export default function CarWashScreen({ navigation, route }) {
   const { theme, isLightMode } = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
   const [membershipWashDiscountPercent, setMembershipWashDiscountPercent] = useState(0);
+  const [wooshGreenPromoPercent, setWooshGreenPromoPercent] = useState(20);
 
   useFocusEffect(
     useCallback(() => {
       let cancelled = false;
       (async () => {
+        try {
+          const plansRes = await getMembershipPlans();
+          if (!cancelled) {
+            const planPct = Number(plansRes?.data?.[0]?.discountPercent);
+            if (planPct > 0) {
+              setWooshGreenPromoPercent(Math.min(100, Math.round(planPct)));
+            }
+          }
+        } catch {
+          /* keep default 20% */
+        }
         try {
           const token = await AsyncStorage.getItem('authToken');
           if (!token) {
@@ -314,6 +326,7 @@ export default function CarWashScreen({ navigation, route }) {
                   fallbackImageSource={fallbackServiceImage}
                   fallbackAddOns={FALLBACK_ADD_ONS}
                   membershipDiscountPercent={membershipWashDiscountPercent}
+                  wooshGreenPromoPercent={wooshGreenPromoPercent}
                 />
               </View>
             ))
@@ -357,6 +370,7 @@ export default function CarWashScreen({ navigation, route }) {
                   navigation={navigation}
                   action="add_to_cart"
                   membershipDiscountPercent={membershipWashDiscountPercent}
+                  wooshGreenPromoPercent={wooshGreenPromoPercent}
                 />
               </View>
             }

@@ -14,7 +14,7 @@ const DEFAULT_PLAN = {
   durationMonths: 12,
   price: 499,
   mrp: 1200,
-  discountPercent: 40,
+  discountPercent: 20,
 };
 
 /**

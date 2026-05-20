@@ -450,14 +450,14 @@ export default function HomeScreen({ navigation }) {
                 <Text style={styles.homeReferralTitle}>Refer &amp; Earn</Text>
               </View>
               <Text style={styles.homeReferralSubtitle}>
-                Invite friends and both of you get ₹{referralInfo.perReferralRewardReferred || 100} in wallet.
+                Invite friends and both of you get {referralInfo.perReferralRewardReferred || 100} Woosh Coins in wallet.
               </Text>
               <View style={styles.homeReferralCodeChip}>
                 <Text style={styles.homeReferralCodeChipLabel}>Code</Text>
                 <Text style={styles.homeReferralCodeChipValue}>{referralInfo.code || 'COMINGSOON'}</Text>
               </View>
               <Text style={styles.homeReferralStats}>
-                {referralInfo.totalReferrals} joined  |  ₹{referralInfo.totalEarnings} earned
+                {referralInfo.totalReferrals} joined  |  {referralInfo.totalEarnings} Woosh Coins earned
               </Text>
             </View>
             <View style={styles.homeReferralRight}>
@@ -470,7 +470,7 @@ export default function HomeScreen({ navigation }) {
                 onPress={() => {
                   const codeText = referralInfo.code || 'your Woosh referral code';
                   Share.share({
-                    message: `Use my Woosh referral code ${codeText} and we both get ₹${referralInfo.perReferralRewardReferred || 100} in wallet on your first order!`,
+                    message: `Use my Woosh referral code ${codeText} and we both get ${referralInfo.perReferralRewardReferred || 100} Woosh Coins in wallet on your first order!`,
                   }).catch(() => {});
                 }}
               >

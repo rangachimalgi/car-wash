@@ -8,7 +8,10 @@ import Coupon from '../models/Coupon.js';
 import { computeCouponDiscount } from './couponController.js';
 import { recordIncentiveForCompletedOrder } from '../services/employeeIncentiveService.js';
 import EmployeeUpsellEvent from '../models/EmployeeUpsellEvent.js';
-import { activateMembershipFromOrder } from '../services/membershipService.js';
+import {
+  activateMembershipFromOrder,
+  getActiveMembershipWashDiscountPercent,
+} from '../services/membershipService.js';
 
 const TAX_RATE = 0.18;
 
@@ -154,21 +157,9 @@ export const createOrder = async (req, res) => {
       });
     }
 
-    const nowMem = new Date();
     let membershipWashDiscountPercent = 0;
     try {
-      const activeMem = await Membership.findOne({
-        user: userId,
-        status: 'active',
-        endsAt: { $gt: nowMem },
-      })
-        .sort({ endsAt: -1 })
-        .select('discountPercent')
-        .lean();
-      membershipWashDiscountPercent = Math.min(
-        100,
-        Math.max(0, Number(activeMem?.discountPercent || 0))
-      );
+      membershipWashDiscountPercent = await getActiveMembershipWashDiscountPercent(userId);
     } catch (memErr) {
       console.warn('Membership discount lookup failed:', memErr?.message || memErr);
     }
