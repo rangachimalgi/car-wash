@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, ActivityIndicator, TextInput } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import Modal from 'react-native-modal';
@@ -8,11 +8,15 @@ import { Image } from 'expo-image';
 import { getVehicles, deleteVehicle, setSelectedVehicle, addVehicle } from '../services/vehicleApi';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getVehicleKeys } from '../services/addressStorage';
+import {
+  filterVehiclesForService,
+  getVehicleFilterLabel,
+} from '../utils/vehicleServiceMatch';
 
 const FALLBACK_CAR_IMAGE = require('../assets/carVehicle.png');
 const FALLBACK_BIKE_IMAGE = require('../assets/fallbackBike.png');
 
-export default function SavedVehiclesModal({ visible, onClose, navigation }) {
+export default function SavedVehiclesModal({ visible, onClose, navigation, serviceCategory = null }) {
   const insets = useSafeAreaInsets();
   const { theme } = useTheme();
   const [vehicles, setVehicles] = useState([]);
@@ -23,6 +27,12 @@ export default function SavedVehiclesModal({ visible, onClose, navigation }) {
   const [customBrand, setCustomBrand] = useState('');
   const [customModel, setCustomModel] = useState('');
   const [savingCustomVehicle, setSavingCustomVehicle] = useState(false);
+
+  const filteredVehicles = useMemo(
+    () => filterVehiclesForService(vehicles, serviceCategory),
+    [vehicles, serviceCategory]
+  );
+  const vehicleFilterLabel = getVehicleFilterLabel(serviceCategory);
 
   // Load vehicles and selected vehicle
   const loadVehicles = useCallback(async () => {
@@ -356,7 +366,7 @@ export default function SavedVehiclesModal({ visible, onClose, navigation }) {
           <Text style={[styles.sectionHeader, { color: theme.textSecondary }]}>Saved Vehicles</Text>
           {!loading && (
             <Text style={[styles.debugText, { color: theme.textSecondary }]}>
-              ({vehicles.length} vehicles)
+              ({filteredVehicles.length} vehicles)
             </Text>
           )}
         </View>
@@ -365,11 +375,13 @@ export default function SavedVehiclesModal({ visible, onClose, navigation }) {
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color={theme.accent} />
           </View>
-        ) : !vehicles || vehicles.length === 0 ? (
+        ) : !filteredVehicles || filteredVehicles.length === 0 ? (
           <View style={styles.emptyContainer}>
             <MaterialCommunityIcons name="car-off" size={48} color={theme.textSecondary} />
             <Text style={[styles.emptyText, { color: theme.textSecondary }]}>
-              No saved vehicles
+              {vehicles.length > 0 && serviceCategory
+                ? `No saved ${vehicleFilterLabel}s for this service`
+                : 'No saved vehicles'}
             </Text>
             <TouchableOpacity
               style={[styles.addFirstButton, { backgroundColor: theme.accent }]}
@@ -383,10 +395,10 @@ export default function SavedVehiclesModal({ visible, onClose, navigation }) {
           <ScrollView 
             style={styles.vehiclesList}
             contentContainerStyle={styles.vehiclesListContent}
-            showsVerticalScrollIndicator={vehicles.length > 5}
+            showsVerticalScrollIndicator={filteredVehicles.length > 5}
             nestedScrollEnabled={true}
           >
-              {vehicles.map((vehicle, index) => {
+              {filteredVehicles.map((vehicle, index) => {
               // Handle both _id (MongoDB) and id (local) formats
               const vehicleId = vehicle._id?.toString() || vehicle.id?.toString() || `vehicle-${index}`;
               const isSelected = selectedVehicleId === vehicleId;

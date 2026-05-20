@@ -10,6 +10,10 @@ import { wooshGreen } from '../theme/wooshGreen';
 import { resolveAssetUrl } from '../config/api';
 import { getAddressKeys, getVehicleKeys } from '../services/addressStorage';
 import { getServiceById } from '../services/serviceApi';
+import {
+  isVehicleValidForService,
+  filterVehiclesForService,
+} from '../utils/vehicleServiceMatch';
 import { useFocusEffect } from '@react-navigation/native';
 import { getVehicles } from '../services/vehicleApi';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -45,29 +49,6 @@ export default function CartScreen({ navigation, route }) {
     return serviceDetails?.category || null;
   }, [cartItems, currentItem?.serviceId, serviceDetailsById]);
 
-  // Check if vehicle is valid for current service
-  const isVehicleValidForService = useCallback((vehicleType, serviceCategory) => {
-    if (!serviceCategory || !vehicleType) return true; // Allow if unknown
-    
-    const vehicleTypeLower = vehicleType?.toLowerCase() || '';
-    
-    if (serviceCategory === 'CarWash' || serviceCategory === 'AutoWash') {
-      // Only allow 4-wheelers (cars)
-      return vehicleTypeLower === '4wheeler' || 
-             vehicleTypeLower === 'car' ||
-             (vehicleTypeLower.includes('4') && vehicleTypeLower.includes('wheeler')) ||
-             (!vehicleTypeLower.includes('2') && !vehicleTypeLower.includes('bike'));
-    }
-    if (serviceCategory === 'BikeWash') {
-      // Only allow 2-wheelers (bikes)
-      return vehicleTypeLower === '2wheeler' || 
-             vehicleTypeLower === 'bike' ||
-             vehicleTypeLower.includes('bike') ||
-             (vehicleTypeLower.includes('2') && vehicleTypeLower.includes('wheeler'));
-    }
-    return true;
-  }, []);
-
   const loadAddressAndVehicle = useCallback(async () => {
     try {
       const keys = await getAddressKeys();
@@ -98,7 +79,10 @@ export default function CartScreen({ navigation, route }) {
         
         if (storedVehicleType && storedVehicleModel) {
           // Only set vehicle if it's valid for the current service
-          if (!serviceCategory || isVehicleValidForService(storedVehicleType, serviceCategory)) {
+          if (
+            !serviceCategory ||
+            isVehicleValidForService(storedVehicleType, serviceCategory, storedVehicleModel)
+          ) {
             setVehicle({
               type: storedVehicleType,
               model: storedVehicleModel,
@@ -116,7 +100,7 @@ export default function CartScreen({ navigation, route }) {
     } catch (error) {
       console.error('Error loading address/vehicle:', error);
     }
-  }, [serviceCategory, isVehicleValidForService]);
+  }, [serviceCategory]);
 
   // Load vehicles separately and only when modal opens (with caching)
   const loadVehiclesForModal = useCallback(async () => {
@@ -400,46 +384,10 @@ export default function CartScreen({ navigation, route }) {
 
   const serviceDetails = currentItem ? serviceDetailsById?.[currentItem.serviceId] : null;
 
-  // Filter vehicles based on service category
-  const filteredVehicles = useMemo(() => {
-    if (!serviceCategory) return allVehicles;
-    
-    if (serviceCategory === 'CarWash' || serviceCategory === 'AutoWash') {
-      // Only show 4-wheelers (cars)
-      return allVehicles.filter(v => {
-        const vehicleType = (v.vehicleType || '').toLowerCase();
-        const vehicleModel = (v.vehicleModel || '').toLowerCase();
-        
-        // Check if it's a 4-wheeler
-        const is4Wheeler = vehicleType === '4wheeler' || 
-                          vehicleType === 'car' ||
-                          (vehicleType.includes('4') && vehicleType.includes('wheeler'));
-        
-        // Exclude bikes
-        const isBike = vehicleType.includes('2wheeler') ||
-                      vehicleType.includes('bike') ||
-                      vehicleType.includes('2') && vehicleType.includes('wheeler') ||
-                      vehicleModel.includes('bike');
-        
-        return is4Wheeler && !isBike;
-      });
-    }
-    if (serviceCategory === 'BikeWash') {
-      // Only show 2-wheelers (bikes)
-      return allVehicles.filter(v => {
-        const vehicleType = (v.vehicleType || '').toLowerCase();
-        const vehicleModel = (v.vehicleModel || '').toLowerCase();
-        
-        // Check if it's a 2-wheeler
-        return vehicleType === '2wheeler' || 
-               vehicleType === 'bike' ||
-               vehicleType.includes('bike') ||
-               (vehicleType.includes('2') && vehicleType.includes('wheeler')) ||
-               vehicleModel.includes('bike');
-      });
-    }
-    return allVehicles;
-  }, [allVehicles, serviceCategory]);
+  const filteredVehicles = useMemo(
+    () => filterVehiclesForService(allVehicles, serviceCategory),
+    [allVehicles, serviceCategory]
+  );
 
   const handleSelectVehicle = async (selectedVehicle) => {
     const phone = await AsyncStorage.getItem('authPhone');
@@ -574,7 +522,10 @@ export default function CartScreen({ navigation, route }) {
 
             {/* Vehicle */}
             {(() => {
-              const shouldShowVehicle = vehicle && (!serviceCategory || isVehicleValidForService(vehicle.type, serviceCategory));
+              const shouldShowVehicle =
+                vehicle &&
+                (!serviceCategory ||
+                  isVehicleValidForService(vehicle.type, serviceCategory, vehicle.model));
               const vehiclePlaceholder =
                 serviceCategory === 'CarWash' || serviceCategory === 'AutoWash'
                   ? 'Select a car'

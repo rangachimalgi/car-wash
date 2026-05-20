@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, TextInput,
 import { StatusBar } from 'expo-status-bar';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import BackHeader from '../components/BackHeader';
+import SavedVehiclesModal from '../components/SavedVehiclesModal';
 import { createOrder } from '../services/orderApi';
 import { getCoupons as getCouponsApi, validateCoupon as validateCouponApi } from '../services/couponApi';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -10,6 +11,8 @@ import { getAddressKeys, getVehicleKeys } from '../services/addressStorage';
 import { getWallet, getReferralInfo } from '../services/walletApi';
 import { useTheme } from '../theme/ThemeContext';
 import { useFocusEffect } from '@react-navigation/native';
+import { getServiceById } from '../services/serviceApi';
+import { isVehicleValidForService } from '../utils/vehicleServiceMatch';
 
 const { width } = Dimensions.get('window');
 const LIGHT_BLUE = '#85E4FC';
@@ -47,6 +50,20 @@ export default function CheckoutScreen({ navigation, route }) {
   const [couponSuggestions, setCouponSuggestions] = useState([]);
   const [address, setAddress] = useState(null);
   const [vehicle, setVehicle] = useState(null);
+  const [showVehiclesModal, setShowVehiclesModal] = useState(false);
+  const [serviceDetailsById, setServiceDetailsById] = useState({});
+
+  const checkoutWashItem = useMemo(() => {
+    if (!checkoutCartItems.length) return null;
+    const wash = checkoutCartItems.find((i) => i.packageType !== 'Membership');
+    return wash || checkoutCartItems[0];
+  }, [checkoutCartItems]);
+
+  const serviceCategory = useMemo(() => {
+    if (!checkoutWashItem?.serviceId) return null;
+    const details = serviceDetailsById[checkoutWashItem.serviceId];
+    return details?.category || null;
+  }, [checkoutWashItem?.serviceId, serviceDetailsById]);
   const [walletBalance, setWalletBalance] = useState(0);
   const [walletLoading, setWalletLoading] = useState(false);
   const [useWallet, setUseWallet] = useState(false);
@@ -87,10 +104,17 @@ export default function CheckoutScreen({ navigation, route }) {
         ]);
 
         if (storedVehicleType && storedVehicleModel) {
-          setVehicle({
-            type: storedVehicleType,
-            model: storedVehicleModel,
-          });
+          if (
+            !serviceCategory ||
+            isVehicleValidForService(storedVehicleType, serviceCategory, storedVehicleModel)
+          ) {
+            setVehicle({
+              type: storedVehicleType,
+              model: storedVehicleModel,
+            });
+          } else {
+            setVehicle(null);
+          }
         } else {
           setVehicle(null);
         }
@@ -128,7 +152,49 @@ export default function CheckoutScreen({ navigation, route }) {
     } catch (error) {
       console.error('Error loading address/vehicle:', error);
     }
-  }, []);
+  }, [serviceCategory]);
+
+  useEffect(() => {
+    const serviceIds = Array.from(
+      new Set(
+        checkoutCartItems
+          .map((i) => i?.serviceId)
+          .filter(Boolean)
+      )
+    );
+    const missing = serviceIds.filter((id) => !serviceDetailsById[id]);
+    if (missing.length === 0) return;
+
+    let cancelled = false;
+    (async () => {
+      const entries = await Promise.all(
+        missing.map(async (serviceId) => {
+          try {
+            const res = await getServiceById(serviceId);
+            return [serviceId, res?.data || null];
+          } catch {
+            return [serviceId, null];
+          }
+        })
+      );
+      if (cancelled) return;
+      setServiceDetailsById((prev) => {
+        const next = { ...prev };
+        entries.forEach(([id, data]) => {
+          if (data) next[id] = data;
+        });
+        return next;
+      });
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [checkoutCartItems, serviceDetailsById]);
+
+  useEffect(() => {
+    loadAddressAndVehicle();
+  }, [serviceCategory, loadAddressAndVehicle]);
 
   // Load on mount and when screen comes into focus
   useFocusEffect(
@@ -272,7 +338,7 @@ export default function CheckoutScreen({ navigation, route }) {
           { text: 'Cancel', style: 'cancel' },
           {
             text: 'Add Vehicle',
-            onPress: () => navigation.navigate('VehicleDetails', { returnTo: 'Checkout' }),
+            onPress: () => setShowVehiclesModal(true),
           },
         ]
       );
@@ -462,7 +528,7 @@ export default function CheckoutScreen({ navigation, route }) {
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Vehicle Details</Text>
             <TouchableOpacity
-              onPress={() => navigation.navigate('VehicleDetails', { returnTo: 'Checkout' })}
+              onPress={() => setShowVehiclesModal(true)}
             >
               <Text style={styles.editButtonText}>
                 {vehicle ? 'Change' : 'Add'}
@@ -479,7 +545,7 @@ export default function CheckoutScreen({ navigation, route }) {
           ) : (
             <TouchableOpacity
               style={styles.addInfoCard}
-              onPress={() => navigation.navigate('VehicleDetails', { returnTo: 'Checkout' })}
+              onPress={() => setShowVehiclesModal(true)}
             >
               <MaterialCommunityIcons name="plus-circle" size={24} color={LIGHT_BLUE} />
               <Text style={styles.addInfoText}>Add Vehicle Details</Text>
@@ -707,6 +773,16 @@ export default function CheckoutScreen({ navigation, route }) {
           <MaterialCommunityIcons name="arrow-right" size={20} color="#000000" />
         </TouchableOpacity>
       </View>
+
+      <SavedVehiclesModal
+        visible={showVehiclesModal}
+        onClose={() => {
+          setShowVehiclesModal(false);
+          loadAddressAndVehicle();
+        }}
+        navigation={navigation}
+        serviceCategory={serviceCategory}
+      />
     </View>
   );
 }
