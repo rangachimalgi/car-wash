@@ -47,6 +47,11 @@ const serviceSchema = new mongoose.Schema({
     type: String,
     default: '',
   },
+  /** Tall image beside add-ons in View Details bottom sheet (customer app). */
+  detailsPanelImage: {
+    type: String,
+    default: '',
+  },
   images: {
     type: [String],
     default: [],

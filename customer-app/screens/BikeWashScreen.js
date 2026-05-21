@@ -11,6 +11,7 @@ import AddOnServicesList from '../components/AddOnServicesList';
 import PricingPackages, { AddToCartButton } from '../components/PricingPackages';
 import ServiceCoverage from '../components/ServiceCoverage';
 import { resolveAssetUrl } from '../config/api';
+import { resolveServiceDetailsPanelImageUri } from '../utils/serviceImages';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
 import { getServiceById, getServicesByCategory } from '../services/serviceApi';
@@ -409,6 +410,13 @@ export default function BikeWashScreen({ navigation }) {
                 maxVisible={4}
                 selectedAddOns={sheetSelectedAddOns}
                 onToggleAddOn={handleToggleSheetAddOn}
+                fallbackImageSource={FALLBACK_BIKE_IMAGE}
+                serviceImageUri={resolveServiceDetailsPanelImageUri(sheetService) || null}
+                serviceImageSource={
+                  !sheetService?.detailsPanelImage && !sheetService?.panelImage
+                    ? FALLBACK_BIKE_IMAGE
+                    : null
+                }
               />
 
               {/* Pricing Packages - commented out in bottom sheet */}

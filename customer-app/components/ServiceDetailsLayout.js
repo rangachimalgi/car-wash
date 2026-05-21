@@ -8,6 +8,7 @@ import ServiceCoverage from './ServiceCoverage';
 import AddOnServicesList from './AddOnServicesList';
 import PricingPackages, { AddToCartButton } from './PricingPackages';
 import { useTheme } from '../theme/ThemeContext';
+import { resolveServiceDetailsPanelImageUri } from '../utils/serviceImages';
 
 const { width, height } = Dimensions.get('window');
 const IMAGE_SECTION_HEIGHT = height * 0.65;
@@ -182,11 +183,12 @@ export default function ServiceDetailsLayout({
             
             {/* Add-On Services List */}
             {showAddOns && addOnServices.length > 0 && (
-              <AddOnServicesList 
+              <AddOnServicesList
                 services={addOnServices}
                 maxVisible={4}
                 selectedAddOns={selectedAddOns}
                 onToggleAddOn={toggleAddOn}
+                serviceImageUri={resolveServiceDetailsPanelImageUri(serviceData) || null}
               />
             )}
 

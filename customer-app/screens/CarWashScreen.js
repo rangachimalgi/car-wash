@@ -11,6 +11,7 @@ import PricingPackages, { AddToCartButton } from '../components/PricingPackages'
 import ServiceCoverage from '../components/ServiceCoverage';
 import WooshGreenCard from '../components/WooshGreenCard';
 import { resolveAssetUrl } from '../config/api';
+import { resolveServiceDetailsPanelImageUri } from '../utils/serviceImages';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
 import { getServiceById, getServicesByCategory } from '../services/serviceApi';
@@ -425,6 +426,13 @@ export default function CarWashScreen({ navigation, route }) {
                 maxVisible={4}
                 selectedAddOns={sheetSelectedAddOns}
                 onToggleAddOn={handleToggleSheetAddOn}
+                fallbackImageSource={fallbackServiceImage}
+                serviceImageUri={resolveServiceDetailsPanelImageUri(sheetService) || null}
+                serviceImageSource={
+                  !sheetService?.detailsPanelImage && !sheetService?.panelImage
+                    ? fallbackServiceImage
+                    : null
+                }
               />
 
               {/* Pricing Packages - commented out in bottom sheet */}

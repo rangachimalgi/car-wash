@@ -73,6 +73,7 @@ function App() {
     duration: '30 mins',
     image: '',
     panelImage: '',
+    detailsPanelImage: '',
     listPrice: '',
     membershipDurationMonths: '12',
     membershipDiscountPercent: '20',
@@ -131,6 +132,7 @@ function App() {
   const [servicesError, setServicesError] = useState('')
   const [uploadingMainImage, setUploadingMainImage] = useState(false)
   const [uploadingPanelImage, setUploadingPanelImage] = useState(false)
+  const [uploadingDetailsPanelImage, setUploadingDetailsPanelImage] = useState(false)
   const [uploadingPackageImage, setUploadingPackageImage] = useState(false)
   const [uploadingPackagePanelImage, setUploadingPackagePanelImage] = useState(false)
   const [authToken, setAuthToken] = useState(() => localStorage.getItem('adminAuthToken') || '')
@@ -2010,6 +2012,26 @@ function App() {
     setFormData((prev) => ({ ...prev, panelImage: '' }))
   }
 
+  const handleDetailsPanelImageUpload = async (e) => {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file) return
+    setUploadingDetailsPanelImage(true)
+    try {
+      const [uploadedUrl] = await uploadServiceImageFiles([file])
+      setFormData((prev) => ({ ...prev, detailsPanelImage: uploadedUrl || '' }))
+      setMessage({ type: 'success', text: 'View Details panel image uploaded' })
+    } catch (error) {
+      setMessage({ type: 'error', text: error.message || 'Failed to upload View Details panel image' })
+    } finally {
+      setUploadingDetailsPanelImage(false)
+    }
+  }
+
+  const handleClearDetailsPanelImage = () => {
+    setFormData((prev) => ({ ...prev, detailsPanelImage: '' }))
+  }
+
   const handlePackageImageUpload = async (e) => {
     const file = e.target.files?.[0]
     e.target.value = ''
@@ -2215,6 +2237,7 @@ function App() {
           duration: service.duration || '30 mins',
           image: service.image || '',
           panelImage: service.panelImage || '',
+          detailsPanelImage: service.detailsPanelImage || '',
           listPrice: String(service.listPrice ?? ''),
           membershipDurationMonths: String(service.membershipDurationMonths ?? '12'),
           membershipDiscountPercent: String(service.membershipDiscountPercent ?? '0'),
@@ -2267,6 +2290,7 @@ function App() {
       duration: serviceFilter === 'membership' ? '' : '30 mins',
       image: '',
       panelImage: '',
+      detailsPanelImage: '',
       listPrice: '',
       membershipDurationMonths: '12',
       membershipDiscountPercent: '20',
@@ -2325,6 +2349,7 @@ function App() {
           duration: (formData.duration || '').trim(),
           image: formData.image,
           panelImage: formData.panelImage || '',
+          detailsPanelImage: formData.detailsPanelImage || '',
           images: [],
           specifications: { coverage: [], notIncluded: [] },
           addOnServices: [],
@@ -2358,6 +2383,7 @@ function App() {
           duration: formData.duration,
           image: formData.image,
           panelImage: formData.panelImage || '',
+          detailsPanelImage: formData.detailsPanelImage || '',
           images: [],
           specifications: {
             coverage: coverage,
@@ -3509,6 +3535,55 @@ function App() {
                       </button>
                     </>
                   ) : null}
+                </div>
+              )}
+
+              {(formData.category === 'CarWash' || formData.category === 'BikeWash' || formData.category === 'AutoWash') && (
+                <div className="form-group">
+                  <label>Panel Image (View Details)</label>
+                  <small className="help-text" style={{ display: 'block', marginBottom: 8 }}>
+                    Tall image beside Add Services when the customer taps View Details (bottom sheet).
+                  </small>
+                  <div className="service-upload-row">
+                    <label className="service-upload-button">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleDetailsPanelImageUpload}
+                        disabled={uploadingDetailsPanelImage}
+                      />
+                      {uploadingDetailsPanelImage ? 'Uploading...' : 'Upload Panel Image'}
+                    </label>
+                    {formData.detailsPanelImage ? (
+                      <span className="service-upload-status">Uploaded</span>
+                    ) : (
+                      <span className="service-upload-status muted">No image</span>
+                    )}
+                  </div>
+                  {formData.detailsPanelImage ? (
+                    <>
+                      <div className="package-image-preview-wrap">
+                        <img
+                          src={resolveUploadOrAbsoluteUrl(formData.detailsPanelImage)}
+                          alt=""
+                          className="package-image-preview package-panel-preview"
+                        />
+                        <small className="help-text">{formData.detailsPanelImage}</small>
+                      </div>
+                      <button
+                        type="button"
+                        className="secondary-button"
+                        onClick={handleClearDetailsPanelImage}
+                        style={{ marginTop: 8 }}
+                      >
+                        Clear View Details panel image
+                      </button>
+                    </>
+                  ) : (
+                    <small className="help-text">
+                      If empty, the app uses the expanded-card panel image. Recommended: tall portrait (~600×900 px).
+                    </small>
+                  )}
                 </div>
               )}
 

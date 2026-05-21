@@ -4,6 +4,7 @@ import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { resolveAssetUrl } from '../config/api';
+import { resolveServiceDetailsPanelImageUri } from '../utils/serviceImages';
 import { getServiceById } from '../services/serviceApi';
 import { useTheme } from '../theme/ThemeContext';
 import ServiceDetailsBottomSheet from '../components/ServiceDetailsBottomSheet';
@@ -247,11 +248,16 @@ export default function ServiceDetailsScreen({ navigation, route }) {
 
             {/* Add-On Services List */}
             {resolvedAddOns.length > 0 && (
-              <AddOnServicesList 
+              <AddOnServicesList
                 services={resolvedAddOns}
                 maxVisible={4}
                 selectedAddOns={selectedAddOns}
                 onToggleAddOn={toggleAddOn}
+                fallbackImageSource={FALLBACK_ADDON_IMAGE}
+                serviceImageUri={resolveServiceDetailsPanelImageUri(service) || null}
+                serviceImageSource={
+                  !service?.detailsPanelImage && !service?.panelImage ? FALLBACK_ADDON_IMAGE : null
+                }
               />
             )}
 

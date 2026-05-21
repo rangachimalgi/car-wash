@@ -342,6 +342,7 @@ export const createService = async (req, res) => {
       duration,
       image,
       panelImage,
+      detailsPanelImage,
       images,
       rating,
       totalReviews,
@@ -426,6 +427,7 @@ export const createService = async (req, res) => {
           : '30 mins'),
       image: image || '',
       panelImage: panelImage || '',
+      detailsPanelImage: detailsPanelImage || '',
       images: images || [],
       rating: rating || 0,
       totalReviews: totalReviews || 0,
@@ -513,6 +515,7 @@ export const updateService = async (req, res) => {
       duration,
       image,
       panelImage,
+      detailsPanelImage,
       images,
       rating,
       totalReviews,
@@ -589,6 +592,7 @@ export const updateService = async (req, res) => {
     if (duration !== undefined) service.duration = duration;
     if (image !== undefined) service.image = image;
     if (panelImage !== undefined) service.panelImage = panelImage;
+    if (detailsPanelImage !== undefined) service.detailsPanelImage = detailsPanelImage;
     if (images !== undefined) service.images = images;
     if (rating !== undefined) service.rating = rating;
     if (totalReviews !== undefined) service.totalReviews = totalReviews;
@@ -737,6 +741,7 @@ export const deleteService = async (req, res) => {
     try {
       if (deleted.image) await removeStoredServiceImage(deleted.image);
       if (deleted.panelImage) await removeStoredServiceImage(deleted.panelImage);
+      if (deleted.detailsPanelImage) await removeStoredServiceImage(deleted.detailsPanelImage);
       if (Array.isArray(deleted.images)) {
         await Promise.all(deleted.images.map((u) => removeStoredServiceImage(u)));
       }

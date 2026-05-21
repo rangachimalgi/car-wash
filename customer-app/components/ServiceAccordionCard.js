@@ -4,6 +4,7 @@ import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { resolveAssetUrl } from '../config/api';
+import { resolveServicePanelImageUri } from '../utils/serviceImages';
 import { useTheme } from '../theme/ThemeContext';
 import { wooshGreen } from '../theme/wooshGreen';
 import AddOnServicesList from './AddOnServicesList';
@@ -75,9 +76,7 @@ export default function ServiceAccordionCard({
   const durationLabel = normalizeDuration(service?.duration);
   const serviceImageFromApi = resolveAssetUrl(service?.image || serviceSummary?.image || '');
   const hasServiceImage = Boolean(serviceImageFromApi);
-  const panelImageFromApi = resolveAssetUrl(
-    service?.panelImage || serviceSummary?.panelImage || ''
-  );
+  const panelImageFromApi = resolveServicePanelImageUri(service) || resolveServicePanelImageUri(serviceSummary);
   const hasPanelImage = Boolean(panelImageFromApi);
   const imageUri =
     serviceImageFromApi ||
