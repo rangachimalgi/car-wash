@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTheme } from '../theme/ThemeContext';
@@ -6,8 +6,12 @@ import { useTheme } from '../theme/ThemeContext';
 const UPCOMING_BOOK_STATUSES = ['Pending', 'Paid', 'Scheduled', 'In Progress'];
 
 export default function UpcomingWashCard({ wash, onPress, onViewLocation, onPayNow, onBook }) {
-  const { theme } = useTheme();
-  const styles = useMemo(() => createStyles(theme), [theme]);
+  const { theme, isLightMode } = useTheme();
+  const styles = useMemo(() => createStyles(theme, isLightMode), [theme, isLightMode]);
+  const [imageError, setImageError] = useState(false);
+  useEffect(() => {
+    setImageError(false);
+  }, [wash.id, wash.image]);
   const status = String(wash.status || '').trim();
   const statusLabel = status === 'In Progress' ? 'Ongoing' : (status || 'Upcoming');
   const showBook = onBook && UPCOMING_BOOK_STATUSES.includes(status);
@@ -21,13 +25,24 @@ export default function UpcomingWashCard({ wash, onPress, onViewLocation, onPayN
       <View style={styles.content}>
         <View style={styles.leftSection}>
           <View style={styles.imageContainer}>
-            <Image 
-              source={{ uri: wash.image }}
-              style={styles.image}
-              resizeMode="cover"
-            />
+            <View style={styles.imageClip}>
+              {wash.image && !imageError ? (
+                <Image
+                  source={{ uri: wash.image }}
+                  style={styles.imageFill}
+                  resizeMode="contain"
+                  onError={() => setImageError(true)}
+                />
+              ) : (
+                <View style={[styles.imageFill, styles.imagePlaceholder]}>
+                  <MaterialCommunityIcons name="car-wash" size={36} color={theme.textSecondary} />
+                </View>
+              )}
+            </View>
             <View style={styles.dateBadge}>
-              <Text style={styles.dateDay}>{wash.date}</Text>
+              <Text style={styles.dateDay} numberOfLines={1}>
+                {wash.date}
+              </Text>
             </View>
           </View>
         </View>
@@ -118,7 +133,7 @@ export default function UpcomingWashCard({ wash, onPress, onViewLocation, onPayN
   );
 }
 
-const createStyles = theme => StyleSheet.create({
+const createStyles = (theme, isLightMode) => StyleSheet.create({
   card: {
     backgroundColor: theme.cardBackground,
     borderRadius: 16,
@@ -135,21 +150,34 @@ const createStyles = theme => StyleSheet.create({
   content: {
     flexDirection: 'row',
     padding: 16,
+    alignItems: 'flex-start',
   },
   leftSection: {
-    marginRight: 16,
+    width: 100,
+    marginRight: 14,
   },
   imageContainer: {
-    position: 'relative',
     width: 100,
     height: 120,
     borderRadius: 12,
     overflow: 'hidden',
+    backgroundColor: isLightMode ? '#F1F5F9' : theme.accentSoft,
+    borderWidth: 1,
+    borderColor: theme.cardBorder,
   },
-  image: {
+  imageClip: {
     width: '100%',
     height: '100%',
-    backgroundColor: theme.accentSoft,
+    overflow: 'hidden',
+  },
+  imageFill: {
+    width: '100%',
+    height: '100%',
+    backgroundColor: isLightMode ? '#F8FAFC' : theme.background,
+  },
+  imagePlaceholder: {
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   dateBadge: {
     position: 'absolute',

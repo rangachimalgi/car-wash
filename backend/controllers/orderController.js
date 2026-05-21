@@ -522,7 +522,7 @@ export const getOrders = async (req, res) => {
 
     const orders = await Order.find(query)
       .sort({ createdAt: -1 })
-      .populate('items.service', 'name category')
+      .populate('items.service', 'name category image')
       .populate('items.addOns', 'name basePrice');
 
     await ensureOrdersHaveNumbers(orders);
@@ -1199,7 +1199,7 @@ export const getOrderById = async (req, res) => {
     } else if (userId) {
       // Customer access: check if order belongs to this user
       order = await Order.findOne({ _id: orderId, user: userId })
-        .populate('items.service', 'name category')
+        .populate('items.service', 'name category image')
         .populate('items.addOns', 'name basePrice');
     } else {
       return res.status(401).json({

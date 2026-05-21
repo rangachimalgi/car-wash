@@ -9,6 +9,11 @@ import UpcomingWashCard from '../components/UpcomingWashCard';
 import { getOrders } from '../services/orderApi';
 import { useTheme } from '../theme/ThemeContext';
 import { normalizeOrderStatus } from '../utils/orderStatus';
+import {
+  getServiceTypeLabel,
+  getOrderItemImageUri,
+  getOrderItemSchedule,
+} from '../utils/orderDisplay';
 
 export default function BookingsScreen({ navigation }) {
   const insets = useSafeAreaInsets();
@@ -30,39 +35,19 @@ export default function BookingsScreen({ navigation }) {
     return date.toLocaleDateString();
   };
 
-  const getServiceTypeLabel = (category, item) => {
-    const packageType = item?.packageType;
-    if (packageType && packageType !== 'OneTime') {
-      return `${packageType} Package`;
-    }
-    if (category === 'CarWash') return 'Car Wash';
-    if (category === 'BikeWash') return 'Bike Wash';
-    if (category === 'AutoWash') return 'Auto Wash';
-    return 'Service';
-  };
-
-  const getServiceImage = (category) => {
-    if (category === 'BikeWash') {
-      return 'https://images.unsplash.com/photo-1558981806-ec527fa84c39?w=300&h=200&fit=crop&auto=format';
-    }
-    if (category === 'AutoWash') {
-      return 'https://images.unsplash.com/photo-1619642751034-765dfdf7c58e?w=300&h=200&fit=crop&auto=format';
-    }
-    return 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=300&h=200&fit=crop&auto=format';
-  };
-
   const mapOrderToUpcoming = (order) => {
     const item = order.items?.[0];
     const category = item?.service?.category;
+    const { date: scheduledDate, time: scheduledTime } = getOrderItemSchedule(item);
     return {
       id: order._id,
       serviceType: getServiceTypeLabel(category, item),
       serviceName: item?.serviceName || item?.service?.name || 'Service',
-      date: formatShortDate(item?.scheduledDate),
-      time: item?.scheduledTimeSlot || '',
+      date: formatShortDate(scheduledDate),
+      time: scheduledTime,
       address: order.customer?.address || 'Address not set',
       price: `₹${order.totalAmount?.toFixed(2)}`,
-      image: getServiceImage(category),
+      image: getOrderItemImageUri(item),
       status: normalizeOrderStatus(order.status),
       employeeLocation: order.employeeLocation,
       startCode: order.startOtp || '',

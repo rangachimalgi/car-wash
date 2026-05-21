@@ -1,4 +1,41 @@
+import { resolveAssetUrl } from '../config/api';
 import { normalizeOrderStatus } from './orderStatus';
+
+const CATEGORY_FALLBACK_IMAGES = {
+  BikeWash: 'https://images.unsplash.com/photo-1558981806-ec527fa84c39?w=300&h=200&fit=crop&auto=format',
+  AutoWash: 'https://images.unsplash.com/photo-1619642751034-765dfdf7c58e?w=300&h=200&fit=crop&auto=format',
+  CarWash: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=300&h=200&fit=crop&auto=format',
+};
+
+/** Resolved image URL for an order line item (service image from API, then category fallback). */
+export function getOrderItemImageUri(item) {
+  const category = item?.service?.category;
+  const raw = item?.service?.image || '';
+  const resolved = resolveAssetUrl(raw);
+  if (resolved) return resolved;
+  if (item?.customPackage) {
+    return CATEGORY_FALLBACK_IMAGES.CarWash;
+  }
+  return CATEGORY_FALLBACK_IMAGES[category] || CATEGORY_FALLBACK_IMAGES.CarWash;
+}
+
+export function getOrderItemSchedule(item) {
+  if (!item) return { date: null, time: '' };
+  if (item.packageType === 'OneTime') {
+    return { date: item.scheduledDate, time: item.scheduledTimeSlot || '' };
+  }
+  if (item.customPackage?.packageStartDate) {
+    return {
+      date: item.customPackage.packageStartDate,
+      time: item.customPackage.packageTimeSlot || '',
+    };
+  }
+  const slot = item.scheduledSlots?.[0];
+  if (slot) {
+    return { date: slot.scheduledDate, time: slot.scheduledTimeSlot || '' };
+  }
+  return { date: item.scheduledDate, time: item.scheduledTimeSlot || '' };
+}
 
 export function getServiceTypeLabel(category, item) {
   const packageType = item?.packageType;
