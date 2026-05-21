@@ -40,6 +40,7 @@ const DEFAULT_PACKAGE_CARD = {
   name: '',
   description: '',
   image: '',
+  panelImage: '',
   times: 2,
   price: '',
   addOnServiceIds: [],
@@ -131,6 +132,7 @@ function App() {
   const [uploadingMainImage, setUploadingMainImage] = useState(false)
   const [uploadingPanelImage, setUploadingPanelImage] = useState(false)
   const [uploadingPackageImage, setUploadingPackageImage] = useState(false)
+  const [uploadingPackagePanelImage, setUploadingPackagePanelImage] = useState(false)
   const [authToken, setAuthToken] = useState(() => localStorage.getItem('adminAuthToken') || '')
   
   // Time Slots state
@@ -540,6 +542,7 @@ function App() {
               name: card?.name ?? '',
               description: card?.description ?? '',
               image: card?.image ?? '',
+              panelImage: card?.panelImage ?? '',
               times: Number(card?.times || 0) || index + 1,
               price: card?.price ?? '',
               addOnServiceIds: Array.isArray(card?.addOnServiceIds) ? card.addOnServiceIds : [],
@@ -578,6 +581,7 @@ function App() {
           name: String(card.name || '').trim(),
           description: String(card.description || '').trim(),
           image: String(card.image || '').trim(),
+          panelImage: String(card.panelImage || '').trim(),
           times: Number(card.times || index + 1),
           price: Number(card.price || 0),
           addOnServiceIds: Array.isArray(card.addOnServiceIds) ? card.addOnServiceIds : [],
@@ -627,6 +631,7 @@ function App() {
       name: card.name || '',
       description: card.description || '',
       image: card.image || '',
+      panelImage: card.panelImage || '',
       times: card.times ?? 2,
       price: card.price ?? '',
       addOnServiceIds: Array.isArray(card.addOnServiceIds) ? [...card.addOnServiceIds] : [],
@@ -656,6 +661,7 @@ function App() {
       name: String(newPackageCard.name || '').trim(),
       description: String(newPackageCard.description || '').trim(),
       image: String(newPackageCard.image || '').trim(),
+      panelImage: String(newPackageCard.panelImage || '').trim(),
       times: Number(newPackageCard.times || 0),
       price: Number(newPackageCard.price || 0),
     }
@@ -2023,6 +2029,27 @@ function App() {
 
   const handleClearPackageImage = () => {
     setNewPackageCard((prev) => ({ ...prev, image: '' }))
+  }
+
+  const handlePackagePanelImageUpload = async (e) => {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file) return
+    setUploadingPackagePanelImage(true)
+    setPackagePricingMessage({ type: '', text: '' })
+    try {
+      const [uploadedUrl] = await uploadServiceImageFiles([file])
+      setNewPackageCard((prev) => ({ ...prev, panelImage: uploadedUrl || '' }))
+      setPackagePricingMessage({ type: 'success', text: 'Panel image uploaded to storage.' })
+    } catch (error) {
+      setPackagePricingMessage({ type: 'error', text: error.message || 'Failed to upload panel image' })
+    } finally {
+      setUploadingPackagePanelImage(false)
+    }
+  }
+
+  const handleClearPackagePanelImage = () => {
+    setNewPackageCard((prev) => ({ ...prev, panelImage: '' }))
   }
 
   const addPackageRow = (packageType) => {
@@ -3803,6 +3830,47 @@ function App() {
                     <small className="help-text">
                       Shown full-width on Monthly Packages cards (16:9 crop). Recommended upload:{' '}
                       <strong>1200×675 px</strong> (or 1600×900). JPG/WebP, subject centered — edges may crop on small phones.
+                    </small>
+                  )}
+                </div>
+                <div className="form-group">
+                  <label>Panel Image (View Details)</label>
+                  <small className="help-text" style={{ display: 'block', marginBottom: 8 }}>
+                    Tall image beside Add Services when the customer opens View Details on a monthly package.
+                  </small>
+                  <div className="service-upload-row">
+                    <label className="service-upload-button">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handlePackagePanelImageUpload}
+                        disabled={uploadingPackagePanelImage}
+                      />
+                      {uploadingPackagePanelImage ? 'Uploading...' : 'Upload Panel Image'}
+                    </label>
+                    {newPackageCard.panelImage ? (
+                      <span className="service-upload-status">Uploaded</span>
+                    ) : (
+                      <span className="service-upload-status muted">No image</span>
+                    )}
+                    {newPackageCard.panelImage ? (
+                      <button type="button" className="secondary-button" onClick={handleClearPackagePanelImage}>
+                        Clear
+                      </button>
+                    ) : null}
+                  </div>
+                  {newPackageCard.panelImage ? (
+                    <div className="package-image-preview-wrap">
+                      <img
+                        src={resolveUploadOrAbsoluteUrl(newPackageCard.panelImage)}
+                        alt="Panel preview"
+                        className="package-image-preview package-panel-preview"
+                      />
+                      <small className="help-text">{newPackageCard.panelImage}</small>
+                    </div>
+                  ) : (
+                    <small className="help-text">
+                      Recommended: tall portrait image (e.g. <strong>600×900 px</strong> or 3:4). Same idea as Panel Image on Car/Bike wash services.
                     </small>
                   )}
                 </div>

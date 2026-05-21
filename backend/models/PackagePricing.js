@@ -19,6 +19,8 @@ const packageCardSchema = new mongoose.Schema(
     name: { type: String, required: true, trim: true },
     description: { type: String, default: '', trim: true },
     image: { type: String, default: '', trim: true },
+    /** Tall image beside add-ons in package View Details (customer app). */
+    panelImage: { type: String, default: '', trim: true },
     times: { type: Number, required: true, min: 1 },
     price: { type: Number, required: true, min: 0 },
     addOnServiceIds: {

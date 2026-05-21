@@ -38,6 +38,7 @@ const buildPackageCards = (pricingConfig, addOnsById = {}) => {
         name: String(card?.name || '').trim(),
         description: String(card?.description || '').trim(),
         image: String(card?.image || '').trim(),
+        panelImage: String(card?.panelImage || '').trim(),
         category: 'Package',
         duration: `${durationDays} days`,
         basePrice,
@@ -206,6 +207,12 @@ export default function PackagesScreen({ navigation }) {
                 selectedAddOns={selectedAddOnsByServiceId[sheetService._id] || []}
                 onToggleAddOn={(addOnId) => toggleAddOn(sheetService._id, addOnId)}
                 fallbackImageSource={FALLBACK_ADDON_IMAGE}
+                serviceImageUri={
+                  resolveAssetUrl(sheetService?.panelImage || '') || null
+                }
+                serviceImageSource={
+                  !sheetService?.panelImage ? FALLBACK_PACKAGE_IMAGE : null
+                }
               />
             </BottomSheetScrollView>
           </ServiceDetailsBottomSheet>

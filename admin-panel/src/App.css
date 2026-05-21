@@ -2046,6 +2046,12 @@
   background: #f8fafc;
 }
 
+.package-panel-preview {
+  width: 120px;
+  height: 160px;
+  object-fit: cover;
+}
+
 .package-list-row {
   align-items: center;
 }

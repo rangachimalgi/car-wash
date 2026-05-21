@@ -47,6 +47,7 @@ const validatePackageCards = (cards = []) => {
     const name = String(card?.name || '').trim();
     const description = String(card?.description || '').trim();
     const image = String(card?.image || '').trim();
+    const panelImage = String(card?.panelImage || '').trim();
     const times = Number(card?.times);
     const price = Number(card?.price);
     const addOnServiceIds = Array.isArray(card?.addOnServiceIds) ? card.addOnServiceIds : [];
@@ -60,6 +61,9 @@ const validatePackageCards = (cards = []) => {
     }
     if (image && !/^https?:\/\//i.test(image) && !image.startsWith('/uploads/')) {
       return { valid: false, message: 'Package image must be a valid URL or /uploads path' };
+    }
+    if (panelImage && !/^https?:\/\//i.test(panelImage) && !panelImage.startsWith('/uploads/')) {
+      return { valid: false, message: 'Panel image must be a valid URL or /uploads path' };
     }
     if (!Number.isFinite(times) || times < 1) {
       return { valid: false, message: 'Each package must include washes per month (times >= 1)' };
@@ -87,6 +91,7 @@ const normalizeLegacyCards = (cards = [], matrix = DEFAULT_MATRIX) => {
           name: String(card.name || '').trim(),
           description: String(card.description || '').trim(),
           image: String(card.image || '').trim(),
+          panelImage: String(card.panelImage || '').trim(),
           times: Number(card.times),
           price: Number(card.price),
           addOnServiceIds: Array.isArray(card.addOnServiceIds) ? card.addOnServiceIds : [],
@@ -99,6 +104,7 @@ const normalizeLegacyCards = (cards = [], matrix = DEFAULT_MATRIX) => {
         name: String(card?.title || '').trim(),
         description: '',
         image: '',
+        panelImage: '',
         times: 1,
         price: fallbackPrice,
         addOnServiceIds: [],
@@ -225,6 +231,7 @@ export const upsertPackagePricing = async (req, res) => {
       name: String(card.name || '').trim(),
       description: String(card.description || '').trim(),
       image: String(card.image || '').trim(),
+      panelImage: String(card.panelImage || '').trim(),
       times: Number(card.times),
       price: Number(card.price),
       addOnServiceIds: Array.isArray(card.addOnServiceIds)
