@@ -145,10 +145,7 @@ export default function BookingsScreen({ navigation }) {
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Upcoming Wash</Text>
           </View>
-          <Text style={styles.addOnHint}>
-            Extra services: only from this list — tap <Text style={styles.addOnHintBold}>Book</Text> on an upcoming wash
-            (after pay, before the wash is done). Add-ons are not added from Your orders.
-          </Text>
+          
 
           {upcomingWashes.length === 0 ? (
             <View style={styles.emptyState}>
