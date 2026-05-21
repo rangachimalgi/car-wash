@@ -34,17 +34,16 @@ const lightTheme = {
 };
 
 const ThemeContext = createContext({
-  theme: lightTheme,
-  isLightMode: true,
-  colorScheme: 'light',
+  theme: darkTheme,
+  isLightMode: false,
+  colorScheme: 'dark',
   setColorScheme: () => {},
   toggleColorScheme: () => {},
   isLoaded: false,
 });
 
 export function ThemeProvider({ children }) {
-  // Default to light mode
-  const [colorScheme, setColorScheme] = useState('light');
+  const [colorScheme, setColorScheme] = useState('dark');
   const [isLoaded, setIsLoaded] = useState(false);
 
   useEffect(() => {
