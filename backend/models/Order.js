@@ -68,6 +68,14 @@ const orderItemSchema = new mongoose.Schema({
 }, { _id: false });
 
 const orderSchema = new mongoose.Schema({
+  /** Customer-facing id (e.g. ORD00001042). Set at create; searchable in Mongo. */
+  orderNumber: {
+    type: String,
+    unique: true,
+    sparse: true,
+    trim: true,
+    index: true,
+  },
   user: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',

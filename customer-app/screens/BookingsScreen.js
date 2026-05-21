@@ -1,24 +1,20 @@
 import React, { useCallback, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, RefreshControl } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import CustomHeader from '../components/CustomHeader';
 import UpcomingWashCard from '../components/UpcomingWashCard';
-import RecentServiceCard from '../components/RecentServiceCard';
-import RatingModal from '../components/RatingModal';
-import { getOrders, submitOrderRating } from '../services/orderApi';
+import { getOrders } from '../services/orderApi';
 import { useTheme } from '../theme/ThemeContext';
 import { normalizeOrderStatus } from '../utils/orderStatus';
 
 export default function BookingsScreen({ navigation }) {
   const insets = useSafeAreaInsets();
   const [upcomingWashes, setUpcomingWashes] = useState([]);
-  const [recentServices, setRecentServices] = useState([]);
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
-  const [ratingOrder, setRatingOrder] = useState(null);
   const { theme, isLightMode } = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
 
@@ -31,12 +27,6 @@ export default function BookingsScreen({ navigation }) {
 
     if (date.toDateString() === today.toDateString()) return 'Today';
     if (date.toDateString() === tomorrow.toDateString()) return 'Tomorrow';
-    return date.toLocaleDateString();
-  };
-
-  const formatRecentDate = (dateValue) => {
-    const date = new Date(dateValue);
-    if (Number.isNaN(date.getTime())) return '';
     return date.toLocaleDateString();
   };
 
@@ -79,23 +69,6 @@ export default function BookingsScreen({ navigation }) {
     };
   };
 
-  const mapOrderToRecent = (order) => {
-    const item = order.items?.[0];
-    const category = item?.service?.category;
-    return {
-      id: order._id,
-      serviceType: getServiceTypeLabel(category, item),
-      serviceName: item?.serviceName || item?.service?.name || 'Service',
-      date: formatRecentDate(item?.scheduledDate || order.createdAt),
-      time: item?.scheduledTimeSlot || '',
-      status: normalizeOrderStatus(order.status) || 'Completed',
-      price: `₹${order.totalAmount?.toFixed(2)}`,
-      image: getServiceImage(category),
-      rating: order.rating,
-      review: order.review,
-    };
-  };
-
   const fetchOrders = async () => {
     setLoading(true);
     try {
@@ -103,17 +76,10 @@ export default function BookingsScreen({ navigation }) {
       if (response.success) {
         const orders = response.data || [];
         const upcomingStatuses = ['Pending', 'Paid', 'Scheduled', 'In Progress'];
-        const recentStatuses = ['Completed', 'Cancelled'];
-
         setUpcomingWashes(
           orders
             .filter((order) => upcomingStatuses.includes(normalizeOrderStatus(order.status)))
             .map(mapOrderToUpcoming)
-        );
-        setRecentServices(
-          orders
-            .filter((order) => recentStatuses.includes(normalizeOrderStatus(order.status)))
-            .map(mapOrderToRecent)
         );
       }
     } catch (error) {
@@ -142,10 +108,6 @@ export default function BookingsScreen({ navigation }) {
     navigation.navigate('EmployeeLiveLocation', { orderId: wash.id });
   };
 
-  const handleRateService = (service) => {
-    setRatingOrder({ id: service.id, serviceName: service.serviceName });
-  };
-
   const handlePayNow = (wash) => {
     navigation.navigate('PaymentMethods', {
       orderId: wash.id,
@@ -159,22 +121,6 @@ export default function BookingsScreen({ navigation }) {
       orderId: wash.id,
       fromUpcomingBookings: true,
     });
-  };
-
-  const handleRatingSubmit = async (payload) => {
-    if (!ratingOrder?.id) return;
-    try {
-      const res = await submitOrderRating(ratingOrder.id, payload);
-      if (res.success) {
-        await fetchOrders();
-      } else {
-        throw new Error(res.message || 'Failed to submit rating');
-      }
-    } catch (err) {
-      const message = err.response?.data?.message || err.message || 'Could not submit rating. Please try again.';
-      Alert.alert('Error', message);
-      throw err;
-    }
   };
 
   return (
@@ -201,7 +147,7 @@ export default function BookingsScreen({ navigation }) {
           </View>
           <Text style={styles.addOnHint}>
             Extra services: only from this list — tap <Text style={styles.addOnHintBold}>Book</Text> on an upcoming wash
-            (after pay, before the wash is done). Add-ons are not added from Recent.
+            (after pay, before the wash is done). Add-ons are not added from Your orders.
           </Text>
 
           {upcomingWashes.length === 0 ? (
@@ -227,42 +173,21 @@ export default function BookingsScreen({ navigation }) {
           )}
         </View>
 
-        {/* Recent Services Section */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Recent Services</Text>
-          </View>
-          
-          {recentServices.length === 0 ? (
-            <View style={styles.emptyState}>
-              <MaterialCommunityIcons name="history" size={64} color={theme.textSecondary} />
-              <Text style={styles.emptyStateText}>No recent services</Text>
-              <Text style={styles.emptyStateSubtext}>Your service history will appear here</Text>
+        <TouchableOpacity
+          style={styles.ordersLinkCard}
+          activeOpacity={0.85}
+          onPress={() => navigation.navigate('YourOrders')}
+        >
+          <View style={styles.ordersLinkLeft}>
+            <MaterialCommunityIcons name="clipboard-text-clock-outline" size={28} color={theme.textPrimary} />
+            <View style={styles.ordersLinkTextCol}>
+              <Text style={styles.ordersLinkTitle}>Your orders</Text>
+              <Text style={styles.ordersLinkSubtitle}>Past washes, reorder & rate</Text>
             </View>
-          ) : (
-            recentServices.map((service) => (
-              <RecentServiceCard 
-                key={service.id} 
-                service={service}
-                onReBook={(s) => {
-                  console.log('Re-book service:', s);
-                }}
-                onPress={() => {
-                  console.log('View service:', service);
-                }}
-                onRate={handleRateService}
-              />
-            ))
-          )}
-        </View>
+          </View>
+          <MaterialCommunityIcons name="chevron-right" size={24} color={theme.textSecondary} />
+        </TouchableOpacity>
       </ScrollView>
-
-      <RatingModal
-        visible={!!ratingOrder}
-        onClose={() => setRatingOrder(null)}
-        onSubmit={handleRatingSubmit}
-        serviceName={ratingOrder?.serviceName}
-      />
     </View>
   );
 }
@@ -317,5 +242,35 @@ const createStyles = theme => StyleSheet.create({
     fontSize: 14,
     color: theme.textSecondary,
     textAlign: 'center',
+  },
+  ordersLinkCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: theme.cardBackground,
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 24,
+    borderWidth: 1,
+    borderColor: theme.cardBorder,
+  },
+  ordersLinkLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    gap: 14,
+  },
+  ordersLinkTextCol: {
+    flex: 1,
+  },
+  ordersLinkTitle: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: theme.textPrimary,
+    marginBottom: 4,
+  },
+  ordersLinkSubtitle: {
+    fontSize: 13,
+    color: theme.textSecondary,
   },
 });

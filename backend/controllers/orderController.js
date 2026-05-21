@@ -12,6 +12,7 @@ import {
   activateMembershipFromOrder,
   getActiveMembershipWashDiscountPercent,
 } from '../services/membershipService.js';
+import { generateOrderNumber, ensureOrderHasNumber, ensureOrdersHaveNumbers } from '../services/orderNumberService.js';
 
 const TAX_RATE = 0.18;
 
@@ -403,8 +404,10 @@ export const createOrder = async (req, res) => {
 
     const startCode = String(Math.floor(100000 + Math.random() * 900000));
     const startCodeExpiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+    const orderNumber = await generateOrderNumber();
 
     const order = await Order.create({
+      orderNumber,
       user: userId,
       items: hydratedItems,
       subtotal,
@@ -522,6 +525,8 @@ export const getOrders = async (req, res) => {
       .populate('items.service', 'name category')
       .populate('items.addOns', 'name basePrice');
 
+    await ensureOrdersHaveNumbers(orders);
+
     res.status(200).json({
       success: true,
       count: orders.length,
@@ -557,6 +562,8 @@ export const getAllOrders = async (req, res) => {
       .populate('items.service', 'name category')
       .populate('items.addOns', 'name basePrice')
       .populate('user', 'name phone'); // Include user info for admin
+
+    await ensureOrdersHaveNumbers(orders);
 
     res.status(200).json({
       success: true,
@@ -1207,6 +1214,8 @@ export const getOrderById = async (req, res) => {
         message: 'Order not found or you do not have access to this order',
       });
     }
+
+    await ensureOrderHasNumber(order);
 
     res.status(200).json({
       success: true,

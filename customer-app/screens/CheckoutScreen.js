@@ -464,10 +464,13 @@ export default function CheckoutScreen({ navigation, route }) {
 
       await AsyncStorage.removeItem('cartItems');
 
-      const orderId = response?.data?._id ? String(response.data._id) : '';
-      const shortId = orderId ? orderId.slice(-6).toUpperCase() : '';
+      const orderNumber = response?.data?.orderNumber || '';
+      const mongoId = response?.data?._id ? String(response.data._id) : '';
+      const displayRef =
+        orderNumber ||
+        (mongoId ? `Order #${mongoId.slice(-6).toUpperCase()}` : '');
       navigation.replace('BookingConfirmation', {
-        orderId: shortId ? `Order #${shortId}` : '',
+        orderId: displayRef,
         subtitle: 'We’ll assign a professional.',
       });
     } catch (error) {

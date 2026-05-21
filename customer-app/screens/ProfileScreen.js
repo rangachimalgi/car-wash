@@ -8,7 +8,6 @@ import {
   Alert,
   Switch,
   Share,
-  Linking,
   useWindowDimensions,
 } from 'react-native';
 import Constants from 'expo-constants';
@@ -26,7 +25,7 @@ import SavedVehiclesModal from '../components/SavedVehiclesModal';
 import { isSessionStillValid, logoutUser } from '../services/authSession';
 import { wooshCoinsLabel } from '../utils/wooshCoins';
 
-const SUPPORT_WHATSAPP_NUMBER = process.env.EXPO_PUBLIC_SUPPORT_WHATSAPP || '918744050709';
+import { openSupportWhatsApp } from '../utils/supportWhatsApp';
 
 export default function ProfileScreen({ navigation }) {
   const insets = useSafeAreaInsets();
@@ -154,22 +153,7 @@ export default function ProfileScreen({ navigation }) {
     }, [])
   );
 
-  const handleWhatsAppHelp = async () => {
-    const message = encodeURIComponent('Hi Woosh team, I need help with my booking.');
-    const appUrl = `whatsapp://send?phone=${SUPPORT_WHATSAPP_NUMBER}&text=${message}`;
-    const webUrl = `https://wa.me/${SUPPORT_WHATSAPP_NUMBER}?text=${message}`;
-
-    try {
-      const supported = await Linking.canOpenURL(appUrl);
-      if (supported) {
-        await Linking.openURL(appUrl);
-        return;
-      }
-      await Linking.openURL(webUrl);
-    } catch (error) {
-      Alert.alert('Unable to open WhatsApp', 'Please make sure WhatsApp is installed.');
-    }
-  };
+  const handleWhatsAppHelp = () => openSupportWhatsApp('Hi Woosh team, I need help with my booking.');
 
 
   return (
@@ -243,8 +227,8 @@ export default function ProfileScreen({ navigation }) {
             activeOpacity={0.85}
             onPress={() => navigation.navigate('MainTabs', { screen: 'Bookings' })}
           >
-            <MaterialCommunityIcons name="clipboard-text-outline" size={28} color={theme.textPrimary} />
-            <Text style={styles.gridCardLabel}>My Bookings</Text>
+            <MaterialCommunityIcons name="calendar-clock-outline" size={28} color={theme.textPrimary} />
+            <Text style={styles.gridCardLabel}>Bookings</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.gridCard, { width: (screenW - 40 - 20) / 3 }]}
@@ -261,6 +245,18 @@ export default function ProfileScreen({ navigation }) {
           >
             <MaterialCommunityIcons name="headset" size={28} color={theme.textPrimary} />
             <Text style={styles.gridCardLabel}>Help &amp; Support</Text>
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.menuListCard}>
+          <TouchableOpacity
+            style={styles.menuListRow}
+            activeOpacity={0.8}
+            onPress={() => navigation.navigate('YourOrders')}
+          >
+            <MaterialCommunityIcons name="clipboard-text-clock-outline" size={22} color={theme.textSecondary} />
+            <Text style={styles.menuListLabel}>Your Orders</Text>
+            <MaterialCommunityIcons name="chevron-right" size={22} color={theme.textPrimary} />
           </TouchableOpacity>
         </View>
 
