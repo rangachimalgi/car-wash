@@ -1,10 +1,23 @@
-import React, { useMemo, useState, useEffect, useCallback } from 'react';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useCallback, useMemo, useState, useEffect } from 'react';
+import {
+  ActivityIndicator,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import api from '../services/api';
 import { useJobNotifications } from '../context/JobNotificationsContext';
+import JobBookingRow, { jobListStyles } from '../components/JobBookingRow';
+import {
+  mapOrderToBooking,
+  sortBookingsByDate,
+} from '../utils/jobBookingHelpers';
 
 export default function JobQueueScreen({ employeeId, navigation }) {
   const insets = useSafeAreaInsets();
@@ -13,42 +26,53 @@ export default function JobQueueScreen({ employeeId, navigation }) {
   const [incomingJobs, setIncomingJobs] = useState([]);
   const [queue, setQueue] = useState([]);
   const [history, setHistory] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
-  const fetchJobs = async () => {
-    if (!employeeId) return;
-    setLoading(true);
-    try {
-      const [incomingRes, queueRes, historyRes] = await Promise.all([
-        api.get(`/jobs/incoming?employeeId=${employeeId}`),
-        api.get(`/jobs/queue?employeeId=${employeeId}`),
-        api.get(`/jobs/history?employeeId=${employeeId}`),
-      ]);
-      setIncomingJobs(incomingRes.data.data || []);
-      setQueue(queueRes.data.data || []);
-      setHistory(historyRes.data.data || []);
-      refreshJobCount();
-    } catch (error) {
-      console.error('Error fetching jobs:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const fetchJobs = useCallback(
+    async (mode = 'initial') => {
+      if (!employeeId) return;
+      if (mode === 'pull') setRefreshing(true);
+      else if (mode === 'initial') setInitialLoading(true);
+
+      try {
+        const [incomingRes, queueRes, historyRes] = await Promise.all([
+          api.get(`/jobs/incoming?employeeId=${employeeId}`),
+          api.get(`/jobs/queue?employeeId=${employeeId}`),
+          api.get(`/jobs/history?employeeId=${employeeId}`),
+        ]);
+        setIncomingJobs(incomingRes.data.data || []);
+        setQueue(queueRes.data.data || []);
+        setHistory(historyRes.data.data || []);
+        refreshJobCount();
+      } catch (error) {
+        console.error('Error fetching jobs:', error);
+      } finally {
+        setInitialLoading(false);
+        setRefreshing(false);
+      }
+    },
+    [employeeId, refreshJobCount]
+  );
+
+  const onRefresh = useCallback(() => {
+    fetchJobs('pull');
+  }, [fetchJobs]);
 
   useEffect(() => {
-    fetchJobs();
-  }, [employeeId]);
+    fetchJobs('initial');
+  }, [fetchJobs]);
 
   useFocusEffect(
     useCallback(() => {
-      fetchJobs();
-    }, [employeeId])
+      fetchJobs('silent');
+    }, [fetchJobs])
   );
 
   const handleAccept = async (orderId) => {
     try {
       await api.post(`/jobs/${orderId}/accept`, { employeeId });
-      fetchJobs();
+      fetchJobs('silent');
     } catch (error) {
       console.error('Error accepting job:', error);
     }
@@ -57,364 +81,241 @@ export default function JobQueueScreen({ employeeId, navigation }) {
   const handleDecline = async (orderId) => {
     try {
       await api.post(`/jobs/${orderId}/decline`, { employeeId });
-      fetchJobs();
+      fetchJobs('silent');
     } catch (error) {
       console.error('Error declining job:', error);
     }
   };
 
-  const mapOrderToCard = (order) => {
-    const firstItem = order?.items?.[0];
-    return {
-      id: order?._id,
-      service: firstItem?.service?.name || 'Service',
-      customer: order?.customer?.name || 'Customer',
-      address: order?.customer?.address || 'Address',
-      time: firstItem?.scheduledTimeSlot || 'Time slot',
-      price: `₹${order?.totalAmount ?? 0}`,
-    };
+  const incomingBookings = useMemo(
+    () => sortBookingsByDate(incomingJobs.map((o) => mapOrderToBooking(o, employeeId))),
+    [incomingJobs, employeeId]
+  );
+
+  const queueBookings = useMemo(
+    () => sortBookingsByDate(queue.map((o) => mapOrderToBooking(o, employeeId))),
+    [queue, employeeId]
+  );
+
+  const historyBookings = useMemo(
+    () =>
+      sortBookingsByDate(history.map((o) => mapOrderToBooking(o, employeeId))).reverse(),
+    [history, employeeId]
+  );
+
+  const openDetail = (orderId) => {
+    navigation?.navigate('JobDetail', { orderId, employeeId });
   };
 
   return (
     <ScrollView
       style={styles.container}
-      contentContainerStyle={[styles.scrollContent, { paddingTop: 24 + insets.top }]}
+      contentContainerStyle={[
+        styles.scrollContent,
+        { paddingTop: 24 + insets.top, paddingBottom: 24 + insets.bottom },
+      ]}
       showsVerticalScrollIndicator={false}
+      refreshControl={
+        <RefreshControl
+          refreshing={refreshing}
+          onRefresh={onRefresh}
+          tintColor="#1A1A1A"
+          colors={['#1A1A1A']}
+        />
+      }
     >
       <StatusBar style="dark" />
-      <View style={styles.titleRow}>
-        <Text style={styles.title}>Job Queue</Text>
-        <TouchableOpacity style={styles.refreshButton} onPress={fetchJobs}>
-          <Text style={styles.refreshButtonText}>{loading ? 'Refreshing...' : 'Refresh'}</Text>
-        </TouchableOpacity>
-      </View>
+      <Text style={styles.title}>Job Queue</Text>
 
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>New Job</Text>
-        {incomingJobs.length > 0 ? (
-          <View style={styles.listContent}>
-            {incomingJobs.map((item) => {
-              const card = mapOrderToCard(item);
-              return (
-                <View key={item._id} style={styles.card}>
-                  <Text style={styles.cardTitle}>{card.service}</Text>
-                  <Text style={styles.cardMeta}>{card.customer}</Text>
-                  <Text style={styles.cardMeta}>{card.address}</Text>
-                  <View style={styles.row}>
-                    <Text style={styles.cardMeta}>{card.time}</Text>
-                    <Text style={styles.priceText}>{card.price}</Text>
-                  </View>
-                  <View style={styles.actionRow}>
-                    <TouchableOpacity
-                      style={styles.declineButton}
-                      onPress={() => handleDecline(card.id)}
-                    >
-                      <Text style={styles.declineText}>Decline</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      style={styles.viewButtonAlt}
-                      onPress={() => navigation?.navigate('JobDetail', { orderId: card.id, employeeId })}
-                    >
-                      <Text style={styles.viewButtonAltText}>View Job</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      style={styles.upsellHintButton}
-                      onPress={() => navigation?.navigate('UpsellPitch', { orderId: card.id, employeeId })}
-                    >
-                      <Text style={styles.upsellHintText}>Add-ons</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      style={styles.acceptButton}
-                      onPress={() => handleAccept(card.id)}
-                    >
-                      <Text style={styles.acceptText}>Accept</Text>
-                    </TouchableOpacity>
-                  </View>
-                </View>
-              );
-            })}
+      <JobSection
+        title="New Jobs"
+        count={incomingBookings.length}
+        loading={initialLoading}
+        emptyText="No new jobs right now."
+        isEmpty={incomingBookings.length === 0}
+      >
+        {incomingBookings.map((booking, index) => (
+          <View key={booking.id}>
+            <JobBookingRow
+              booking={booking}
+              isLast
+              showPrice
+              onPress={() => openDetail(booking.id)}
+            />
+            <View style={jobListStyles.cardFooter}>
+              <View style={jobListStyles.actionRow}>
+                <TouchableOpacity
+                  style={jobListStyles.btnMuted}
+                  onPress={() => handleDecline(booking.id)}
+                >
+                  <Text style={jobListStyles.btnMutedText}>Decline</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={jobListStyles.btnOutline}
+                  onPress={() => openDetail(booking.id)}
+                >
+                  <Text style={jobListStyles.btnOutlineText}>View Job</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={jobListStyles.btnOutline}
+                  onPress={() =>
+                    navigation?.navigate('UpsellPitch', { orderId: booking.id, employeeId })
+                  }
+                >
+                  <Text style={jobListStyles.btnOutlineText}>Add-ons</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={jobListStyles.btnPrimary}
+                  onPress={() => handleAccept(booking.id)}
+                >
+                  <Text style={jobListStyles.btnPrimaryText}>Accept</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+            {index < incomingBookings.length - 1 && <View style={styles.itemDivider} />}
           </View>
-        ) : (
-          <View style={styles.emptyCard}>
-            <Text style={styles.emptyText}>
-              {loading ? 'Loading jobs...' : 'No new jobs right now.'}
-            </Text>
-          </View>
-        )}
-      </View>
+        ))}
+      </JobSection>
 
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Queue</Text>
-        {queue.length === 0 ? (
-          <Text style={styles.emptyText}>No jobs in queue.</Text>
-        ) : (
-          <View style={styles.listContent}>
-            {queue.map((item) => {
-              const card = mapOrderToCard(item);
-              return (
-                <View key={item._id || item.id} style={styles.queueItem}>
-                  <View>
-                    <Text style={styles.queueTitle}>{card.service}</Text>
-                    <Text style={styles.queueTime}>{card.time}</Text>
-                  </View>
-                  <View style={styles.queueActions}>
-                    <Text style={styles.queueId}>{card.id?.slice(-6)}</Text>
-                    <TouchableOpacity
-                      style={styles.viewButton}
-                      onPress={() => navigation?.navigate('JobDetail', { orderId: card.id, employeeId })}
-                    >
-                      <Text style={styles.viewButtonText}>View Job</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      style={styles.startButton}
-                      onPress={() => navigation?.navigate('StartService', { orderId: card.id, employeeId })}
-                    >
-                      <Text style={styles.startButtonText}>Start Service</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      style={styles.upsellHintButton}
-                      onPress={() => navigation?.navigate('UpsellPitch', { orderId: card.id, employeeId })}
-                    >
-                      <Text style={styles.upsellHintText}>Add-ons</Text>
-                    </TouchableOpacity>
-                  </View>
-                </View>
-              );
-            })}
+      <JobSection
+        title="In Queue"
+        count={queueBookings.length}
+        loading={initialLoading}
+        emptyText="No jobs in queue."
+        isEmpty={queueBookings.length === 0}
+      >
+        {queueBookings.map((booking, index) => (
+          <View key={booking.id}>
+            <JobBookingRow
+              booking={booking}
+              isLast
+              showPrice
+              onPress={() => openDetail(booking.id)}
+            />
+            <View style={jobListStyles.cardFooter}>
+              <View style={jobListStyles.actionRow}>
+                <TouchableOpacity
+                  style={jobListStyles.btnOutline}
+                  onPress={() => openDetail(booking.id)}
+                >
+                  <Text style={jobListStyles.btnOutlineText}>View Job</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={jobListStyles.btnPrimary}
+                  onPress={() =>
+                    navigation?.navigate('StartService', { orderId: booking.id, employeeId })
+                  }
+                >
+                  <Text style={jobListStyles.btnPrimaryText}>Start Service</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={jobListStyles.btnOutline}
+                  onPress={() =>
+                    navigation?.navigate('UpsellPitch', { orderId: booking.id, employeeId })
+                  }
+                >
+                  <Text style={jobListStyles.btnOutlineText}>Add-ons</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+            {index < queueBookings.length - 1 && <View style={styles.itemDivider} />}
           </View>
-        )}
-      </View>
+        ))}
+      </JobSection>
 
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>History</Text>
-        {history.length === 0 ? (
-          <Text style={styles.emptyText}>No history yet.</Text>
-        ) : (
-          <View style={styles.listContent}>
-            {history.map((item) => {
-              const card = mapOrderToCard(item);
-              return (
-                <View key={item._id || item.id} style={styles.historyItem}>
-                  <View>
-                    <Text style={styles.queueTitle}>{card.service}</Text>
-                    <Text style={styles.queueTime}>{card.time}</Text>
-                  </View>
-                  <Text style={styles.historyStatus}>Completed</Text>
-                </View>
-              );
-            })}
-          </View>
-        )}
-      </View>
+      <JobSection
+        title="History"
+        count={historyBookings.length}
+        loading={initialLoading}
+        emptyText="No history yet."
+        isEmpty={historyBookings.length === 0}
+      >
+        {historyBookings.map((booking, index) => (
+          <JobBookingRow
+            key={booking.id}
+            booking={booking}
+            isLast={index === historyBookings.length - 1}
+            showPrice
+            onPress={() => openDetail(booking.id)}
+          />
+        ))}
+      </JobSection>
     </ScrollView>
   );
 }
+
+function JobSection({ title, count, loading, emptyText, isEmpty, children }) {
+  return (
+    <View style={sectionStyles.section}>
+      <View style={sectionStyles.header}>
+        <Text style={sectionStyles.title}>{title}</Text>
+        <View style={sectionStyles.countPill}>
+          <Text style={sectionStyles.countText}>{count}</Text>
+        </View>
+      </View>
+
+      {loading && isEmpty ? (
+        <View style={jobListStyles.listEmpty}>
+          <ActivityIndicator size="small" color="#1A1A1A" />
+        </View>
+      ) : isEmpty ? (
+        <View style={jobListStyles.listEmpty}>
+          <Text style={jobListStyles.listEmptyText}>{emptyText}</Text>
+        </View>
+      ) : (
+        <View style={jobListStyles.listGroup}>{children}</View>
+      )}
+    </View>
+  );
+}
+
+const sectionStyles = StyleSheet.create({
+  section: {
+    marginBottom: 24,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+  },
+  title: {
+    fontSize: 17,
+    fontWeight: '800',
+    color: '#1A1A1A',
+  },
+  countPill: {
+    backgroundColor: '#F3F4F6',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 999,
+  },
+  countText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#6B7280',
+  },
+});
 
 const createStyles = () =>
   StyleSheet.create({
     container: {
       flex: 1,
-      backgroundColor: '#F5F6F8',
-      paddingHorizontal: 20,
+      backgroundColor: '#F6F7FB',
     },
     scrollContent: {
-      paddingBottom: 24,
+      paddingHorizontal: 20,
     },
     title: {
-      fontSize: 24,
-      fontWeight: '700',
+      fontSize: 28,
+      fontWeight: '800',
       color: '#1A1A1A',
-      marginBottom: 16,
-    },
-    titleRow: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      marginBottom: 8,
-    },
-    refreshButton: {
-      backgroundColor: '#EEF2FF',
-      paddingHorizontal: 12,
-      paddingVertical: 6,
-      borderRadius: 10,
-    },
-    refreshButtonText: {
-      color: '#2F5CF4',
-      fontWeight: '700',
-      fontSize: 12,
-    },
-    section: {
+      letterSpacing: -0.5,
       marginBottom: 20,
     },
-    sectionTitle: {
-      fontSize: 16,
-      fontWeight: '700',
-      color: '#1A1A1A',
-      marginBottom: 10,
-    },
-    card: {
-      backgroundColor: '#FFFFFF',
-      borderRadius: 16,
-      borderWidth: 1,
-      borderColor: '#E2E8F0',
-      padding: 16,
-    },
-    emptyCard: {
-      backgroundColor: '#FFFFFF',
-      borderRadius: 16,
-      borderWidth: 1,
-      borderColor: '#E2E8F0',
-      padding: 16,
-      alignItems: 'center',
-    },
-    emptyText: {
-      fontSize: 12,
-      color: '#6B7280',
-    },
-    cardTitle: {
-      fontSize: 16,
-      fontWeight: '700',
-      color: '#1A1A1A',
-      marginBottom: 6,
-    },
-    cardMeta: {
-      fontSize: 12,
-      color: '#6B7280',
-      marginBottom: 4,
-    },
-    row: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      marginTop: 4,
-    },
-    priceText: {
-      fontSize: 14,
-      fontWeight: '700',
-      color: '#1A1A1A',
-    },
-    actionRow: {
-      flexDirection: 'row',
-      flexWrap: 'wrap',
-      gap: 12,
-      marginTop: 12,
-    },
-    declineButton: {
-      flex: 1,
-      backgroundColor: '#FEE2E2',
-      borderRadius: 12,
-      paddingVertical: 12,
-      alignItems: 'center',
-    },
-    declineText: {
-      color: '#DC2626',
-      fontWeight: '700',
-      fontSize: 13,
-    },
-    acceptButton: {
-      flex: 1,
-      backgroundColor: '#2F8CF4',
-      borderRadius: 12,
-      paddingVertical: 12,
-      alignItems: 'center',
-    },
-    acceptText: {
-      color: '#FFFFFF',
-      fontWeight: '700',
-      fontSize: 13,
-    },
-    viewButtonAlt: {
-      flex: 1,
-      backgroundColor: '#EEF2FF',
-      borderRadius: 12,
-      paddingVertical: 12,
-      alignItems: 'center',
-    },
-    viewButtonAltText: {
-      color: '#2F5CF4',
-      fontWeight: '700',
-      fontSize: 13,
-    },
-    listContent: {
-      gap: 10,
-    },
-    queueItem: {
-      backgroundColor: '#FFFFFF',
-      borderRadius: 12,
-      borderWidth: 1,
-      borderColor: '#E2E8F0',
-      padding: 14,
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-    },
-    queueActions: {
-      alignItems: 'flex-end',
-      gap: 8,
-    },
-    historyItem: {
-      backgroundColor: '#FFFFFF',
-      borderRadius: 12,
-      borderWidth: 1,
-      borderColor: '#E2E8F0',
-      padding: 14,
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-    },
-    queueTitle: {
-      fontSize: 14,
-      fontWeight: '600',
-      color: '#1A1A1A',
-      marginBottom: 4,
-    },
-    queueTime: {
-      fontSize: 12,
-      color: '#6B7280',
-    },
-    queueId: {
-      fontSize: 11,
-      color: '#6B7280',
-      fontWeight: '600',
-    },
-    viewButton: {
-      backgroundColor: '#EEF2FF',
-      borderRadius: 8,
-      paddingHorizontal: 10,
-      paddingVertical: 6,
-    },
-    viewButtonText: {
-      color: '#2F5CF4',
-      fontWeight: '700',
-      fontSize: 11,
-    },
-    startButton: {
-      backgroundColor: '#22C55E',
-      borderRadius: 8,
-      paddingHorizontal: 10,
-      paddingVertical: 6,
-    },
-    startButtonText: {
-      color: '#FFFFFF',
-      fontWeight: '700',
-      fontSize: 11,
-    },
-    historyStatus: {
-      fontSize: 12,
-      fontWeight: '700',
-      color: '#16A34A',
-    },
-    upsellHintButton: {
-      backgroundColor: '#EEF2FF',
-      borderRadius: 8,
-      paddingHorizontal: 10,
-      paddingVertical: 6,
-      borderWidth: 1,
-      borderColor: '#C7D2FE',
-    },
-    upsellHintText: {
-      color: '#2F5CF4',
-      fontWeight: '800',
-      fontSize: 11,
+    itemDivider: {
+      height: 1,
+      backgroundColor: '#F3F4F6',
+      marginHorizontal: 14,
     },
   });
