@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import HomeScreen from '../screens/HomeScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import EarningsHistoryScreen from '../screens/EarningsHistoryScreen';
+import InventoryScreen from '../screens/InventoryScreen';
 
 const Tab = createBottomTabNavigator();
 
@@ -41,6 +42,7 @@ function SimpleTabBar({ state, descriptors, navigation }) {
 
         const iconName = {
           Home: focused ? 'home' : 'home-outline',
+          Inventory: focused ? 'package-variant' : 'package-variant-closed',
           Earnings: focused ? 'cash' : 'cash',
           Profile: focused ? 'account' : 'account-outline',
         }[route.name] || 'circle-outline';
@@ -108,6 +110,22 @@ export default function MainTabs({ onLogout, employeeId, navigation }) {
         }}
       >
         {(props) => <HomeScreen {...props} employeeId={employeeId} />}
+      </Tab.Screen>
+      <Tab.Screen
+        name="Inventory"
+        options={{
+          title: 'Inventory',
+          tabBarLabel: 'Inventory',
+          tabBarIcon: ({ color, focused }) => (
+            <MaterialCommunityIcons
+              name={focused ? 'package-variant' : 'package-variant-closed'}
+              color={color}
+              size={24}
+            />
+          ),
+        }}
+      >
+        {(props) => <InventoryScreen {...props} employeeId={employeeId} />}
       </Tab.Screen>
       <Tab.Screen
         name="Earnings"
