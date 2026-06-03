@@ -75,43 +75,104 @@ function computeStats(items) {
   };
 }
 
-function SummaryCard({ label, value, hint, highlight, style }) {
-  return (
-    <View style={[summaryStyles.card, highlight && summaryStyles.cardHighlight, style]}>
-      <Text style={summaryStyles.label}>{label}</Text>
-      <Text style={[summaryStyles.value, highlight && summaryStyles.valueHighlight]}>{value}</Text>
-      <Text style={[summaryStyles.hint, highlight && summaryStyles.hintHighlight]}>{hint}</Text>
+const ALERT_ORANGE = '#EA580C';
+const ALERT_ORANGE_LIGHT = '#FFF7ED';
+const ALERT_ORANGE_BORDER = '#FDBA74';
+
+function SummaryCard({ label, value, hint, variant, onPress, style }) {
+  const isAlert = variant === 'alert';
+  const isInfo = variant === 'info';
+  const isSuccess = variant === 'success';
+
+  const content = (
+    <View
+      style={[
+        summaryStyles.card,
+        isAlert && summaryStyles.cardAlert,
+        isInfo && summaryStyles.cardInfo,
+        isSuccess && summaryStyles.cardSuccess,
+        style,
+      ]}
+    >
+      <Text style={[summaryStyles.label, isAlert && summaryStyles.labelAlert]}>{label}</Text>
+      <Text
+        style={[
+          summaryStyles.value,
+          isAlert && summaryStyles.valueAlert,
+          isInfo && summaryStyles.valueInfo,
+          isSuccess && summaryStyles.valueSuccess,
+        ]}
+      >
+        {value}
+      </Text>
+      <Text style={[summaryStyles.hint, isAlert && summaryStyles.hintAlert]}>{hint}</Text>
     </View>
   );
+
+  if (onPress) {
+    return (
+      <TouchableOpacity onPress={onPress} activeOpacity={0.85} style={style}>
+        {content}
+      </TouchableOpacity>
+    );
+  }
+  return content;
 }
 
-function MaterialRow({ item, onPress }) {
+function MaterialRow({ item, onPress, variant = 'default' }) {
   const { percent, hasConfiguredMax } = getItemCapacity(item);
   const iconName = getCategoryIcon(item?.category);
+  const isAlert = variant === 'alert';
 
   return (
-    <TouchableOpacity style={materialStyles.row} onPress={onPress} activeOpacity={0.85}>
-      <View style={materialStyles.thumb}>
-        <MaterialCommunityIcons name={iconName} size={28} color="#1A1A1A" />
+    <TouchableOpacity
+      style={[materialStyles.row, isAlert && materialStyles.rowAlert]}
+      onPress={onPress}
+      activeOpacity={0.85}
+    >
+      <View style={[materialStyles.thumb, isAlert && materialStyles.thumbAlert]}>
+        <MaterialCommunityIcons name={iconName} size={28} color={isAlert ? ALERT_ORANGE : '#1A1A1A'} />
       </View>
 
       <View style={materialStyles.body}>
-        <Text style={materialStyles.name} numberOfLines={1}>
-          {item?.name || 'Unnamed'}
-        </Text>
+        <View style={materialStyles.nameRow}>
+          <Text style={materialStyles.name} numberOfLines={1}>
+            {item?.name || 'Unnamed'}
+          </Text>
+          {isAlert ? (
+            <View style={materialStyles.lowBadge}>
+              <Text style={materialStyles.lowBadgeText}>Low Stock</Text>
+            </View>
+          ) : null}
+        </View>
         <Text style={materialStyles.stockLine}>{getStockLabel(item)}</Text>
+        {/* {isAlert && item?.lowStockThreshold != null ? (
+          <Text style={materialStyles.thresholdHint}>
+            Alert at {formatAmount(item.lowStockThreshold)} {item?.unit || 'units'} or below
+          </Text>
+        ) : null} */}
 
         {hasConfiguredMax ? (
           <View style={materialStyles.progressRow}>
             <View style={materialStyles.progressTrack}>
-              <View style={[materialStyles.progressFill, { width: `${percent}%` }]} />
+              <View
+                style={[
+                  materialStyles.progressFill,
+                  isAlert && materialStyles.progressFillAlert,
+                  { width: `${percent}%` },
+                ]}
+              />
             </View>
-            <Text style={materialStyles.percent}>{percent}%</Text>
+            <Text style={[materialStyles.percent, isAlert && materialStyles.percentAlert]}>
+              {percent}%
+            </Text>
           </View>
         ) : null}
       </View>
 
-      <MaterialCommunityIcons name="chevron-right" size={22} color="#9CA3AF" />
+      {!isAlert ? (
+        <MaterialCommunityIcons name="chevron-right" size={22} color="#9CA3AF" />
+      ) : null}
     </TouchableOpacity>
   );
 }
@@ -157,8 +218,13 @@ export default function InventoryScreen({ navigation, employeeId }) {
 
   const stats = useMemo(() => computeStats(items), [items]);
 
+  const lowStockItems = useMemo(
+    () => items.filter((it) => it?.isLowStock),
+    [items]
+  );
+
   const displayedItems = useMemo(() => {
-    if (filter === 'lowStock') return items.filter((it) => it?.isLowStock);
+    if (filter === 'lowStock') return lowStockItems;
     if (filter === 'inUse') {
       return items.filter((it) => {
         const { current, max, hasConfiguredMax } = getItemCapacity(it);
@@ -171,8 +237,9 @@ export default function InventoryScreen({ navigation, employeeId }) {
         return hasConfiguredMax && current >= max;
       });
     }
-    return items;
-  }, [items, filter]);
+    // All: material list excludes low-stock rows (shown in alert section above)
+    return items.filter((it) => !it?.isLowStock);
+  }, [items, filter, lowStockItems]);
 
   const filterLabel = {
     all: 'All items',
@@ -248,7 +315,8 @@ export default function InventoryScreen({ navigation, employeeId }) {
               label="Low Stock"
               value={String(stats.lowStock)}
               hint="Needs refill"
-              highlight={stats.lowStock > 0}
+              variant={stats.lowStock > 0 ? 'alert' : undefined}
+              onPress={stats.lowStock > 0 ? () => setFilter('lowStock') : undefined}
             />
           </View>
           <View style={styles.statsRow}>
@@ -257,36 +325,94 @@ export default function InventoryScreen({ navigation, employeeId }) {
               label="In Use"
               value={String(stats.inUse)}
               hint="Items"
+              variant="info"
             />
             <SummaryCard
               style={styles.statCardHalf}
               label="Available"
               value={String(stats.available)}
               hint="Items"
+              variant="success"
             />
           </View>
         </View>
 
-        <View style={styles.listSectionHeader}>
-          <Text style={styles.listSectionTitle}>Material List</Text>
-          {filter !== 'all' ? (
-            <Text style={styles.filterBadge}>{filterLabel}</Text>
-          ) : null}
-        </View>
+        {filter === 'all' && lowStockItems.length > 0 ? (
+          <View style={styles.lowStockSection}>
+            <Text style={styles.lowStockSectionTitle}>Low Stock Items</Text>
+            <View style={styles.lowStockContainer}>
+              {lowStockItems.map((item, index) => (
+                <View
+                  key={item._id || `${item.name}-${item.category}`}
+                  style={index < lowStockItems.length - 1 ? materialStyles.alertDivider : null}
+                >
+                  <MaterialRow
+                    item={item}
+                    variant="alert"
+                    onPress={() => openMaterialUsage(item)}
+                  />
+                </View>
+              ))}
+            </View>
+          </View>
+        ) : null}
 
-        {displayedItems.length === 0 ? (
+        {filter === 'lowStock' && lowStockItems.length === 0 ? (
           <View style={styles.emptyContainer}>
-            <Text style={styles.emptyText}>No materials found.</Text>
+            <Text style={styles.emptyText}>No low stock items right now.</Text>
           </View>
-        ) : (
-          displayedItems.map((item) => (
-            <MaterialRow
-              key={item._id || `${item.name}-${item.category}`}
-              item={item}
-              onPress={() => openMaterialUsage(item)}
-            />
-          ))
-        )}
+        ) : null}
+
+        {filter === 'lowStock' && lowStockItems.length > 0 ? (
+          <View style={styles.lowStockSection}>
+            <Text style={styles.lowStockSectionTitle}>Low Stock Items</Text>
+            <View style={styles.lowStockContainer}>
+              {lowStockItems.map((item, index) => (
+                <View
+                  key={item._id || `${item.name}-${item.category}`}
+                  style={index < lowStockItems.length - 1 ? materialStyles.alertDivider : null}
+                >
+                  <MaterialRow
+                    item={item}
+                    variant="alert"
+                    onPress={() => openMaterialUsage(item)}
+                  />
+                </View>
+              ))}
+            </View>
+          </View>
+        ) : null}
+
+        {filter !== 'lowStock' ? (
+          <>
+            <View style={styles.listSectionHeader}>
+              <Text style={styles.listSectionTitle}>Material List</Text>
+              {filter !== 'all' ? (
+                <Text style={styles.filterBadge}>{filterLabel}</Text>
+              ) : null}
+            </View>
+
+            {displayedItems.length === 0 ? (
+              <View style={styles.emptyContainer}>
+                <Text style={styles.emptyText}>
+                  {items.length === 0
+                    ? 'No materials found.'
+                    : lowStockItems.length === items.length
+                      ? 'All items are low on stock — see above.'
+                      : 'No other materials to show.'}
+                </Text>
+              </View>
+            ) : (
+              displayedItems.map((item) => (
+                <MaterialRow
+                  key={item._id || `${item.name}-${item.category}`}
+                  item={item}
+                  onPress={() => openMaterialUsage(item)}
+                />
+              ))
+            )}
+          </>
+        ) : null}
       </ScrollView>
 
       <Modal visible={filterOpen} animationType="fade" transparent onRequestClose={() => setFilterOpen(false)}>
@@ -341,8 +467,17 @@ const summaryStyles = StyleSheet.create({
     borderColor: '#E5E7EB',
     padding: 14,
   },
-  cardHighlight: {
-    borderColor: '#1A1A1A',
+  cardAlert: {
+    borderColor: ALERT_ORANGE_BORDER,
+    backgroundColor: ALERT_ORANGE_LIGHT,
+  },
+  cardInfo: {
+    borderColor: '#BFDBFE',
+    backgroundColor: '#EFF6FF',
+  },
+  cardSuccess: {
+    borderColor: '#BBF7D0',
+    backgroundColor: '#F0FDF4',
   },
   label: {
     fontSize: 13,
@@ -356,16 +491,27 @@ const summaryStyles = StyleSheet.create({
     color: '#1A1A1A',
     marginBottom: 4,
   },
-  valueHighlight: {
-    color: '#000000',
+  labelAlert: {
+    color: ALERT_ORANGE,
+    fontWeight: '700',
+  },
+  valueAlert: {
+    color: ALERT_ORANGE,
+  },
+  valueInfo: {
+    color: '#2563EB',
+  },
+  valueSuccess: {
+    color: '#16A34A',
   },
   hint: {
     fontSize: 12,
     fontWeight: '500',
     color: '#9CA3AF',
   },
-  hintHighlight: {
-    color: '#4B5563',
+  hintAlert: {
+    color: '#9A3412',
+    fontWeight: '600',
   },
 });
 
@@ -381,6 +527,18 @@ const materialStyles = StyleSheet.create({
     marginBottom: 12,
     gap: 12,
   },
+  rowAlert: {
+    marginBottom: 0,
+    borderWidth: 0,
+    borderRadius: 0,
+    backgroundColor: 'transparent',
+    paddingVertical: 14,
+    paddingHorizontal: 4,
+  },
+  alertDivider: {
+    borderBottomWidth: 1,
+    borderBottomColor: ALERT_ORANGE_BORDER,
+  },
   thumb: {
     width: 56,
     height: 56,
@@ -391,20 +549,48 @@ const materialStyles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  thumbAlert: {
+    backgroundColor: '#FFEDD5',
+    borderColor: ALERT_ORANGE_BORDER,
+  },
   body: {
     flex: 1,
     minWidth: 0,
   },
+  nameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
+    marginBottom: 4,
+  },
   name: {
+    flex: 1,
     fontSize: 15,
     fontWeight: '800',
     color: '#1A1A1A',
-    marginBottom: 4,
+  },
+  lowBadge: {
+    backgroundColor: '#FEE2E2',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+  },
+  lowBadgeText: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#DC2626',
   },
   stockLine: {
     fontSize: 12,
     fontWeight: '600',
     color: '#6B7280',
+    marginBottom: 4,
+  },
+  thresholdHint: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#9A3412',
     marginBottom: 8,
   },
   progressRow: {
@@ -424,12 +610,18 @@ const materialStyles = StyleSheet.create({
     borderRadius: 999,
     backgroundColor: '#1A1A1A',
   },
+  progressFillAlert: {
+    backgroundColor: ALERT_ORANGE,
+  },
   percent: {
     fontSize: 12,
     fontWeight: '700',
     color: '#1A1A1A',
     minWidth: 36,
     textAlign: 'right',
+  },
+  percentAlert: {
+    color: ALERT_ORANGE,
   },
 });
 
@@ -484,6 +676,24 @@ const createStyles = () =>
       alignItems: 'center',
       justifyContent: 'space-between',
       marginBottom: 12,
+    },
+    lowStockSection: {
+      marginBottom: 20,
+    },
+    lowStockSectionTitle: {
+      fontSize: 17,
+      fontWeight: '800',
+      color: '#1A1A1A',
+      marginBottom: 10,
+    },
+    lowStockContainer: {
+      borderWidth: 1,
+      borderColor: ALERT_ORANGE_BORDER,
+      borderRadius: 14,
+      backgroundColor: ALERT_ORANGE_LIGHT,
+      paddingHorizontal: 10,
+      paddingVertical: 4,
+      overflow: 'hidden',
     },
     listSectionTitle: {
       fontSize: 17,

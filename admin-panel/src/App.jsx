@@ -7054,7 +7054,9 @@ function App() {
                     step="0.01"
                     placeholder="10"
                   />
-                  <small className="help-text">Alert when stock falls below this amount</small>
+                  <small className="help-text">
+                    Employee app flags &quot;Low Stock&quot; when current stock is at or below this amount (same unit as above)
+                  </small>
                 </div>
               </div>
 
