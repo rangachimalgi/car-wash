@@ -385,6 +385,22 @@ export default function MaterialUsageScreen({ navigation, route, employeeId: emp
           <Text style={styles.linkBtnText}>Mark as purchased (no job)</Text>
         </TouchableOpacity>
 
+        {material?.isLowStock ? (
+          <TouchableOpacity
+            style={styles.linkBtn}
+            onPress={() =>
+              navigation.navigate('RequestRefill', {
+                inventoryId: material._id,
+                employeeId,
+              })
+            }
+          >
+            <Text style={[styles.linkBtnText, styles.linkBtnTextStrong]}>
+              Request refill instead
+            </Text>
+          </TouchableOpacity>
+        ) : null}
+
         {fromJobComplete ? (
           <TouchableOpacity style={styles.doneBtn} onPress={finishFlow}>
             <Text style={styles.doneBtnText}>Done — back to home</Text>
@@ -571,6 +587,7 @@ const createStyles = () =>
     primaryBtnText: { color: '#FFFFFF', fontWeight: '800', fontSize: 15 },
     linkBtn: { marginTop: 12, alignItems: 'center', paddingVertical: 8 },
     linkBtnText: { fontSize: 13, fontWeight: '700', color: '#6B7280' },
+    linkBtnTextStrong: { color: '#EA580C' },
     doneBtn: {
       marginTop: 16,
       borderWidth: 1,

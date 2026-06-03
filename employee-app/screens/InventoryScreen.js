@@ -170,9 +170,7 @@ function MaterialRow({ item, onPress, variant = 'default' }) {
         ) : null}
       </View>
 
-      {!isAlert ? (
-        <MaterialCommunityIcons name="chevron-right" size={22} color="#9CA3AF" />
-      ) : null}
+      <MaterialCommunityIcons name="chevron-right" size={22} color="#9CA3AF" />
     </TouchableOpacity>
   );
 }
@@ -248,9 +246,9 @@ export default function InventoryScreen({ navigation, employeeId }) {
     available: 'Available',
   }[filter];
 
-  const openMaterialUsage = (item) => {
+  const openInventoryItem = (item) => {
     const rootNav = navigation.getParent?.() || navigation;
-    rootNav.navigate('MaterialUsage', {
+    rootNav.navigate('MaterialDetail', {
       inventoryId: item._id,
       employeeId,
     });
@@ -349,7 +347,7 @@ export default function InventoryScreen({ navigation, employeeId }) {
                   <MaterialRow
                     item={item}
                     variant="alert"
-                    onPress={() => openMaterialUsage(item)}
+                    onPress={() => openInventoryItem(item)}
                   />
                 </View>
               ))}
@@ -375,7 +373,7 @@ export default function InventoryScreen({ navigation, employeeId }) {
                   <MaterialRow
                     item={item}
                     variant="alert"
-                    onPress={() => openMaterialUsage(item)}
+                    onPress={() => openInventoryItem(item)}
                   />
                 </View>
               ))}
@@ -407,7 +405,7 @@ export default function InventoryScreen({ navigation, employeeId }) {
                 <MaterialRow
                   key={item._id || `${item.name}-${item.category}`}
                   item={item}
-                  onPress={() => openMaterialUsage(item)}
+                  onPress={() => openInventoryItem(item)}
                 />
               ))
             )}

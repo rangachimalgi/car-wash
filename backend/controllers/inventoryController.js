@@ -1,5 +1,6 @@
 import Inventory from '../models/Inventory.js';
 import InventoryUsage from '../models/InventoryUsage.js';
+import InventoryRefillRequest from '../models/InventoryRefillRequest.js';
 import Order from '../models/Order.js';
 
 function buildJobLabel(order) {
@@ -547,6 +548,78 @@ export const recordInventoryUsage = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error recording inventory usage',
+      error: error.message,
+    });
+  }
+};
+
+// @desc    Submit refill request for an inventory item
+// @route   POST /api/inventory/:id/refill-request
+export const createRefillRequest = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { quantity, reason, notes, employeeId } = req.body;
+
+    if (!employeeId) {
+      return res.status(400).json({
+        success: false,
+        message: 'employeeId is required',
+      });
+    }
+
+    if (quantity === undefined) {
+      return res.status(400).json({
+        success: false,
+        message: 'quantity is required',
+      });
+    }
+
+    const qty = Number(quantity);
+    if (!Number.isFinite(qty) || qty <= 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Quantity must be greater than 0',
+      });
+    }
+
+    const validReasons = ['Low Stock', 'Damaged', 'High Usage', 'Other'];
+    const resolvedReason = validReasons.includes(reason) ? reason : 'Low Stock';
+
+    const item = await Inventory.findById(id);
+    if (!item) {
+      return res.status(404).json({
+        success: false,
+        message: 'Inventory item not found',
+      });
+    }
+
+    const request = await InventoryRefillRequest.create({
+      inventoryId: item._id,
+      employeeId: String(employeeId),
+      quantity: qty,
+      unit: item.unit,
+      reason: resolvedReason,
+      notes: notes ? String(notes).trim() : '',
+      itemName: item.name,
+      currentStockAtRequest: item.currentStock,
+    });
+
+    res.status(201).json({
+      success: true,
+      message: 'Refill request submitted',
+      data: request,
+    });
+  } catch (error) {
+    console.error('Error creating refill request:', error);
+    if (error.name === 'CastError') {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid inventory item ID',
+      });
+    }
+    res.status(500).json({
+      success: false,
+      message: 'Error creating refill request',
       error: error.message,
     });
   }

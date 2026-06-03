@@ -7,6 +7,7 @@ import {
   updateStock,
   getInventoryUsageHistory,
   recordInventoryUsage,
+  createRefillRequest,
   deleteInventoryItem,
 } from '../controllers/inventoryController.js';
 
@@ -19,6 +20,7 @@ router.get('/', getInventory);
 
 router.get('/:id/usage', getInventoryUsageHistory);
 router.post('/:id/usage', recordInventoryUsage);
+router.post('/:id/refill-request', createRefillRequest);
 
 // @route   GET /api/inventory/:id
 // @desc    Get single inventory item by ID

@@ -39,3 +39,21 @@ export const recordInventoryUsage = async (inventoryId, payload) => {
   }
 };
 
+export const submitRefillRequest = async (inventoryId, payload) => {
+  try {
+    const response = await api.post(`/inventory/${inventoryId}/refill-request`, payload);
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || { message: 'Failed to submit refill request' };
+  }
+};
+
+export const getInventoryById = async (inventoryId) => {
+  try {
+    const response = await api.get(`/inventory/${inventoryId}`);
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || { message: 'Failed to fetch inventory item' };
+  }
+};
+

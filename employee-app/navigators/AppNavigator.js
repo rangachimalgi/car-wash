@@ -5,7 +5,9 @@ import DocumentUploadScreen from '../screens/DocumentUploadScreen';
 import JobQueueScreen from '../screens/JobQueueScreen';
 import JobDetailScreen from '../screens/JobDetailScreen';
 import StartServiceScreen from '../screens/StartServiceScreen';
+import MaterialDetailScreen from '../screens/MaterialDetailScreen';
 import MaterialUsageScreen from '../screens/MaterialUsageScreen';
+import RequestRefillScreen from '../screens/RequestRefillScreen';
 import UpsellPitchScreen from '../screens/UpsellPitchScreen';
 import MainTabs from './MainTabs';
 
@@ -27,8 +29,14 @@ export default function AppNavigator({ onLogout, employeeId }) {
       </Stack.Screen>
       <Stack.Screen name="JobDetail" component={JobDetailScreen} />
       <Stack.Screen name="StartService" component={StartServiceScreen} />
+      <Stack.Screen name="MaterialDetail">
+        {(props) => <MaterialDetailScreen {...props} employeeId={employeeId} />}
+      </Stack.Screen>
       <Stack.Screen name="MaterialUsage">
         {(props) => <MaterialUsageScreen {...props} employeeId={employeeId} />}
+      </Stack.Screen>
+      <Stack.Screen name="RequestRefill">
+        {(props) => <RequestRefillScreen {...props} employeeId={employeeId} />}
       </Stack.Screen>
       <Stack.Screen name="UpsellPitch" component={UpsellPitchScreen} />
     </Stack.Navigator>
