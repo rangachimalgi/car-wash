@@ -260,8 +260,11 @@ export default function StartServiceScreen({ navigation, route }) {
       }
       await stopBackgroundLocationUpdates();
       await clearActiveOrderId();
-      Alert.alert('Submitted', 'Service marked as completed.');
-      navigation.goBack();
+      navigation.replace('MaterialUsage', {
+        orderId,
+        employeeId,
+        fromJobComplete: true,
+      });
     } catch (error) {
       console.error('Submit service error:', error);
       Alert.alert('Submit failed', 'Unable to submit right now.');

@@ -215,6 +215,7 @@ function App() {
     name: '',
     category: 'Soap',
     currentStock: '',
+    maxCapacity: '',
     unit: 'units',
     lowStockThreshold: '',
     description: '',
@@ -1198,6 +1199,19 @@ function App() {
     setLoadingInventory(true)
     setInventoryMessage({ type: '', text: '' })
 
+    const maxCap = Number(inventoryFormData.maxCapacity)
+    if (!inventoryFormData.maxCapacity || Number.isNaN(maxCap) || maxCap <= 0) {
+      setInventoryMessage({ type: 'error', text: 'Max capacity is required (e.g. 20 bottles on the shelf).' })
+      setLoadingInventory(false)
+      return
+    }
+
+    if (Number(inventoryFormData.currentStock) > maxCap) {
+      setInventoryMessage({ type: 'error', text: 'Current stock cannot be greater than max capacity.' })
+      setLoadingInventory(false)
+      return
+    }
+
     try {
       const inventoryData = {
         name: inventoryFormData.name.trim(),
@@ -1207,6 +1221,7 @@ function App() {
         lowStockThreshold: Number(inventoryFormData.lowStockThreshold),
         description: inventoryFormData.description.trim(),
         supplier: inventoryFormData.supplier.trim(),
+        maxCapacity: maxCap,
       }
 
       const url = editingInventoryId 
@@ -1234,6 +1249,7 @@ function App() {
           name: '',
           category: 'Soap',
           currentStock: '',
+          maxCapacity: '',
           unit: 'units',
           lowStockThreshold: '',
           description: '',
@@ -1272,6 +1288,7 @@ function App() {
           name: item.name || '',
           category: item.category || 'Soap',
           currentStock: String(item.currentStock || ''),
+          maxCapacity: item.maxCapacity != null ? String(item.maxCapacity) : '',
           unit: item.unit || 'units',
           lowStockThreshold: String(item.lowStockThreshold || ''),
           description: item.description || '',
@@ -1292,6 +1309,7 @@ function App() {
       name: '',
       category: 'Soap',
       currentStock: '',
+      maxCapacity: '',
       unit: 'units',
       lowStockThreshold: '',
       description: '',
@@ -6827,6 +6845,12 @@ function App() {
                             {item.currentStock} {item.unit}
                           </span>
                         </div>
+                        {item.maxCapacity != null && item.maxCapacity > 0 && (
+                          <div className="detail-item">
+                            <span className="detail-label">Max Capacity:</span>
+                            <span className="detail-value">{item.maxCapacity} {item.unit}</span>
+                          </div>
+                        )}
                         <div className="detail-item">
                           <span className="detail-label">Low Stock Threshold:</span>
                           <span className="detail-value">{item.lowStockThreshold} {item.unit}</span>
@@ -6999,6 +7023,24 @@ function App() {
                   />
                 </div>
 
+                <div className="form-group">
+                  <label htmlFor="inventory-max-capacity">Max Capacity *</label>
+                  <input
+                    type="number"
+                    id="inventory-max-capacity"
+                    name="maxCapacity"
+                    value={inventoryFormData.maxCapacity}
+                    onChange={handleInventoryChange}
+                    required
+                    min="0.01"
+                    step="0.01"
+                    placeholder="e.g., 20"
+                  />
+                  <small className="help-text">Full shelf size — employee app shows “10 left / 20 bottles”</small>
+                </div>
+              </div>
+
+              <div className="form-row">
                 <div className="form-group">
                   <label htmlFor="inventory-threshold">Low Stock Threshold *</label>
                   <input

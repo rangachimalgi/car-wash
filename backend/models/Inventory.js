@@ -25,6 +25,11 @@ const inventorySchema = new mongoose.Schema({
     trim: true,
     default: 'units',
   },
+  maxCapacity: {
+    type: Number,
+    min: [0, 'Max capacity cannot be negative'],
+    default: null,
+  },
   lowStockThreshold: {
     type: Number,
     required: [true, 'Low stock threshold is required'],

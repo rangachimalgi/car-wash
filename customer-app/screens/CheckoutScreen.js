@@ -1,5 +1,17 @@
-import React, { useMemo, useState, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, TextInput, Dimensions, Alert, Share } from 'react-native';
+import React, { useMemo, useState, useEffect, useCallback, useRef } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  Image,
+  TextInput,
+  Dimensions,
+  Alert,
+  Share,
+  ActivityIndicator,
+} from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import BackHeader from '../components/BackHeader';
@@ -81,6 +93,8 @@ export default function CheckoutScreen({ navigation, route }) {
     totalEarnings: 0,
     perReferralRewardReferred: 100,
   });
+  const [isPlacingOrder, setIsPlacingOrder] = useState(false);
+  const placingOrderRef = useRef(false);
   const { theme, isLightMode } = useTheme();
   const styles = useMemo(() => createStyles(theme, isLightMode), [theme, isLightMode]);
   // Load address and vehicle data
@@ -321,6 +335,7 @@ export default function CheckoutScreen({ navigation, route }) {
 
   const handlePayNow = async () => {
     if (checkoutCartItems.length === 0) return;
+    if (placingOrderRef.current || isPlacingOrder) return;
 
     // Validate address and vehicle before proceeding
     if (!address || !address.address || address.address.trim() === '') {
@@ -379,6 +394,9 @@ export default function CheckoutScreen({ navigation, route }) {
       });
       return;
     }
+
+    placingOrderRef.current = true;
+    setIsPlacingOrder(true);
 
     try {
       const itemsPayload = checkoutCartItems.map((item) => {
@@ -476,6 +494,9 @@ export default function CheckoutScreen({ navigation, route }) {
     } catch (error) {
       console.error('Order creation failed:', error);
       Alert.alert('Order failed', 'Unable to place order right now.');
+    } finally {
+      placingOrderRef.current = false;
+      setIsPlacingOrder(false);
     }
   };
 
@@ -793,12 +814,20 @@ export default function CheckoutScreen({ navigation, route }) {
           <Text style={styles.amountLabel}>Total Amount</Text>
           <Text style={styles.amountValue}>₹{finalTotal.toFixed(2)}</Text>
         </View>
-        <TouchableOpacity 
-          style={styles.payNowButton}
+        <TouchableOpacity
+          style={[styles.payNowButton, isPlacingOrder && styles.payNowButtonDisabled]}
           onPress={handlePayNow}
+          disabled={isPlacingOrder}
+          activeOpacity={0.85}
         >
-          <Text style={styles.payNowButtonText}>Book Now</Text>
-          <MaterialCommunityIcons name="arrow-right" size={20} color="#000000" />
+          <Text style={styles.payNowButtonText}>
+            {isPlacingOrder ? 'Booking…' : 'Book Now'}
+          </Text>
+          {!isPlacingOrder ? (
+            <MaterialCommunityIcons name="arrow-right" size={20} color="#000000" />
+          ) : (
+            <ActivityIndicator size="small" color="#000000" />
+          )}
         </TouchableOpacity>
       </View>
 
@@ -1174,6 +1203,9 @@ const createStyles = (theme, isLightMode) => StyleSheet.create({
     borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  payNowButtonDisabled: {
+    opacity: 0.65,
   },
   payNowButtonText: {
     fontSize: 18,

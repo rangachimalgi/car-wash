@@ -5,6 +5,8 @@ import {
   createInventoryItem,
   updateInventoryItem,
   updateStock,
+  getInventoryUsageHistory,
+  recordInventoryUsage,
   deleteInventoryItem,
 } from '../controllers/inventoryController.js';
 
@@ -14,6 +16,9 @@ const router = express.Router();
 // @desc    Get all inventory items (with filters: category, lowStock, search)
 // @access  Admin
 router.get('/', getInventory);
+
+router.get('/:id/usage', getInventoryUsageHistory);
+router.post('/:id/usage', recordInventoryUsage);
 
 // @route   GET /api/inventory/:id
 // @desc    Get single inventory item by ID

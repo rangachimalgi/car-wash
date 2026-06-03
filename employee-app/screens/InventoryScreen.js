@@ -1,20 +1,18 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   Modal,
   RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { getInventory, updateInventoryStock } from '../services/inventoryApi.js';
+import { getInventory } from '../services/inventoryApi.js';
 
 const CATEGORY_ICONS = {
   Soap: 'bottle-tonic-outline',
@@ -24,21 +22,32 @@ const CATEGORY_ICONS = {
   Other: 'package-variant',
 };
 
-function getItemCapacity(item) {
-  const current = Number(item?.currentStock) || 0;
-  const threshold = Number(item?.lowStockThreshold) || 1;
-  const max =
-    Number(item?.maxCapacity) > 0
-      ? Number(item.maxCapacity)
-      : Math.max(current, threshold * 2, 1);
-  const percent = max > 0 ? Math.min(100, Math.round((current / max) * 100)) : 0;
-  return { current, max, percent };
+function readMaxCapacity(item) {
+  const raw = item?.maxCapacity ?? item?.max_capacity;
+  const n = Number(raw);
+  return Number.isFinite(n) && n > 0 ? n : null;
 }
 
-function formatQty(value, unit = 'units') {
+function getItemCapacity(item) {
+  const current = Number(item?.currentStock) || 0;
+  const max = readMaxCapacity(item);
+  const percent =
+    max != null && max > 0 ? Math.min(100, Math.round((current / max) * 100)) : null;
+  return { current, max, percent, hasConfiguredMax: max != null };
+}
+
+function formatAmount(value) {
   const n = Number(value) || 0;
-  const display = Number.isInteger(n) ? String(n) : n.toFixed(1).replace(/\.0$/, '');
-  return `${display} ${unit}`;
+  return Number.isInteger(n) ? String(n) : n.toFixed(1).replace(/\.0$/, '');
+}
+
+function getStockLabel(item) {
+  const { current, max, hasConfiguredMax } = getItemCapacity(item);
+  const unit = item?.unit || 'units';
+  if (hasConfiguredMax) {
+    return `${formatAmount(current)} left / ${formatAmount(max)} ${unit}`;
+  }
+  return `${formatAmount(current)} ${unit} in stock`;
 }
 
 function getCategoryIcon(category) {
@@ -52,10 +61,10 @@ function computeStats(items) {
 
   for (const item of items) {
     if (item?.isLowStock) lowStock += 1;
-    const { current, max } = getItemCapacity(item);
+    const { current, max, hasConfiguredMax } = getItemCapacity(item);
+    if (!hasConfiguredMax) continue;
     if (current > 0 && current < max) inUse += 1;
     else if (current >= max) available += 1;
-    else if (current > 0 && !item?.isLowStock) available += 1;
   }
 
   return {
@@ -77,8 +86,7 @@ function SummaryCard({ label, value, hint, highlight, style }) {
 }
 
 function MaterialRow({ item, onPress }) {
-  const { current, max, percent } = getItemCapacity(item);
-  const unit = item?.unit || 'units';
+  const { percent, hasConfiguredMax } = getItemCapacity(item);
   const iconName = getCategoryIcon(item?.category);
 
   return (
@@ -91,16 +99,16 @@ function MaterialRow({ item, onPress }) {
         <Text style={materialStyles.name} numberOfLines={1}>
           {item?.name || 'Unnamed'}
         </Text>
-        <Text style={materialStyles.stockLine} numberOfLines={1}>
-          {formatQty(current, unit)} Left / {formatQty(max, unit)}
-        </Text>
+        <Text style={materialStyles.stockLine}>{getStockLabel(item)}</Text>
 
-        <View style={materialStyles.progressRow}>
-          <View style={materialStyles.progressTrack}>
-            <View style={[materialStyles.progressFill, { width: `${percent}%` }]} />
+        {hasConfiguredMax ? (
+          <View style={materialStyles.progressRow}>
+            <View style={materialStyles.progressTrack}>
+              <View style={[materialStyles.progressFill, { width: `${percent}%` }]} />
+            </View>
+            <Text style={materialStyles.percent}>{percent}%</Text>
           </View>
-          <Text style={materialStyles.percent}>{percent}%</Text>
-        </View>
+        ) : null}
       </View>
 
       <MaterialCommunityIcons name="chevron-right" size={22} color="#9CA3AF" />
@@ -108,7 +116,7 @@ function MaterialRow({ item, onPress }) {
   );
 }
 
-export default function InventoryScreen({ employeeId }) {
+export default function InventoryScreen({ navigation, employeeId }) {
   const insets = useSafeAreaInsets();
   const styles = useMemo(() => createStyles(), []);
 
@@ -118,10 +126,6 @@ export default function InventoryScreen({ employeeId }) {
   const [error, setError] = useState('');
   const [filter, setFilter] = useState('all');
   const [filterOpen, setFilterOpen] = useState(false);
-
-  const [detailItem, setDetailItem] = useState(null);
-  const [quantityText, setQuantityText] = useState('1');
-  const [submitting, setSubmitting] = useState(false);
 
   const fetchInventory = useCallback(async () => {
     try {
@@ -157,14 +161,14 @@ export default function InventoryScreen({ employeeId }) {
     if (filter === 'lowStock') return items.filter((it) => it?.isLowStock);
     if (filter === 'inUse') {
       return items.filter((it) => {
-        const { current, max } = getItemCapacity(it);
-        return current > 0 && current < max;
+        const { current, max, hasConfiguredMax } = getItemCapacity(it);
+        return hasConfiguredMax && current > 0 && current < max;
       });
     }
     if (filter === 'available') {
       return items.filter((it) => {
-        const { current, max } = getItemCapacity(it);
-        return current >= max || (current > 0 && !it?.isLowStock);
+        const { current, max, hasConfiguredMax } = getItemCapacity(it);
+        return hasConfiguredMax && current >= max;
       });
     }
     return items;
@@ -177,71 +181,12 @@ export default function InventoryScreen({ employeeId }) {
     available: 'Available',
   }[filter];
 
-  const parseQuantity = () => {
-    const n = Number(quantityText);
-    if (!Number.isFinite(n) || n <= 0) return null;
-    return n;
-  };
-
-  const updateItemInList = (updated) => {
-    if (!updated?._id) return;
-    setItems((prev) => prev.map((it) => (it._id === updated._id ? updated : it)));
-    setDetailItem((prev) => (prev?._id === updated._id ? updated : prev));
-  };
-
-  const openDetail = (item) => {
-    setDetailItem(item);
-    setQuantityText('1');
-  };
-
-  const closeDetail = () => {
-    setDetailItem(null);
-    setQuantityText('1');
-  };
-
-  const handleMarkPurchased = async () => {
-    if (!detailItem?._id) return;
-
-    const qty = parseQuantity();
-    if (!qty) {
-      Alert.alert('Invalid quantity', 'Enter a quantity greater than 0.');
-      return;
-    }
-
-    const name = detailItem?.name || 'this item';
-    const unit = detailItem?.unit || 'units';
-
-    Alert.alert(
-      'Confirm',
-      `Mark as purchased: remove ${qty} ${unit} from "${name}" stock?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Yes',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              setSubmitting(true);
-              const res = await updateInventoryStock(detailItem._id, {
-                quantity: qty,
-                operation: 'remove',
-              });
-
-              if (res?.success) {
-                updateItemInList(res.data);
-                Alert.alert('Done', res.message || 'Updated inventory stock');
-              } else {
-                Alert.alert('Error', res?.message || 'Failed to update inventory stock');
-              }
-            } catch (e) {
-              Alert.alert('Error', e?.message || 'Failed to update inventory stock');
-            } finally {
-              setSubmitting(false);
-            }
-          },
-        },
-      ]
-    );
+  const openMaterialUsage = (item) => {
+    const rootNav = navigation.getParent?.() || navigation;
+    rootNav.navigate('MaterialUsage', {
+      inventoryId: item._id,
+      employeeId,
+    });
   };
 
   if (loading) {
@@ -338,7 +283,7 @@ export default function InventoryScreen({ employeeId }) {
             <MaterialRow
               key={item._id || `${item.name}-${item.category}`}
               item={item}
-              onPress={() => openDetail(item)}
+              onPress={() => openMaterialUsage(item)}
             />
           ))
         )}
@@ -384,59 +329,6 @@ export default function InventoryScreen({ employeeId }) {
         </View>
       </Modal>
 
-      <Modal visible={Boolean(detailItem)} animationType="slide" transparent onRequestClose={closeDetail}>
-        <View style={styles.modalBackdrop}>
-          <View style={styles.detailSheet}>
-            <View style={styles.detailHeader}>
-              <Text style={styles.detailTitle} numberOfLines={1}>
-                {detailItem?.name || 'Item'}
-              </Text>
-              <TouchableOpacity onPress={closeDetail} style={styles.detailClose}>
-                <MaterialCommunityIcons name="close" size={20} color="#1A1A1A" />
-              </TouchableOpacity>
-            </View>
-
-            {detailItem ? (
-              <>
-                <View style={styles.detailMeta}>
-                  <Text style={styles.detailMetaText}>
-                    {formatQty(getItemCapacity(detailItem).current, detailItem.unit)} left of{' '}
-                    {formatQty(getItemCapacity(detailItem).max, detailItem.unit)}
-                  </Text>
-                  <Text style={styles.detailMetaText}>
-                    Category: {detailItem.category || 'Other'}
-                  </Text>
-                  {detailItem.isLowStock ? (
-                    <Text style={styles.detailLow}>Low stock — needs refill</Text>
-                  ) : null}
-                </View>
-
-                <Text style={styles.detailLabel}>Quantity used / purchased</Text>
-                <TextInput
-                  value={quantityText}
-                  onChangeText={(t) => setQuantityText(t.replace(/[^0-9.]/g, ''))}
-                  keyboardType="numeric"
-                  placeholder="1"
-                  style={styles.quantityInput}
-                  placeholderTextColor="#9CA3AF"
-                />
-
-                <TouchableOpacity
-                  style={[styles.primaryButton, submitting && styles.primaryButtonDisabled]}
-                  onPress={handleMarkPurchased}
-                  disabled={submitting}
-                >
-                  {submitting ? (
-                    <ActivityIndicator size="small" color="#FFFFFF" />
-                  ) : (
-                    <Text style={styles.primaryButtonText}>Mark as purchased</Text>
-                  )}
-                </TouchableOpacity>
-              </>
-            ) : null}
-          </View>
-        </View>
-      </Modal>
     </View>
   );
 }

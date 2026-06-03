@@ -1,4 +1,18 @@
 import Inventory from '../models/Inventory.js';
+import InventoryUsage from '../models/InventoryUsage.js';
+import Order from '../models/Order.js';
+
+function buildJobLabel(order) {
+  if (!order) return 'Job';
+  const parts = [];
+  if (order.orderNumber) parts.push(order.orderNumber);
+  const vehicle = [order.customer?.vehicleType, order.customer?.vehicleModel]
+    .filter(Boolean)
+    .join(' ');
+  if (vehicle) parts.push(vehicle);
+  else if (order.customer?.name) parts.push(order.customer.name);
+  return parts.join(' · ') || 'Job';
+}
 
 // @desc    Get all inventory items (with optional filters)
 // @route   GET /api/inventory
@@ -90,16 +104,27 @@ export const createInventoryItem = async (req, res) => {
       category,
       currentStock,
       unit,
+      maxCapacity,
       lowStockThreshold,
       description,
       supplier,
     } = req.body;
 
     // Validate required fields
-    if (!name || !category || currentStock === undefined || !unit || lowStockThreshold === undefined) {
+    if (
+      !name ||
+      !category ||
+      currentStock === undefined ||
+      !unit ||
+      lowStockThreshold === undefined ||
+      maxCapacity === undefined ||
+      maxCapacity === null ||
+      maxCapacity === ''
+    ) {
       return res.status(400).json({
         success: false,
-        message: 'Missing required fields: name, category, currentStock, unit, lowStockThreshold',
+        message:
+          'Missing required fields: name, category, currentStock, unit, maxCapacity, lowStockThreshold',
       });
     }
 
@@ -127,12 +152,29 @@ export const createInventoryItem = async (req, res) => {
       });
     }
 
+    const parsedMaxCapacity = Number(maxCapacity);
+
+    if (Number.isNaN(parsedMaxCapacity) || parsedMaxCapacity <= 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Max capacity must be greater than 0',
+      });
+    }
+
+    if (Number(currentStock) > parsedMaxCapacity) {
+      return res.status(400).json({
+        success: false,
+        message: 'Current stock cannot exceed max capacity',
+      });
+    }
+
     // Create inventory item (isLowStock will be auto-calculated by pre-save hook)
     const inventoryItem = await Inventory.create({
       name: name.trim(),
       category,
       currentStock: Number(currentStock),
       unit: unit.trim(),
+      maxCapacity: parsedMaxCapacity,
       lowStockThreshold: Number(lowStockThreshold),
       description: description ? description.trim() : '',
       supplier: supplier ? supplier.trim() : '',
@@ -176,6 +218,7 @@ export const updateInventoryItem = async (req, res) => {
       category,
       currentStock,
       unit,
+      maxCapacity,
       lowStockThreshold,
       description,
       supplier,
@@ -214,6 +257,41 @@ export const updateInventoryItem = async (req, res) => {
         success: false,
         message: 'Low stock threshold cannot be negative',
       });
+    }
+
+    if (maxCapacity !== undefined) {
+      const parsedMaxCapacity =
+        maxCapacity === null || maxCapacity === '' ? null : Number(maxCapacity);
+
+      if (parsedMaxCapacity !== null && (Number.isNaN(parsedMaxCapacity) || parsedMaxCapacity <= 0)) {
+        return res.status(400).json({
+          success: false,
+          message: 'Max capacity must be greater than 0 when set',
+        });
+      }
+
+      const stockToCheck =
+        currentStock !== undefined ? Number(currentStock) : item.currentStock;
+
+      if (parsedMaxCapacity !== null && stockToCheck > parsedMaxCapacity) {
+        return res.status(400).json({
+          success: false,
+          message: 'Current stock cannot exceed max capacity',
+        });
+      }
+
+      item.maxCapacity = parsedMaxCapacity;
+    }
+
+    if (currentStock !== undefined) {
+      const newStock = Number(currentStock);
+      const cap = item.maxCapacity;
+      if (cap != null && cap > 0 && newStock > cap) {
+        return res.status(400).json({
+          success: false,
+          message: 'Current stock cannot exceed max capacity',
+        });
+      }
     }
 
     // Update fields
@@ -306,6 +384,12 @@ export const updateStock = async (req, res) => {
     let newStock;
     if (operation === 'add') {
       newStock = item.currentStock + Number(quantity);
+      if (item.maxCapacity != null && item.maxCapacity > 0 && newStock > item.maxCapacity) {
+        return res.status(400).json({
+          success: false,
+          message: `Cannot exceed max capacity of ${item.maxCapacity} ${item.unit}.`,
+        });
+      }
       // Update lastRestocked if adding stock
       item.lastRestocked = new Date();
     } else {
@@ -341,6 +425,128 @@ export const updateStock = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error updating stock',
+      error: error.message,
+    });
+  }
+};
+
+// @desc    Get usage history for an inventory item
+// @route   GET /api/inventory/:id/usage
+export const getInventoryUsageHistory = async (req, res) => {
+  try {
+    const item = await Inventory.findById(req.params.id).select('_id name');
+    if (!item) {
+      return res.status(404).json({
+        success: false,
+        message: 'Inventory item not found',
+      });
+    }
+
+    const logs = await InventoryUsage.find({ inventoryId: req.params.id })
+      .sort({ createdAt: -1 })
+      .limit(50)
+      .select('-__v');
+
+    res.status(200).json({
+      success: true,
+      count: logs.length,
+      data: logs,
+    });
+  } catch (error) {
+    console.error('Error fetching inventory usage:', error);
+    if (error.name === 'CastError') {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid inventory item ID',
+      });
+    }
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching inventory usage',
+      error: error.message,
+    });
+  }
+};
+
+// @desc    Record material usage for a job (deducts stock)
+// @route   POST /api/inventory/:id/usage
+export const recordInventoryUsage = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { quantity, orderId, employeeId, note } = req.body;
+
+    if (quantity === undefined || !orderId || !employeeId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Missing required fields: quantity, orderId, employeeId',
+      });
+    }
+
+    const qty = Number(quantity);
+    if (!Number.isFinite(qty) || qty <= 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Quantity must be greater than 0',
+      });
+    }
+
+    const item = await Inventory.findById(id);
+    if (!item) {
+      return res.status(404).json({
+        success: false,
+        message: 'Inventory item not found',
+      });
+    }
+
+    const order = await Order.findById(orderId);
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message: 'Job not found',
+      });
+    }
+
+    const newStock = item.currentStock - qty;
+    if (newStock < 0) {
+      return res.status(400).json({
+        success: false,
+        message: `Cannot use ${qty} ${item.unit}. Only ${item.currentStock} ${item.unit} available.`,
+      });
+    }
+
+    item.currentStock = newStock;
+    await item.save();
+
+    const usage = await InventoryUsage.create({
+      inventoryId: item._id,
+      orderId: order._id,
+      employeeId: String(employeeId),
+      quantity: qty,
+      unit: item.unit,
+      orderNumber: order.orderNumber || '',
+      jobLabel: buildJobLabel(order),
+      note: note ? String(note).trim() : '',
+    });
+
+    res.status(201).json({
+      success: true,
+      message: 'Usage recorded successfully',
+      data: {
+        inventory: item,
+        usage,
+      },
+    });
+  } catch (error) {
+    console.error('Error recording inventory usage:', error);
+    if (error.name === 'CastError') {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid inventory or job ID',
+      });
+    }
+    res.status(500).json({
+      success: false,
+      message: 'Error recording inventory usage',
       error: error.message,
     });
   }

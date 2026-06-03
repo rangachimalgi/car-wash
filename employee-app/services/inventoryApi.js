@@ -21,3 +21,21 @@ export const updateInventoryStock = async (inventoryId, { quantity, operation })
   }
 };
 
+export const getInventoryUsage = async (inventoryId) => {
+  try {
+    const response = await api.get(`/inventory/${inventoryId}/usage`);
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || { message: 'Failed to fetch usage history' };
+  }
+};
+
+export const recordInventoryUsage = async (inventoryId, payload) => {
+  try {
+    const response = await api.post(`/inventory/${inventoryId}/usage`, payload);
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || { message: 'Failed to record usage' };
+  }
+};
+
