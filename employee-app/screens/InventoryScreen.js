@@ -254,6 +254,11 @@ export default function InventoryScreen({ navigation, employeeId }) {
     });
   };
 
+  const openMyRequests = () => {
+    const rootNav = navigation.getParent?.() || navigation;
+    rootNav.navigate('MyRequests', { employeeId });
+  };
+
   if (loading) {
     return (
       <View style={[styles.container, styles.centerContent, { paddingTop: 24 + insets.top }]}>
@@ -269,8 +274,8 @@ export default function InventoryScreen({ navigation, employeeId }) {
       <StatusBar style="dark" />
 
       <View style={[styles.header, { paddingTop: 12 + insets.top }]}>
-        <TouchableOpacity style={styles.headerBtn} activeOpacity={0.7}>
-          <MaterialCommunityIcons name="menu" size={24} color="#1A1A1A" />
+        <TouchableOpacity style={styles.headerBtn} onPress={openMyRequests} activeOpacity={0.7}>
+          <MaterialCommunityIcons name="clipboard-text-outline" size={24} color="#1A1A1A" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Inventory</Text>
         <TouchableOpacity

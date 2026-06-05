@@ -117,6 +117,7 @@ export default function RequestRefillScreen({ navigation, route, employeeId: emp
               });
               if (res?.success) {
                 Alert.alert('Submitted', res.message || 'Refill request sent to admin.', [
+                  { text: 'View requests', onPress: () => navigation.replace('MyRequests', { employeeId }) },
                   { text: 'OK', onPress: () => navigation.goBack() },
                 ]);
               } else {

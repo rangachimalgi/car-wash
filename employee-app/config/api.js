@@ -2,7 +2,7 @@ import { Platform } from 'react-native';
 
 // Single source of truth for dev API host. Use your machine's LAN IP for physical devices.
 // Find it: Mac/Linux `ipconfig getifaddr en0`, Windows `ipconfig`. For iOS simulator, 127.0.0.1 works.
-const COMPUTER_IP = '192.168.1.98';
+const COMPUTER_IP = '192.168.1.10';
 
 // Set true when using Android Emulator (uses 10.0.2.2 to reach host)
 const USE_ANDROID_EMULATOR = false;

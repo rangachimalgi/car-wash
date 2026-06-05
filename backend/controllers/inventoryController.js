@@ -630,18 +630,25 @@ export const createRefillRequest = async (req, res) => {
 // @access  Admin
 export const getRefillRequests = async (req, res) => {
   try {
-    const { status } = req.query;
+    const { status, employeeId } = req.query;
     const query = {};
+
+    if (employeeId) {
+      query.employeeId = String(employeeId).trim();
+    }
 
     const validStatuses = ['pending', 'approved', 'fulfilled', 'rejected'];
     if (status && status !== 'all') {
-      if (!validStatuses.includes(status)) {
+      if (status === 'approved') {
+        query.status = { $in: ['approved', 'fulfilled'] };
+      } else if (!validStatuses.includes(status)) {
         return res.status(400).json({
           success: false,
-          message: `Invalid status. Must be one of: ${validStatuses.join(', ')}, or all`,
+          message: `Invalid status. Must be one of: ${validStatuses.join(', ')}, approved, or all`,
         });
+      } else {
+        query.status = status;
       }
-      query.status = status;
     }
 
     const requests = await InventoryRefillRequest.find(query)

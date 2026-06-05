@@ -14,7 +14,7 @@ import Constants from 'expo-constants';
 //   EXPO_PUBLIC_MERGE_MEDIA_FROM_URL=https://YOUR-HOST/api/media/public
 //
 // Android emulator: host defaults to 10.0.2.2 (AVD → your machine). Override with EXPO_PUBLIC_ANDROID_API_HOST.
-const COMPUTER_IP = '192.168.1.98';
+const COMPUTER_IP = '192.168.1.10';
 const DEV_API_PORT = process.env.EXPO_PUBLIC_API_PORT || '8000';
 const ANDROID_API_HOST = process.env.EXPO_PUBLIC_ANDROID_API_HOST || COMPUTER_IP;
 /** Production API root (release build + dev hero-slider merge). */

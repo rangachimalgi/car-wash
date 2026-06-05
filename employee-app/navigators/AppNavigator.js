@@ -8,6 +8,7 @@ import StartServiceScreen from '../screens/StartServiceScreen';
 import MaterialDetailScreen from '../screens/MaterialDetailScreen';
 import MaterialUsageScreen from '../screens/MaterialUsageScreen';
 import RequestRefillScreen from '../screens/RequestRefillScreen';
+import MyRequestsScreen from '../screens/MyRequestsScreen';
 import UpsellPitchScreen from '../screens/UpsellPitchScreen';
 import MainTabs from './MainTabs';
 
@@ -37,6 +38,9 @@ export default function AppNavigator({ onLogout, employeeId }) {
       </Stack.Screen>
       <Stack.Screen name="RequestRefill">
         {(props) => <RequestRefillScreen {...props} employeeId={employeeId} />}
+      </Stack.Screen>
+      <Stack.Screen name="MyRequests">
+        {(props) => <MyRequestsScreen {...props} employeeId={employeeId} />}
       </Stack.Screen>
       <Stack.Screen name="UpsellPitch" component={UpsellPitchScreen} />
     </Stack.Navigator>

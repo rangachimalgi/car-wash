@@ -57,3 +57,12 @@ export const getInventoryById = async (inventoryId) => {
   }
 };
 
+export const getRefillRequests = async (params = {}) => {
+  try {
+    const response = await api.get('/inventory/refill-requests', { params });
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || { message: 'Failed to fetch refill requests' };
+  }
+};
+
