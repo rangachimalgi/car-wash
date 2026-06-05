@@ -50,6 +50,14 @@ const inventoryRefillRequestSchema = new mongoose.Schema(
       type: Number,
       min: 0,
     },
+    reviewedAt: {
+      type: Date,
+    },
+    adminNote: {
+      type: String,
+      trim: true,
+      default: '',
+    },
   },
   { timestamps: true }
 );

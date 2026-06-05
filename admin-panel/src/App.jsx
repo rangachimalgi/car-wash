@@ -224,6 +224,10 @@ function App() {
   const [editingInventoryId, setEditingInventoryId] = useState(null)
   const [inventoryMessage, setInventoryMessage] = useState({ type: '', text: '' })
   const [stockUpdateModal, setStockUpdateModal] = useState({ open: false, item: null, quantity: '', operation: 'add' })
+  const [refillRequests, setRefillRequests] = useState([])
+  const [pendingRefillCount, setPendingRefillCount] = useState(0)
+  const [loadingRefillRequests, setLoadingRefillRequests] = useState(false)
+  const [refillRequestFilter, setRefillRequestFilter] = useState('pending')
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [navOpen, setNavOpen] = useState({
     revenueAnalytics: false,
@@ -334,8 +338,9 @@ function App() {
   useEffect(() => {
     if (activeTab === 'inventory') {
       fetchInventory()
+      fetchRefillRequests()
     }
-  }, [activeTab, inventoryCategoryFilter, inventoryFilter, inventorySearch])
+  }, [activeTab, inventoryCategoryFilter, inventoryFilter, inventorySearch, refillRequestFilter])
 
   useEffect(() => {
     if (activeTab === 'employeeIncentives') {
@@ -1316,6 +1321,77 @@ function App() {
       supplier: '',
     })
   }
+
+  const fetchPendingRefillCount = async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/inventory/refill-requests?status=pending`)
+      const data = await response.json()
+      if (data.success) {
+        setPendingRefillCount(data.count ?? (data.data?.length ?? 0))
+      }
+    } catch (error) {
+      console.error('Error fetching pending refill count:', error)
+    }
+  }
+
+  const fetchRefillRequests = async () => {
+    setLoadingRefillRequests(true)
+    try {
+      const params = refillRequestFilter !== 'all' ? `?status=${refillRequestFilter}` : ''
+      const response = await fetch(`${API_BASE_URL}/inventory/refill-requests${params}`)
+      const data = await response.json()
+      if (data.success) {
+        setRefillRequests(data.data || [])
+      } else {
+        console.error('Error fetching refill requests:', data.message)
+        setInventoryMessage({ type: 'error', text: data.message || 'Error fetching refill requests' })
+      }
+      await fetchPendingRefillCount()
+    } catch (error) {
+      console.error('Error fetching refill requests:', error)
+      setInventoryMessage({ type: 'error', text: `Network error: ${error.message}` })
+    } finally {
+      setLoadingRefillRequests(false)
+    }
+  }
+
+  const handleReviewRefillRequest = async (requestId, action) => {
+    const isReject = action === 'reject'
+    let adminNote = ''
+    if (isReject) {
+      adminNote = window.prompt('Optional note for the employee (reason for rejection):') || ''
+      if (!window.confirm('Reject this refill request?')) return
+    } else if (!window.confirm('Approve and add stock for this refill request?')) {
+      return
+    }
+
+    setLoadingRefillRequests(true)
+    setInventoryMessage({ type: '', text: '' })
+    try {
+      const response = await fetch(`${API_BASE_URL}/inventory/refill-requests/${requestId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action, adminNote: adminNote.trim() || undefined }),
+      })
+      const data = await response.json()
+      if (response.ok && data.success) {
+        setInventoryMessage({ type: 'success', text: data.message })
+        fetchRefillRequests()
+        fetchInventory()
+      } else {
+        setInventoryMessage({ type: 'error', text: data.message || 'Failed to update refill request' })
+      }
+    } catch (error) {
+      console.error('Error reviewing refill request:', error)
+      setInventoryMessage({ type: 'error', text: error.message || 'Network error' })
+    } finally {
+      setLoadingRefillRequests(false)
+    }
+  }
+
+  useEffect(() => {
+    fetchPendingRefillCount()
+  }, [])
 
   // Handle stock update
   const handleStockUpdate = async () => {
@@ -2807,6 +2883,7 @@ function App() {
   }
 
   const inventoryLowStockCount = inventory.filter(item => item.isLowStock).length
+  const inventoryNavBadge = pendingRefillCount > 0 ? pendingRefillCount : inventoryLowStockCount
 
   const iconStroke = 'currentColor'
   const Icon = ({ name }) => {
@@ -2989,7 +3066,7 @@ function App() {
       id: 'inventoryManagement',
       label: 'Inventory management',
       icon: 'inventory',
-      items: [{ id: 'inventory', label: 'Inventory', icon: 'inventory', badge: inventoryLowStockCount }],
+      items: [{ id: 'inventory', label: 'Inventory', icon: 'inventory', badge: inventoryNavBadge }],
     },
   ]
 
@@ -6728,9 +6805,178 @@ function App() {
                     <div style={{ fontSize: '12px', color: summary.lowStockItems > 0 ? '#856404' : '#155724', marginBottom: '5px' }}>Low Stock Items</div>
                     <div style={{ fontSize: '24px', fontWeight: 'bold', color: summary.lowStockItems > 0 ? '#856404' : '#155724' }}>{summary.lowStockItems}</div>
                   </div>
+                  <div style={{ 
+                    padding: '15px', 
+                    backgroundColor: pendingRefillCount > 0 ? '#fff3cd' : '#f8f9fa', 
+                    borderRadius: '8px', 
+                    border: `1px solid ${pendingRefillCount > 0 ? '#ffc107' : '#ddd'}` 
+                  }}>
+                    <div style={{ fontSize: '12px', color: pendingRefillCount > 0 ? '#856404' : '#666', marginBottom: '5px' }}>Pending Refill Requests</div>
+                    <div style={{ fontSize: '24px', fontWeight: 'bold', color: pendingRefillCount > 0 ? '#856404' : '#333' }}>{pendingRefillCount}</div>
+                  </div>
                 </div>
               )
             })()}
+
+            {/* Refill requests (employee → admin approval) */}
+            <div className="addons-list-section" style={{ marginBottom: '24px' }}>
+              <div className="section-header">
+                <h2 className="section-title">Refill Requests</h2>
+                <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
+                  <select
+                    value={refillRequestFilter}
+                    onChange={(e) => setRefillRequestFilter(e.target.value)}
+                    style={{
+                      padding: '8px 12px',
+                      border: '1px solid #ddd',
+                      borderRadius: '4px',
+                      fontSize: '14px',
+                    }}
+                  >
+                    <option value="pending">Pending</option>
+                    <option value="fulfilled">Approved / Fulfilled</option>
+                    <option value="rejected">Rejected</option>
+                    <option value="all">All</option>
+                  </select>
+                  <button
+                    type="button"
+                    className="secondary-button"
+                    onClick={fetchRefillRequests}
+                    disabled={loadingRefillRequests}
+                  >
+                    {loadingRefillRequests ? 'Loading...' : 'Refresh'}
+                  </button>
+                </div>
+              </div>
+              <p className="info-text" style={{ marginBottom: '16px' }}>
+                Employees submit refills from the app. Approve to add stock automatically; reject to decline.
+              </p>
+              {loadingRefillRequests ? (
+                <div className="loading-text">Loading refill requests...</div>
+              ) : refillRequests.length === 0 ? (
+                <div className="info-text">No refill requests{refillRequestFilter !== 'all' ? ` with status "${refillRequestFilter}"` : ''}.</div>
+              ) : (
+                <div className="addons-grid">
+                  {refillRequests.map((req) => {
+                    const item = req.inventoryId
+                    const statusColors = {
+                      pending: { bg: '#fff3cd', border: '#ffc107', text: '#856404' },
+                      fulfilled: { bg: '#d4edda', border: '#c3e6cb', text: '#155724' },
+                      rejected: { bg: '#f8d7da', border: '#f5c6cb', text: '#721c24' },
+                      approved: { bg: '#cce5ff', border: '#b8daff', text: '#004085' },
+                    }
+                    const sc = statusColors[req.status] || statusColors.pending
+                    return (
+                      <div
+                        key={req._id}
+                        className="addon-card"
+                        style={{ border: `2px solid ${sc.border}`, backgroundColor: sc.bg }}
+                      >
+                        <div className="addon-card-header">
+                          <h3 className="addon-card-title">{req.itemName || item?.name || 'Unknown item'}</h3>
+                          <span style={{
+                            padding: '4px 8px',
+                            borderRadius: '4px',
+                            fontSize: '11px',
+                            fontWeight: '600',
+                            backgroundColor: sc.text,
+                            color: 'white',
+                            textTransform: 'uppercase',
+                          }}>
+                            {req.status}
+                          </span>
+                        </div>
+                        <div className="addon-card-details">
+                          <div className="detail-item">
+                            <span className="detail-label">Quantity:</span>
+                            <span className="detail-value" style={{ fontWeight: 'bold' }}>
+                              {req.quantity} {req.unit}
+                            </span>
+                          </div>
+                          <div className="detail-item">
+                            <span className="detail-label">Reason:</span>
+                            <span className="detail-value">{req.reason}</span>
+                          </div>
+                          <div className="detail-item">
+                            <span className="detail-label">Employee:</span>
+                            <span className="detail-value">{req.employeeId}</span>
+                          </div>
+                          <div className="detail-item">
+                            <span className="detail-label">Stock at request:</span>
+                            <span className="detail-value">
+                              {req.currentStockAtRequest != null ? `${req.currentStockAtRequest} ${req.unit}` : '—'}
+                            </span>
+                          </div>
+                          {item?.currentStock != null && (
+                            <div className="detail-item">
+                              <span className="detail-label">Current stock:</span>
+                              <span className="detail-value">{item.currentStock} {item.unit || req.unit}</span>
+                            </div>
+                          )}
+                          {req.notes && (
+                            <div className="detail-item">
+                              <span className="detail-label">Notes:</span>
+                              <span className="detail-value">{req.notes}</span>
+                            </div>
+                          )}
+                          <div className="detail-item">
+                            <span className="detail-label">Requested:</span>
+                            <span className="detail-value">
+                              {req.createdAt ? new Date(req.createdAt).toLocaleString('en-IN') : '—'}
+                            </span>
+                          </div>
+                          {req.reviewedAt && (
+                            <div className="detail-item">
+                              <span className="detail-label">Reviewed:</span>
+                              <span className="detail-value">
+                                {new Date(req.reviewedAt).toLocaleString('en-IN')}
+                              </span>
+                            </div>
+                          )}
+                          {req.adminNote && (
+                            <div className="detail-item">
+                              <span className="detail-label">Admin note:</span>
+                              <span className="detail-value">{req.adminNote}</span>
+                            </div>
+                          )}
+                        </div>
+                        {req.status === 'pending' && (
+                          <div className="addon-card-footer" style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                            <button
+                              type="button"
+                              onClick={() => handleReviewRefillRequest(req._id, 'approve')}
+                              disabled={loadingRefillRequests}
+                              style={{
+                                flex: 1,
+                                minWidth: '100px',
+                                padding: '8px 16px',
+                                backgroundColor: '#28a745',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: '4px',
+                                cursor: 'pointer',
+                                fontSize: '14px',
+                              }}
+                            >
+                              Approve &amp; restock
+                            </button>
+                            <button
+                              type="button"
+                              className="secondary-button"
+                              onClick={() => handleReviewRefillRequest(req._id, 'reject')}
+                              disabled={loadingRefillRequests}
+                              style={{ flex: 1, minWidth: '80px', color: '#dc3545', borderColor: '#dc3545' }}
+                            >
+                              Reject
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
 
             {/* Inventory List Section */}
             <div className="addons-list-section">

@@ -8,6 +8,8 @@ import {
   getInventoryUsageHistory,
   recordInventoryUsage,
   createRefillRequest,
+  getRefillRequests,
+  reviewRefillRequest,
   deleteInventoryItem,
 } from '../controllers/inventoryController.js';
 
@@ -17,6 +19,9 @@ const router = express.Router();
 // @desc    Get all inventory items (with filters: category, lowStock, search)
 // @access  Admin
 router.get('/', getInventory);
+
+router.get('/refill-requests', getRefillRequests);
+router.patch('/refill-requests/:requestId', reviewRefillRequest);
 
 router.get('/:id/usage', getInventoryUsageHistory);
 router.post('/:id/usage', recordInventoryUsage);

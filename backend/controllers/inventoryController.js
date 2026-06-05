@@ -625,6 +625,137 @@ export const createRefillRequest = async (req, res) => {
   }
 };
 
+// @desc    List refill requests (admin)
+// @route   GET /api/inventory/refill-requests
+// @access  Admin
+export const getRefillRequests = async (req, res) => {
+  try {
+    const { status } = req.query;
+    const query = {};
+
+    const validStatuses = ['pending', 'approved', 'fulfilled', 'rejected'];
+    if (status && status !== 'all') {
+      if (!validStatuses.includes(status)) {
+        return res.status(400).json({
+          success: false,
+          message: `Invalid status. Must be one of: ${validStatuses.join(', ')}, or all`,
+        });
+      }
+      query.status = status;
+    }
+
+    const requests = await InventoryRefillRequest.find(query)
+      .populate('inventoryId', 'name category unit currentStock maxCapacity isLowStock')
+      .sort({ status: 1, createdAt: -1 })
+      .select('-__v');
+
+    res.status(200).json({
+      success: true,
+      count: requests.length,
+      data: requests,
+    });
+  } catch (error) {
+    console.error('Error fetching refill requests:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching refill requests',
+      error: error.message,
+    });
+  }
+};
+
+// @desc    Approve or reject a refill request (admin)
+// @route   PATCH /api/inventory/refill-requests/:requestId
+// @access  Admin
+export const reviewRefillRequest = async (req, res) => {
+  try {
+    const { requestId } = req.params;
+    const { action, adminNote } = req.body;
+
+    if (!action || !['approve', 'reject'].includes(action)) {
+      return res.status(400).json({
+        success: false,
+        message: 'action is required and must be "approve" or "reject"',
+      });
+    }
+
+    const request = await InventoryRefillRequest.findById(requestId);
+    if (!request) {
+      return res.status(404).json({
+        success: false,
+        message: 'Refill request not found',
+      });
+    }
+
+    if (request.status !== 'pending') {
+      return res.status(400).json({
+        success: false,
+        message: `This request was already ${request.status}`,
+      });
+    }
+
+    if (action === 'reject') {
+      request.status = 'rejected';
+      request.reviewedAt = new Date();
+      if (adminNote) request.adminNote = String(adminNote).trim();
+      await request.save();
+
+      return res.status(200).json({
+        success: true,
+        message: 'Refill request rejected',
+        data: request,
+      });
+    }
+
+    const item = await Inventory.findById(request.inventoryId);
+    if (!item) {
+      return res.status(404).json({
+        success: false,
+        message: 'Inventory item no longer exists',
+      });
+    }
+
+    const newStock = item.currentStock + request.quantity;
+    if (item.maxCapacity != null && item.maxCapacity > 0 && newStock > item.maxCapacity) {
+      return res.status(400).json({
+        success: false,
+        message: `Approving would exceed max capacity of ${item.maxCapacity} ${item.unit}. Current stock: ${item.currentStock}.`,
+      });
+    }
+
+    item.currentStock = newStock;
+    item.lastRestocked = new Date();
+    await item.save();
+
+    request.status = 'fulfilled';
+    request.reviewedAt = new Date();
+    if (adminNote) request.adminNote = String(adminNote).trim();
+    await request.save();
+
+    res.status(200).json({
+      success: true,
+      message: `Refill approved. Added ${request.quantity} ${request.unit} to ${item.name}.`,
+      data: {
+        request,
+        inventory: item,
+      },
+    });
+  } catch (error) {
+    console.error('Error reviewing refill request:', error);
+    if (error.name === 'CastError') {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid refill request ID',
+      });
+    }
+    res.status(500).json({
+      success: false,
+      message: 'Error reviewing refill request',
+      error: error.message,
+    });
+  }
+};
+
 // @desc    Delete inventory item
 // @route   DELETE /api/inventory/:id
 // @access  Admin
