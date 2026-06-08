@@ -1,5 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
+  ActivityIndicator,
   Alert,
   Image,
   Linking,
@@ -10,10 +11,10 @@ import {
   TextInput,
   TouchableOpacity,
   View,
-  ActivityIndicator,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import * as Location from 'expo-location';
 import { API_BASE_URL } from '../config/api';
@@ -23,15 +24,101 @@ import {
   startBackgroundLocationUpdates,
   stopBackgroundLocationUpdates,
 } from '../locationTask';
+import { getScheduledTimeSlot } from '../utils/jobBookingHelpers';
 
 const UPLOADS_BASE = API_BASE_URL.replace(/\/api\/?$/, '');
+const BLUE = '#2563EB';
+const BLUE_LIGHT = '#EFF6FF';
+const BLUE_BORDER = '#BFDBFE';
+const GREEN = '#16A34A';
+const GREEN_LIGHT = '#F0FDF4';
+const GREEN_BORDER = '#BBF7D0';
+
+function getInitials(name) {
+  const parts = (name || '').trim().split(/\s+/).filter(Boolean);
+  if (parts.length >= 2) {
+    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  }
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return '?';
+}
+
+function formatPhoneDisplay(phone) {
+  if (!phone) return 'Phone not provided';
+  const digits = phone.replace(/\D/g, '');
+  if (digits.length === 12 && digits.startsWith('91')) {
+    return `+91 ${digits.slice(2, 7)} ${digits.slice(7)}`;
+  }
+  if (digits.length === 10) {
+    return `+91 ${digits.slice(0, 5)} ${digits.slice(5)}`;
+  }
+  return phone;
+}
+
+function splitAddress(address) {
+  if (!address || address === 'Address not provided') {
+    return { primary: address, secondary: '' };
+  }
+  const parts = address.split(',').map((s) => s.trim()).filter(Boolean);
+  if (parts.length <= 1) return { primary: address, secondary: '' };
+  return { primary: parts[0], secondary: parts.slice(1).join(', ') };
+}
+
+function formatTimeLabel(date) {
+  if (!date) return '—';
+  try {
+    return new Date(date).toLocaleTimeString('en-IN', {
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true,
+    });
+  } catch {
+    return '—';
+  }
+}
+
+function formatDurationMins(start, end) {
+  if (!start || !end) return '—';
+  const mins = Math.max(0, Math.round((new Date(end) - new Date(start)) / 60000));
+  return `${mins} mins`;
+}
+
+function IconBadge({ name, color = BLUE, bg = BLUE_LIGHT, size = 16 }) {
+  return (
+    <View style={iconBadgeStyles.wrap}>
+      <View style={[iconBadgeStyles.inner, { backgroundColor: bg }]}>
+        <MaterialCommunityIcons name={name} size={size} color={color} />
+      </View>
+    </View>
+  );
+}
+
+const iconBadgeStyles = StyleSheet.create({
+  wrap: { alignSelf: 'flex-start' },
+  inner: {
+    width: 32,
+    height: 32,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+});
+
+const cardShadow = Platform.select({
+  ios: {
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+  },
+  android: { elevation: 2 },
+});
 
 export default function StartServiceScreen({ navigation, route }) {
   const insets = useSafeAreaInsets();
-  const [paymentReceived, setPaymentReceived] = useState(false);
+  const styles = useMemo(() => createStyles(), []);
   const [submitting, setSubmitting] = useState(false);
-  const [amount, setAmount] = useState(null);
-  const [address, setAddress] = useState('');
+  const [order, setOrder] = useState(null);
   const [coords, setCoords] = useState(null);
   const [orderStatus, setOrderStatus] = useState(null);
   const [codeInput, setCodeInput] = useState('');
@@ -41,10 +128,31 @@ export default function StartServiceScreen({ navigation, route }) {
   const [afterPhotos, setAfterPhotos] = useState([]);
   const [uploadingBefore, setUploadingBefore] = useState(false);
   const [uploadingAfter, setUploadingAfter] = useState(false);
+  const [startedAt, setStartedAt] = useState(null);
+  const [now, setNow] = useState(Date.now());
+
   const orderId = route?.params?.orderId;
   const employeeId = route?.params?.employeeId;
-
   const orderInProgress = orderStatus === 'In Progress';
+
+  const applyOrderData = (data) => {
+    setOrder(data);
+    setOrderStatus(data.status);
+    setBeforePhotos(data.servicePhotos?.beforePhotos || []);
+    setAfterPhotos(data.servicePhotos?.afterPhotos || []);
+    const lat = data.customer?.latitude;
+    const lng = data.customer?.longitude;
+    if (typeof lat === 'number' && typeof lng === 'number') {
+      setCoords({ lat, lng });
+    } else {
+      setCoords(null);
+    }
+    if (data.status === 'In Progress' && !startedAt) {
+      const assignment = data.assignments?.find((a) => a.employeeId === employeeId);
+      const fallback = assignment?.acceptedAt || data.updatedAt;
+      setStartedAt(fallback ? new Date(fallback) : new Date());
+    }
+  };
 
   useEffect(() => {
     const loadOrder = async () => {
@@ -56,18 +164,7 @@ export default function StartServiceScreen({ navigation, route }) {
         const res = await fetch(url);
         const data = await res.json();
         if (res.ok && data?.data) {
-          setOrderStatus(data.data.status);
-          if (data.data.totalAmount != null) setAmount(data.data.totalAmount);
-          setAddress(data.data.customer?.address || '');
-          setBeforePhotos(data.data.servicePhotos?.beforePhotos || []);
-          setAfterPhotos(data.data.servicePhotos?.afterPhotos || []);
-          const lat = data.data.customer?.latitude;
-          const lng = data.data.customer?.longitude;
-          if (typeof lat === 'number' && typeof lng === 'number') {
-            setCoords({ lat, lng });
-          } else {
-            setCoords(null);
-          }
+          applyOrderData(data.data);
         }
       } catch (error) {
         console.error('Error loading order:', error);
@@ -75,6 +172,12 @@ export default function StartServiceScreen({ navigation, route }) {
     };
     loadOrder();
   }, [orderId, employeeId]);
+
+  useEffect(() => {
+    if (!orderInProgress) return undefined;
+    const timer = setInterval(() => setNow(Date.now()), 60000);
+    return () => clearInterval(timer);
+  }, [orderInProgress]);
 
   useEffect(() => {
     if (!orderId || !orderInProgress) return;
@@ -85,7 +188,9 @@ export default function StartServiceScreen({ navigation, route }) {
         if (status !== 'granted') return;
         const sendLocation = async () => {
           try {
-            const position = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+            const position = await Location.getCurrentPositionAsync({
+              accuracy: Location.Accuracy.Balanced,
+            });
             const { latitude, longitude } = position.coords || {};
             if (typeof latitude !== 'number' || typeof longitude !== 'number') return;
             const url = employeeId
@@ -145,12 +250,17 @@ export default function StartServiceScreen({ navigation, route }) {
       });
       const data = await res.json();
       if (res.ok && data.success) {
-        setOrderStatus('In Progress');
+        setStartedAt(new Date());
+        if (data.data) {
+          applyOrderData(data.data);
+        } else {
+          setOrderStatus('In Progress');
+        }
         setCodeInput('');
       } else {
         setCodeError(data.message || 'Invalid code');
       }
-    } catch (e) {
+    } catch {
       setCodeError('Could not verify. Try again.');
     } finally {
       setLoadingVerify(false);
@@ -160,7 +270,6 @@ export default function StartServiceScreen({ navigation, route }) {
   const pickAndUploadPhotos = async (type) => {
     const isBefore = type === 'before';
     const setUploading = isBefore ? setUploadingBefore : setUploadingAfter;
-    const setPhotos = isBefore ? setBeforePhotos : setAfterPhotos;
     const current = isBefore ? beforePhotos : afterPhotos;
     if (current.length >= 4) {
       Alert.alert('Limit reached', 'You can upload up to 4 photos.');
@@ -214,26 +323,16 @@ export default function StartServiceScreen({ navigation, route }) {
     }
   };
 
-  const handleOpenMaps = async () => {
-    if (!coords && !address) {
-      Alert.alert('No location', 'Customer location not available.');
+  const handleCall = async () => {
+    const phone = order?.customer?.phone;
+    if (!phone) {
+      Alert.alert('No phone number', 'Customer phone number is not available.');
       return;
     }
-    const destination = coords ? `${coords.lat},${coords.lng}` : encodeURIComponent(address);
-    const httpUrl = Platform.OS === 'ios'
-      ? `http://maps.apple.com/?daddr=${destination}`
-      : `https://www.google.com/maps/dir/?api=1&destination=${destination}`;
     try {
-      await Linking.openURL(httpUrl);
-    } catch (error) {
-      const geoUrl = coords
-        ? `geo:${coords.lat},${coords.lng}?q=${coords.lat},${coords.lng}`
-        : `geo:0,0?q=${destination}`;
-      try {
-        await Linking.openURL(geoUrl);
-      } catch (geoError) {
-        Alert.alert('Maps unavailable', 'Unable to open maps on this device.');
-      }
+      await Linking.openURL(`tel:${phone.replace(/\s/g, '')}`);
+    } catch {
+      Alert.alert('Call unavailable', 'Unable to open the phone dialer.');
     }
   };
 
@@ -244,8 +343,7 @@ export default function StartServiceScreen({ navigation, route }) {
     }
     setSubmitting(true);
     try {
-      // Include employeeId in query for employee access
-      const url = employeeId 
+      const url = employeeId
         ? `${API_BASE_URL}/orders/${orderId}?employeeId=${employeeId}`
         : `${API_BASE_URL}/orders/${orderId}`;
       const res = await fetch(url, {
@@ -275,290 +373,694 @@ export default function StartServiceScreen({ navigation, route }) {
 
   const needsOtp = orderStatus && !['In Progress', 'Completed', 'Cancelled'].includes(orderStatus);
   const loading = orderId && orderStatus === null;
-  const canSubmit =
-    orderInProgress &&
-    beforePhotos.length >= 1 &&
-    afterPhotos.length >= 1 &&
-    paymentReceived;
+  const canSubmit = orderInProgress && beforePhotos.length >= 1 && afterPhotos.length >= 1;
+
+  const item = order?.items?.[0];
+  const serviceName = item?.service?.name || item?.serviceName || 'Service';
+  const addOnText = (item?.addOns || []).map((a) => a.name).filter(Boolean).join(', ');
+  const address = order?.customer?.address || 'Address not provided';
+  const { primary: addressPrimary, secondary: addressSecondary } = splitAddress(address);
+  const customerName = order?.customer?.name || 'Customer';
+  const customerPhone = order?.customer?.phone || '';
+  const vehicleModel = order?.customer?.vehicleModel || '';
+  const vehicleType = order?.customer?.vehicleType || '';
+  const vehiclePrimary = vehicleModel || vehicleType || 'Not provided';
+  const vehicleSecondary = vehicleModel && vehicleType ? vehicleType : '';
+  const scheduledSlot = getScheduledTimeSlot(order);
+  const startedLabel = formatTimeLabel(startedAt);
+  const completedLabel = formatTimeLabel(now);
+  const durationLabel = formatDurationMins(startedAt, now);
+
+  const photosReady = beforePhotos.length >= 1 && afterPhotos.length >= 1;
+  const beforeUri = beforePhotos[0] ? UPLOADS_BASE + beforePhotos[0] : null;
+  const afterUri = afterPhotos[0] ? UPLOADS_BASE + afterPhotos[0] : null;
+
+  const showHelp = () => {
+    Alert.alert(
+      'Job in Progress',
+      'Upload before and after photos, then tap Complete Job. The customer will be notified and can leave a review.'
+    );
+  };
 
   return (
-    <ScrollView
-      style={[styles.container, { paddingTop: 24 + insets.top }]}
-      contentContainerStyle={styles.scrollContent}
-      showsVerticalScrollIndicator={false}
-    >
+    <View style={[styles.container, { paddingTop: 12 + insets.top }]}>
       <StatusBar style="dark" />
-      <Text style={styles.title}>Start Service</Text>
 
-      {loading && (
-        <Text style={styles.sectionHint}>Loading order...</Text>
-      )}
+      <View style={styles.headerRow}>
+        <TouchableOpacity style={styles.headerBtn} onPress={() => navigation.goBack()}>
+          <MaterialCommunityIcons name="arrow-left" size={20} color={BLUE} />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>
+          {orderInProgress ? 'Job in Progress' : 'Start Service'}
+        </Text>
+        <TouchableOpacity style={styles.headerBtn} onPress={showHelp}>
+          <MaterialCommunityIcons name="help-circle-outline" size={22} color="#64748B" />
+        </TouchableOpacity>
+      </View>
 
-      {needsOtp && (
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Enter start code</Text>
-          <Text style={styles.sectionHint}>
-            Ask the customer for the 6-digit code shown in their Bookings screen. Enter it below to start the service.
-          </Text>
-          <TextInput
-            style={styles.codeInput}
-            value={codeInput}
-            onChangeText={(t) => { setCodeInput(t.replace(/\D/g, '').slice(0, 6)); setCodeError(''); }}
-            placeholder="000000"
-            placeholderTextColor="#9CA3AF"
-            keyboardType="number-pad"
-            maxLength={6}
-          />
-          {codeError ? <Text style={styles.codeError}>{codeError}</Text> : null}
-          <TouchableOpacity
-            style={[styles.startServiceButton, (codeInput.replace(/\D/g, '').length !== 6 || loadingVerify) && styles.startServiceButtonDisabled]}
-            onPress={handleVerifyCode}
-            disabled={codeInput.replace(/\D/g, '').length !== 6 || loadingVerify}
-          >
-            <Text style={styles.startServiceButtonText}>
-              {loadingVerify ? 'Verifying...' : 'Verify & Start'}
-            </Text>
-          </TouchableOpacity>
+      {loading ? (
+        <View style={styles.loadingWrap}>
+          <ActivityIndicator size="small" color={BLUE} />
+          <Text style={styles.loadingText}>Loading order...</Text>
         </View>
-      )}
+      ) : null}
 
-      {orderInProgress && (
+      {needsOtp ? (
+        <ScrollView
+          style={styles.scroll}
+          contentContainerStyle={[styles.scrollContent, { paddingBottom: 24 + insets.bottom }]}
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.card}>
+            <Text style={styles.otpTitle}>Enter start code</Text>
+            <Text style={styles.otpHint}>
+              Ask the customer for the 6-digit code shown in their Bookings screen.
+            </Text>
+            <TextInput
+              style={styles.codeInput}
+              value={codeInput}
+              onChangeText={(t) => {
+                setCodeInput(t.replace(/\D/g, '').slice(0, 6));
+                setCodeError('');
+              }}
+              placeholder="000000"
+              placeholderTextColor="#9CA3AF"
+              keyboardType="number-pad"
+              maxLength={6}
+            />
+            {codeError ? <Text style={styles.codeError}>{codeError}</Text> : null}
+            <TouchableOpacity
+              style={[
+                styles.verifyButton,
+                (codeInput.replace(/\D/g, '').length !== 6 || loadingVerify) && styles.verifyButtonDisabled,
+              ]}
+              onPress={handleVerifyCode}
+              disabled={codeInput.replace(/\D/g, '').length !== 6 || loadingVerify}
+            >
+              <Text style={styles.verifyButtonText}>
+                {loadingVerify ? 'Verifying...' : 'Verify & Start'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
+      ) : null}
+
+      {orderInProgress ? (
         <>
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Customer Location</Text>
-            <Text style={styles.sectionHint}>{address || 'Address not available'}</Text>
-            <TouchableOpacity style={styles.locationButton} onPress={handleOpenMaps}>
-              <Text style={styles.locationButtonText}>Open in Maps</Text>
-            </TouchableOpacity>
-          </View>
-
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Before Photos</Text>
-            <Text style={styles.sectionHint}>Upload up to 4 images ({beforePhotos.length}/4)</Text>
-            {beforePhotos.length > 0 && (
-              <View style={styles.photoRow}>
-                {beforePhotos.map((url, i) => (
-                  <Image
-                    key={`before-${i}`}
-                    source={{ uri: UPLOADS_BASE + url }}
-                    style={styles.photoThumb}
-                    resizeMode="cover"
-                  />
-                ))}
-              </View>
-            )}
-            <TouchableOpacity
-              style={[styles.uploadButton, uploadingBefore && styles.uploadButtonDisabled]}
-              onPress={() => pickAndUploadPhotos('before')}
-              disabled={uploadingBefore || beforePhotos.length >= 4}
-            >
-              {uploadingBefore ? (
-                <ActivityIndicator color="#2F5CF4" />
-              ) : (
-                <Text style={styles.uploadButtonText}>
-                  {beforePhotos.length >= 4 ? 'Before photos added' : 'Upload Before Photos'}
-                </Text>
-              )}
-            </TouchableOpacity>
-          </View>
-
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>After Photos</Text>
-            <Text style={styles.sectionHint}>Upload up to 4 images ({afterPhotos.length}/4)</Text>
-            {afterPhotos.length > 0 && (
-              <View style={styles.photoRow}>
-                {afterPhotos.map((url, i) => (
-                  <Image
-                    key={`after-${i}`}
-                    source={{ uri: UPLOADS_BASE + url }}
-                    style={styles.photoThumb}
-                    resizeMode="cover"
-                  />
-                ))}
-              </View>
-            )}
-            <TouchableOpacity
-              style={[styles.uploadButton, uploadingAfter && styles.uploadButtonDisabled]}
-              onPress={() => pickAndUploadPhotos('after')}
-              disabled={uploadingAfter || afterPhotos.length >= 4}
-            >
-              {uploadingAfter ? (
-                <ActivityIndicator color="#2F5CF4" />
-              ) : (
-                <Text style={styles.uploadButtonText}>
-                  {afterPhotos.length >= 4 ? 'After photos added' : 'Upload After Photos'}
-                </Text>
-              )}
-            </TouchableOpacity>
-          </View>
-
-          <TouchableOpacity
-            style={styles.paymentButton}
-            onPress={() => setPaymentReceived(true)}
+          <ScrollView
+            style={styles.scroll}
+            contentContainerStyle={[styles.scrollContent, { paddingBottom: 130 + insets.bottom }]}
+            showsVerticalScrollIndicator={false}
           >
-            <Text style={styles.paymentButtonText}>
-              {paymentReceived
-                ? 'Payment Received'
-                : `Get Payment${amount != null ? ` ₹${amount}` : ''}`}
-            </Text>
-          </TouchableOpacity>
+            {/* Status banner */}
+            <View style={[styles.statusBanner, photosReady && styles.statusBannerReady]}>
+              <View style={[styles.statusIconWrap, photosReady && styles.statusIconWrapReady]}>
+                <MaterialCommunityIcons
+                  name={photosReady ? 'check-circle' : 'progress-clock'}
+                  size={22}
+                  color={photosReady ? GREEN : BLUE}
+                />
+              </View>
+              <View style={styles.statusTextWrap}>
+                <Text style={[styles.statusTitle, photosReady && styles.statusTitleReady]}>
+                  {photosReady ? 'Ready to Complete' : 'Service Started'}
+                </Text>
+                <Text style={styles.statusSubtext}>
+                  {photosReady
+                    ? "Great work! You've added all required photos."
+                    : 'Upload before & after photos to finish the job.'}
+                </Text>
+              </View>
+            </View>
 
-          <TouchableOpacity
-            style={[styles.submitButton, (!canSubmit || submitting) && styles.submitButtonDisabled]}
-            onPress={handleSubmit}
-            disabled={!canSubmit || submitting}
-          >
-            <Text style={styles.submitButtonText}>
-              {submitting ? 'Submitting...' : 'Submit'}
-            </Text>
-          </TouchableOpacity>
-          {!canSubmit && orderInProgress ? (
-            <Text style={styles.submitHint}>
-              Add at least one before and after photo, tap Get Payment, then submit.
-            </Text>
-          ) : null}
+            {/* Job Summary */}
+            <Text style={styles.blockTitle}>Job Summary</Text>
+            <View style={styles.card}>
+              <View style={styles.customerRow}>
+                <View style={styles.avatar}>
+                  <Text style={styles.avatarText}>{getInitials(customerName)}</Text>
+                </View>
+                <View style={styles.customerInfo}>
+                  <Text style={styles.customerName}>{customerName}</Text>
+                  <View style={styles.phoneRow}>
+                    <MaterialCommunityIcons name="phone-outline" size={13} color="#9CA3AF" />
+                    <Text style={styles.phoneText}>{formatPhoneDisplay(customerPhone)}</Text>
+                  </View>
+                </View>
+                <TouchableOpacity style={styles.callButton} onPress={handleCall} activeOpacity={0.8}>
+                  <MaterialCommunityIcons name="phone" size={18} color={BLUE} />
+                </TouchableOpacity>
+              </View>
+
+              <View style={styles.summaryDivider} />
+
+              <View style={styles.splitRow}>
+                <View style={styles.splitCol}>
+                  <IconBadge name="car-side" />
+                  <Text style={styles.splitPrimary} numberOfLines={1}>
+                    {vehiclePrimary}
+                  </Text>
+                  {vehicleSecondary ? (
+                    <Text style={styles.splitSecondary} numberOfLines={1}>
+                      {vehicleSecondary}
+                    </Text>
+                  ) : null}
+                </View>
+                <View style={styles.splitDivider} />
+                <View style={styles.splitCol}>
+                  <IconBadge name="map-marker" />
+                  <Text style={styles.splitPrimary} numberOfLines={2}>
+                    {addressPrimary}
+                  </Text>
+                  {addressSecondary ? (
+                    <Text style={styles.splitSecondary} numberOfLines={2}>
+                      {addressSecondary}
+                    </Text>
+                  ) : null}
+                </View>
+              </View>
+            </View>
+
+            {/* Before & After Photos */}
+            <Text style={styles.blockTitle}>Before & After Photos</Text>
+            <View style={styles.photoCompareRow}>
+              <TouchableOpacity
+                style={styles.photoSlot}
+                onPress={() => pickAndUploadPhotos('before')}
+                disabled={uploadingBefore}
+                activeOpacity={0.85}
+              >
+                {beforeUri ? (
+                  <Image source={{ uri: beforeUri }} style={styles.photoImage} resizeMode="cover" />
+                ) : (
+                  <View style={styles.photoPlaceholder}>
+                    {uploadingBefore ? (
+                      <ActivityIndicator color={BLUE} />
+                    ) : (
+                      <>
+                        <MaterialCommunityIcons name="camera-plus-outline" size={28} color="#94A3B8" />
+                        <Text style={styles.photoPlaceholderText}>Tap to upload</Text>
+                      </>
+                    )}
+                  </View>
+                )}
+                <View style={styles.photoLabel}>
+                  <Text style={styles.photoLabelText}>Before</Text>
+                </View>
+              </TouchableOpacity>
+
+              <View style={styles.photoArrow}>
+                <MaterialCommunityIcons name="chevron-right" size={18} color={BLUE} />
+              </View>
+
+              <TouchableOpacity
+                style={styles.photoSlot}
+                onPress={() => pickAndUploadPhotos('after')}
+                disabled={uploadingAfter}
+                activeOpacity={0.85}
+              >
+                {afterUri ? (
+                  <Image source={{ uri: afterUri }} style={styles.photoImage} resizeMode="cover" />
+                ) : (
+                  <View style={styles.photoPlaceholder}>
+                    {uploadingAfter ? (
+                      <ActivityIndicator color={BLUE} />
+                    ) : (
+                      <>
+                        <MaterialCommunityIcons name="camera-plus-outline" size={28} color="#94A3B8" />
+                        <Text style={styles.photoPlaceholderText}>Tap to upload</Text>
+                      </>
+                    )}
+                  </View>
+                )}
+                <View style={styles.photoLabel}>
+                  <Text style={styles.photoLabelText}>After</Text>
+                </View>
+              </TouchableOpacity>
+            </View>
+
+            {/* Service Details */}
+            <Text style={styles.blockTitle}>Service Details</Text>
+            <View style={styles.card}>
+              <View style={styles.detailRow}>
+                <IconBadge name="package-variant-closed" />
+                <View style={styles.detailInfo}>
+                  <Text style={styles.detailPrimary}>{serviceName}</Text>
+                  {addOnText ? <Text style={styles.detailSecondary}>{addOnText}</Text> : null}
+                </View>
+              </View>
+            </View>
+
+            {/* Time */}
+            <Text style={styles.blockTitle}>Time</Text>
+            <View style={styles.card}>
+              <View style={styles.timeSplitRow}>
+                <View style={styles.timeCol}>
+                  <Text style={styles.timeLabel}>Started At</Text>
+                  <Text style={styles.timeValue}>{startedLabel}</Text>
+                </View>
+                <View style={styles.splitDivider} />
+                <View style={styles.timeCol}>
+                  <Text style={styles.timeLabel}>Scheduled</Text>
+                  <Text style={styles.timeValue}>{scheduledSlot}</Text>
+                </View>
+              </View>
+              <View style={styles.durationBanner}>
+                <MaterialCommunityIcons name="clock-outline" size={16} color={GREEN} />
+                <Text style={styles.durationText}>Total Time Taken: {durationLabel}</Text>
+              </View>
+            </View>
+          </ScrollView>
+
+          <View style={[styles.footer, { paddingBottom: 14 + insets.bottom }]}>
+            <TouchableOpacity
+              style={[styles.completeButton, (!canSubmit || submitting) && styles.completeButtonDisabled]}
+              onPress={handleSubmit}
+              disabled={!canSubmit || submitting}
+              activeOpacity={0.9}
+            >
+              <MaterialCommunityIcons name="check-circle-outline" size={20} color="#FFFFFF" />
+              <Text style={styles.completeButtonText}>
+                {submitting ? 'Completing...' : 'Complete Job'}
+              </Text>
+            </TouchableOpacity>
+            <View style={styles.footerHintRow}>
+              <MaterialCommunityIcons name="lock-outline" size={12} color="#94A3B8" />
+              <Text style={styles.footerHint}>
+                Customer will be notified, invoice will be generated and review will be requested
+              </Text>
+            </View>
+            {!canSubmit ? (
+              <Text style={styles.footerRequirement}>
+                Add at least one before and after photo to complete the job.
+              </Text>
+            ) : null}
+          </View>
         </>
-      )}
-
-    </ScrollView>
+      ) : null}
+    </View>
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#F5F6F8',
-    paddingHorizontal: 20,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#1A1A1A',
-    marginBottom: 8,
-  },
-  subtitle: {
-    fontSize: 14,
-    color: '#6B7280',
-  },
-  section: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    padding: 16,
-    marginBottom: 16,
-  },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#1A1A1A',
-    marginBottom: 6,
-  },
-  sectionHint: {
-    fontSize: 12,
-    color: '#6B7280',
-    marginBottom: 12,
-  },
-  photoRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-    marginBottom: 12,
-  },
-  photoThumb: {
-    width: 72,
-    height: 72,
-    borderRadius: 8,
-    backgroundColor: '#E2E8F0',
-  },
-  scrollContent: {
-    paddingBottom: 32,
-  },
-  uploadButton: {
-    backgroundColor: '#EEF2FF',
-    borderRadius: 10,
-    paddingVertical: 12,
-    alignItems: 'center',
-  },
-  uploadButtonDisabled: {
-    opacity: 0.7,
-  },
-  uploadButtonText: {
-    color: '#2F5CF4',
-    fontWeight: '700',
-    fontSize: 12,
-  },
-  paymentButton: {
-    backgroundColor: '#22C55E',
-    borderRadius: 12,
-    paddingVertical: 14,
-    alignItems: 'center',
-    marginTop: 8,
-  },
-  paymentButtonText: {
-    color: '#FFFFFF',
-    fontWeight: '700',
-    fontSize: 14,
-  },
-  submitButton: {
-    backgroundColor: '#2F8CF4',
-    borderRadius: 12,
-    paddingVertical: 14,
-    alignItems: 'center',
-    marginTop: 12,
-  },
-  submitButtonDisabled: {
-    opacity: 0.55,
-  },
-  submitButtonText: {
-    color: '#FFFFFF',
-    fontWeight: '700',
-    fontSize: 14,
-  },
-  submitHint: {
-    fontSize: 12,
-    color: '#6B7280',
-    marginTop: 10,
-    textAlign: 'center',
-  },
-  locationButton: {
-    backgroundColor: '#1F2937',
-    borderRadius: 10,
-    paddingVertical: 12,
-    alignItems: 'center',
-  },
-  locationButtonText: {
-    color: '#FFFFFF',
-    fontWeight: '700',
-    fontSize: 12,
-  },
-  startServiceButton: {
-    backgroundColor: '#2F8CF4',
-    borderRadius: 12,
-    paddingVertical: 14,
-    alignItems: 'center',
-  },
-  startServiceButtonDisabled: {
-    opacity: 0.6,
-  },
-  startServiceButtonText: {
-    color: '#FFFFFF',
-    fontWeight: '700',
-    fontSize: 14,
-  },
-  codeInput: {
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    borderRadius: 10,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    fontSize: 20,
-    letterSpacing: 4,
-    marginBottom: 8,
-  },
-  codeError: {
-    fontSize: 13,
-    color: '#DC2626',
-    marginBottom: 8,
-  },
+const createStyles = () =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: '#F1F5F9',
+    },
+    headerRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingHorizontal: 16,
+      marginBottom: 12,
+    },
+    headerBtn: {
+      width: 38,
+      height: 38,
+      borderRadius: 12,
+      backgroundColor: BLUE_LIGHT,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    headerTitle: {
+      fontSize: 17,
+      fontWeight: '700',
+      color: '#0F172A',
+      letterSpacing: -0.2,
+    },
+    scroll: {
+      flex: 1,
+    },
+    scrollContent: {
+      paddingHorizontal: 16,
+      gap: 14,
+    },
+    loadingWrap: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      paddingHorizontal: 16,
+      marginBottom: 12,
+    },
+    loadingText: {
+      color: '#64748B',
+      fontSize: 13,
+    },
+    card: {
+      backgroundColor: '#FFFFFF',
+      borderRadius: 18,
+      borderWidth: 1,
+      borderColor: '#E8EDF3',
+      padding: 18,
+      ...cardShadow,
+    },
+    blockTitle: {
+      fontSize: 15,
+      fontWeight: '700',
+      color: '#0F172A',
+      marginBottom: -6,
+      letterSpacing: -0.2,
+    },
+    statusBanner: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
+      backgroundColor: BLUE_LIGHT,
+      borderRadius: 16,
+      borderWidth: 1,
+      borderColor: BLUE_BORDER,
+      padding: 16,
+    },
+    statusBannerReady: {
+      backgroundColor: GREEN_LIGHT,
+      borderColor: GREEN_BORDER,
+    },
+    statusIconWrap: {
+      width: 40,
+      height: 40,
+      borderRadius: 20,
+      backgroundColor: '#FFFFFF',
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    statusIconWrapReady: {
+      backgroundColor: '#FFFFFF',
+    },
+    statusTextWrap: {
+      flex: 1,
+      gap: 3,
+    },
+    statusTitle: {
+      fontSize: 15,
+      fontWeight: '700',
+      color: BLUE,
+    },
+    statusTitleReady: {
+      color: GREEN,
+    },
+    statusSubtext: {
+      fontSize: 12,
+      color: '#64748B',
+      lineHeight: 17,
+    },
+    customerRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 14,
+    },
+    avatar: {
+      width: 50,
+      height: 50,
+      borderRadius: 25,
+      backgroundColor: BLUE,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    avatarText: {
+      color: '#FFFFFF',
+      fontSize: 17,
+      fontWeight: '700',
+      letterSpacing: 0.5,
+    },
+    customerInfo: {
+      flex: 1,
+      gap: 5,
+    },
+    customerName: {
+      fontSize: 17,
+      fontWeight: '700',
+      color: '#0F172A',
+    },
+    phoneRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 5,
+    },
+    phoneText: {
+      fontSize: 13,
+      color: '#64748B',
+      fontWeight: '500',
+    },
+    callButton: {
+      width: 44,
+      height: 44,
+      borderRadius: 14,
+      borderWidth: 1.5,
+      borderColor: BLUE_BORDER,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: BLUE_LIGHT,
+    },
+    summaryDivider: {
+      height: 1,
+      backgroundColor: '#E8EDF3',
+      marginVertical: 16,
+    },
+    splitRow: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+    },
+    splitCol: {
+      flex: 1,
+      gap: 6,
+      paddingHorizontal: 2,
+    },
+    splitDivider: {
+      width: 1,
+      backgroundColor: '#E8EDF3',
+      marginHorizontal: 14,
+      alignSelf: 'stretch',
+    },
+    splitPrimary: {
+      fontSize: 14,
+      fontWeight: '700',
+      color: '#0F172A',
+      lineHeight: 20,
+    },
+    splitSecondary: {
+      fontSize: 12,
+      color: '#64748B',
+      fontWeight: '500',
+      lineHeight: 17,
+    },
+    photoCompareRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+    },
+    photoSlot: {
+      flex: 1,
+      aspectRatio: 1.15,
+      borderRadius: 14,
+      overflow: 'hidden',
+      backgroundColor: '#E2E8F0',
+      position: 'relative',
+    },
+    photoImage: {
+      width: '100%',
+      height: '100%',
+    },
+    photoPlaceholder: {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 8,
+      backgroundColor: '#F8FAFC',
+      borderWidth: 1.5,
+      borderColor: '#E2E8F0',
+      borderStyle: 'dashed',
+      borderRadius: 14,
+    },
+    photoPlaceholderText: {
+      fontSize: 11,
+      color: '#94A3B8',
+      fontWeight: '500',
+    },
+    photoLabel: {
+      position: 'absolute',
+      top: 8,
+      left: 8,
+      backgroundColor: 'rgba(15, 23, 42, 0.65)',
+      borderRadius: 6,
+      paddingHorizontal: 8,
+      paddingVertical: 3,
+    },
+    photoLabelText: {
+      color: '#FFFFFF',
+      fontSize: 11,
+      fontWeight: '600',
+    },
+    photoArrow: {
+      width: 28,
+      height: 28,
+      borderRadius: 14,
+      backgroundColor: '#FFFFFF',
+      borderWidth: 1,
+      borderColor: BLUE_BORDER,
+      alignItems: 'center',
+      justifyContent: 'center',
+      ...cardShadow,
+    },
+    detailRow: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      gap: 12,
+    },
+    detailInfo: {
+      flex: 1,
+      gap: 4,
+      paddingTop: 4,
+    },
+    detailPrimary: {
+      fontSize: 14,
+      fontWeight: '700',
+      color: '#0F172A',
+      lineHeight: 20,
+    },
+    detailSecondary: {
+      fontSize: 13,
+      color: '#64748B',
+      fontWeight: '500',
+      lineHeight: 18,
+    },
+    timeSplitRow: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      marginBottom: 14,
+    },
+    timeCol: {
+      flex: 1,
+      gap: 6,
+      paddingHorizontal: 2,
+    },
+    timeLabel: {
+      fontSize: 12,
+      color: '#94A3B8',
+      fontWeight: '500',
+    },
+    timeValue: {
+      fontSize: 14,
+      fontWeight: '700',
+      color: '#0F172A',
+      lineHeight: 20,
+    },
+    durationBanner: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      backgroundColor: GREEN_LIGHT,
+      borderRadius: 12,
+      paddingVertical: 12,
+      paddingHorizontal: 14,
+      borderWidth: 1,
+      borderColor: GREEN_BORDER,
+    },
+    durationText: {
+      fontSize: 13,
+      fontWeight: '600',
+      color: GREEN,
+    },
+    footer: {
+      position: 'absolute',
+      left: 0,
+      right: 0,
+      bottom: 0,
+      backgroundColor: '#F1F5F9',
+      paddingHorizontal: 16,
+      paddingTop: 10,
+      borderTopWidth: 1,
+      borderTopColor: '#E2E8F0',
+    },
+    completeButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 8,
+      backgroundColor: BLUE,
+      borderRadius: 16,
+      paddingVertical: 17,
+      ...Platform.select({
+        ios: {
+          shadowColor: BLUE,
+          shadowOffset: { width: 0, height: 4 },
+          shadowOpacity: 0.3,
+          shadowRadius: 8,
+        },
+        android: { elevation: 4 },
+      }),
+    },
+    completeButtonDisabled: {
+      opacity: 0.5,
+    },
+    completeButtonText: {
+      fontSize: 16,
+      fontWeight: '700',
+      color: '#FFFFFF',
+    },
+    footerHintRow: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      gap: 6,
+      marginTop: 10,
+      paddingHorizontal: 4,
+    },
+    footerHint: {
+      flex: 1,
+      fontSize: 11,
+      color: '#94A3B8',
+      lineHeight: 15,
+    },
+    footerRequirement: {
+      textAlign: 'center',
+      fontSize: 11,
+      color: '#EA580C',
+      marginTop: 8,
+    },
+    otpTitle: {
+      fontSize: 16,
+      fontWeight: '700',
+      color: '#0F172A',
+      marginBottom: 6,
+    },
+    otpHint: {
+      fontSize: 13,
+      color: '#64748B',
+      lineHeight: 18,
+      marginBottom: 16,
+    },
+    codeInput: {
+      borderWidth: 1.5,
+      borderColor: '#E2E8F0',
+      borderRadius: 14,
+      paddingVertical: 14,
+      paddingHorizontal: 16,
+      fontSize: 22,
+      letterSpacing: 6,
+      textAlign: 'center',
+      marginBottom: 8,
+      backgroundColor: '#F8FAFC',
+      color: '#0F172A',
+      fontWeight: '600',
+    },
+    codeError: {
+      fontSize: 13,
+      color: '#DC2626',
+      marginBottom: 8,
+    },
+    verifyButton: {
+      backgroundColor: BLUE,
+      borderRadius: 14,
+      paddingVertical: 15,
+      alignItems: 'center',
+      marginTop: 4,
+    },
+    verifyButtonDisabled: {
+      opacity: 0.55,
+    },
+    verifyButtonText: {
+      color: '#FFFFFF',
+      fontWeight: '700',
+      fontSize: 15,
+    },
   });
