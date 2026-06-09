@@ -20,9 +20,17 @@ const api = axios.create({
 // Request interceptor (for adding auth tokens and FormData uploads)
 api.interceptors.request.use(
   async (config) => {
-    // For FormData (e.g. document upload), do NOT set Content-Type so the runtime sets multipart/form-data with boundary
-    if (config.data && typeof FormData !== 'undefined' && config.data instanceof FormData) {
+    // For FormData, let React Native set multipart/form-data with boundary.
+    // Prefer fetch for file uploads (see orderPhotosApi.js); this is a fallback.
+    const isFormData =
+      config.data &&
+      ((typeof FormData !== 'undefined' && config.data instanceof FormData) ||
+        config.data?.constructor?.name === 'FormData' ||
+        Array.isArray(config.data?._parts));
+    if (isFormData) {
       delete config.headers['Content-Type'];
+      if (config.headers.common) delete config.headers.common['Content-Type'];
+      if (config.headers.post) delete config.headers.post['Content-Type'];
     }
     // Add auth token if available
     try {

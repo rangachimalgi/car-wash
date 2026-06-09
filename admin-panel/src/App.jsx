@@ -6040,8 +6040,8 @@ function App() {
                               <span className="order-photos-label">Before:</span>
                               <div className="order-photos-thumbs">
                                 {selectedOrder.servicePhotos.beforePhotos.map((url, i) => (
-                                  <a key={`before-${i}`} href={UPLOADS_BASE + url} target="_blank" rel="noopener noreferrer" className="order-photo-link">
-                                    <img src={UPLOADS_BASE + url} alt={`Before ${i + 1}`} className="order-photo-thumb" />
+                                  <a key={`before-${i}`} href={resolveUploadOrAbsoluteUrl(url)} target="_blank" rel="noopener noreferrer" className="order-photo-link">
+                                    <img src={resolveUploadOrAbsoluteUrl(url)} alt={`Before ${i + 1}`} className="order-photo-thumb" />
                                   </a>
                                 ))}
                               </div>
@@ -6052,8 +6052,8 @@ function App() {
                               <span className="order-photos-label">After:</span>
                               <div className="order-photos-thumbs">
                                 {selectedOrder.servicePhotos.afterPhotos.map((url, i) => (
-                                  <a key={`after-${i}`} href={UPLOADS_BASE + url} target="_blank" rel="noopener noreferrer" className="order-photo-link">
-                                    <img src={UPLOADS_BASE + url} alt={`After ${i + 1}`} className="order-photo-thumb" />
+                                  <a key={`after-${i}`} href={resolveUploadOrAbsoluteUrl(url)} target="_blank" rel="noopener noreferrer" className="order-photo-link">
+                                    <img src={resolveUploadOrAbsoluteUrl(url)} alt={`After ${i + 1}`} className="order-photo-thumb" />
                                   </a>
                                 ))}
                               </div>

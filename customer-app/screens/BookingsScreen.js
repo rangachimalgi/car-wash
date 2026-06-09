@@ -54,8 +54,8 @@ export default function BookingsScreen({ navigation }) {
     };
   };
 
-  const fetchOrders = async () => {
-    setLoading(true);
+  const fetchOrders = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true);
     try {
       const response = await getOrders();
       if (response.success) {
@@ -70,24 +70,28 @@ export default function BookingsScreen({ navigation }) {
     } catch (error) {
       console.error('Error fetching orders:', error);
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
-  };
+  }, []);
 
   useFocusEffect(
     useCallback(() => {
-      fetchOrders();
-    }, [])
+      fetchOrders(false);
+      const intervalId = setInterval(() => {
+        fetchOrders(true);
+      }, 15000);
+      return () => clearInterval(intervalId);
+    }, [fetchOrders])
   );
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
     try {
-      await fetchOrders();
+      await fetchOrders(true);
     } finally {
       setRefreshing(false);
     }
-  }, []);
+  }, [fetchOrders]);
 
   const handleViewLocation = (wash) => {
     navigation.navigate('EmployeeLiveLocation', { orderId: wash.id });

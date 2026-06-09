@@ -4,6 +4,7 @@ import AttendanceScreen from '../screens/AttendanceScreen';
 import DocumentUploadScreen from '../screens/DocumentUploadScreen';
 import JobQueueScreen from '../screens/JobQueueScreen';
 import JobDetailScreen from '../screens/JobDetailScreen';
+import BeforePhotosScreen from '../screens/BeforePhotosScreen';
 import StartServiceScreen from '../screens/StartServiceScreen';
 import MaterialDetailScreen from '../screens/MaterialDetailScreen';
 import MaterialUsageScreen from '../screens/MaterialUsageScreen';
@@ -28,7 +29,12 @@ export default function AppNavigator({ onLogout, employeeId }) {
       <Stack.Screen name="Jobs">
         {(props) => <JobQueueScreen {...props} employeeId={employeeId} />}
       </Stack.Screen>
-      <Stack.Screen name="JobDetail" component={JobDetailScreen} />
+      <Stack.Screen name="JobDetail">
+        {(props) => <JobDetailScreen {...props} employeeId={employeeId} />}
+      </Stack.Screen>
+      <Stack.Screen name="BeforePhotos">
+        {(props) => <BeforePhotosScreen {...props} employeeId={employeeId} />}
+      </Stack.Screen>
       <Stack.Screen name="StartService" component={StartServiceScreen} />
       <Stack.Screen name="MaterialDetail">
         {(props) => <MaterialDetailScreen {...props} employeeId={employeeId} />}

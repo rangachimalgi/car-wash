@@ -13,8 +13,25 @@ import {
   getActiveMembershipWashDiscountPercent,
 } from '../services/membershipService.js';
 import { generateOrderNumber, ensureOrderHasNumber, ensureOrdersHaveNumbers } from '../services/orderNumberService.js';
+import {
+  isR2Configured,
+  uploadObjectToR2,
+  randomSuffix,
+} from '../services/r2Upload.js';
+import path from 'path';
 
 const TAX_RATE = 0.18;
+
+function safeImageExt(originalname, mimetype) {
+  let ext = path.extname(originalname || '');
+  if (!ext && mimetype) {
+    if (/jpeg|jpg/i.test(mimetype)) ext = '.jpg';
+    else if (/png/i.test(mimetype)) ext = '.png';
+    else if (/webp/i.test(mimetype)) ext = '.webp';
+    else if (/gif/i.test(mimetype)) ext = '.gif';
+  }
+  return ext || '.jpg';
+}
 
 /** Send Expo push notification to assigned employees (fire-and-forget). */
 async function notifyEmployeesNewJob(employeeIds, orderSummary = '') {
@@ -903,7 +920,29 @@ export const uploadOrderPhotos = async (req, res) => {
       });
     }
 
-    const urls = files.map((f) => `/uploads/order-photos/${f.filename}`);
+    const urls = [];
+    for (const file of files) {
+      if (isR2Configured()) {
+        const ext = safeImageExt(file.originalname, file.mimetype);
+        const filename = `order-${String(orderId).slice(-6)}-${Date.now()}-${randomSuffix()}${ext}`;
+        const key = `order-photos/${filename}`;
+        if (!file.buffer) {
+          return res.status(500).json({
+            success: false,
+            message: 'Upload buffer missing (R2 mode)',
+          });
+        }
+        const url = await uploadObjectToR2({
+          key,
+          body: file.buffer,
+          contentType: file.mimetype || 'image/jpeg',
+        });
+        urls.push(url);
+      } else {
+        urls.push(`/uploads/order-photos/${file.filename}`);
+      }
+    }
+
     const field = type === 'before' ? 'servicePhotos.beforePhotos' : 'servicePhotos.afterPhotos';
     const existing = (order.servicePhotos && (type === 'before' ? order.servicePhotos.beforePhotos : order.servicePhotos.afterPhotos)) || [];
     const combined = [...existing, ...urls].slice(-4);
@@ -934,36 +973,61 @@ export const uploadOrderPhotos = async (req, res) => {
 // @access  Employee (employeeId query param) or Protected
 export const updateEmployeeLocation = async (req, res) => {
   try {
-    const { latitude, longitude } = req.body;
+    const latitude = Number(req.body?.latitude);
+    const longitude = Number(req.body?.longitude);
     const orderId = req.params.id;
     const employeeId = req.query.employeeId; // For employee access
     const userId = req.user?._id; // From auth middleware (may be undefined for employees)
 
-    if (typeof latitude !== 'number' || typeof longitude !== 'number') {
+    if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
       return res.status(400).json({
         success: false,
         message: 'Latitude and longitude are required',
       });
     }
 
-    const update = {
-      employeeLocation: {
+    let order;
+    if (employeeId) {
+      order = await Order.findById(orderId);
+      if (!order) {
+        return res.status(404).json({
+          success: false,
+          message: 'Order not found',
+        });
+      }
+      const assigned = order.assignments?.some(
+        (a) => String(a.employeeId) === String(employeeId)
+      );
+      if (!assigned) {
+        return res.status(404).json({
+          success: false,
+          message: 'Order not found or not assigned to you',
+        });
+      }
+      order.employeeLocation = {
         latitude,
         longitude,
         updatedAt: new Date(),
-      },
-    };
-
-    let query;
-    if (employeeId) {
-      // Employee access: check if order is assigned to this employee
-      query = {
-        _id: orderId,
-        assignments: { $elemMatch: { employeeId } },
       };
+      await order.save();
     } else if (userId) {
-      // Customer access: check if order belongs to this user (for admin/customer viewing)
-      query = { _id: orderId, user: userId };
+      order = await Order.findOneAndUpdate(
+        { _id: orderId, user: userId },
+        {
+          employeeLocation: {
+            latitude,
+            longitude,
+            updatedAt: new Date(),
+          },
+        },
+        { new: true }
+      );
+      if (!order) {
+        return res.status(404).json({
+          success: false,
+          message: 'Order not found',
+        });
+      }
     } else {
       return res.status(401).json({
         success: false,
@@ -971,20 +1035,13 @@ export const updateEmployeeLocation = async (req, res) => {
       });
     }
 
-    const order = await Order.findOneAndUpdate(query, update, { new: true })
+    const populated = await Order.findById(order._id)
       .populate('items.service', 'name category')
       .populate('items.addOns', 'name basePrice');
 
-    if (!order) {
-      return res.status(404).json({
-        success: false,
-        message: 'Order not found',
-      });
-    }
-
     res.status(200).json({
       success: true,
-      data: order,
+      data: populated,
     });
   } catch (error) {
     console.error('Error updating employee location:', error);

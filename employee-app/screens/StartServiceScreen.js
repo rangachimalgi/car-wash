@@ -16,18 +16,12 @@ import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
-import * as Location from 'expo-location';
 import { API_BASE_URL } from '../config/api';
 import api from '../services/api';
-import {
-  clearActiveOrderId,
-  saveActiveOrderId,
-  startBackgroundLocationUpdates,
-  stopBackgroundLocationUpdates,
-} from '../locationTask';
+import { uploadOrderPhotos } from '../services/orderPhotosApi';
+import { stopEmployeeLocationSharing } from '../locationTask';
 import { getScheduledTimeSlot } from '../utils/jobBookingHelpers';
-
-const UPLOADS_BASE = API_BASE_URL.replace(/\/api\/?$/, '');
+import { resolveUploadUrl } from '../utils/resolveUploadUrl';
 const BLUE = '#2563EB';
 const BLUE_LIGHT = '#EFF6FF';
 const BLUE_BORDER = '#BFDBFE';
@@ -127,7 +121,6 @@ export default function StartServiceScreen({ navigation, route }) {
   const [codeError, setCodeError] = useState('');
   const [beforePhotos, setBeforePhotos] = useState([]);
   const [afterPhotos, setAfterPhotos] = useState([]);
-  const [uploadingBefore, setUploadingBefore] = useState(false);
   const [uploadingAfter, setUploadingAfter] = useState(false);
   const [startedAt, setStartedAt] = useState(null);
   const [now, setNow] = useState(Date.now());
@@ -181,57 +174,13 @@ export default function StartServiceScreen({ navigation, route }) {
   }, [orderInProgress]);
 
   useEffect(() => {
-    if (!orderId || !orderInProgress) return;
-    let intervalId;
-    const startLocationUpdates = async () => {
-      try {
-        const { status } = await Location.requestForegroundPermissionsAsync();
-        if (status !== 'granted') return;
-        const sendLocation = async () => {
-          try {
-            const position = await Location.getCurrentPositionAsync({
-              accuracy: Location.Accuracy.Balanced,
-            });
-            const { latitude, longitude } = position.coords || {};
-            if (typeof latitude !== 'number' || typeof longitude !== 'number') return;
-            const url = employeeId
-              ? `${API_BASE_URL}/orders/${orderId}/employee-location?employeeId=${employeeId}`
-              : `${API_BASE_URL}/orders/${orderId}/employee-location`;
-            await fetch(url, {
-              method: 'PATCH',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ latitude, longitude }),
-            });
-          } catch (e) {
-            console.error('Error updating live location:', e);
-          }
-        };
-        await sendLocation();
-        intervalId = setInterval(sendLocation, 20000);
-      } catch (e) {
-        console.error('Error requesting location permission:', e);
+    if (loading || orderInProgress || !orderId) return;
+    if (orderStatus && !['In Progress', 'Completed', 'Cancelled'].includes(orderStatus)) {
+      if (beforePhotos.length < 1) {
+        navigation.replace('BeforePhotos', { orderId, employeeId });
       }
-    };
-    startLocationUpdates();
-    return () => {
-      if (intervalId) clearInterval(intervalId);
-    };
-  }, [orderId, employeeId, orderInProgress]);
-
-  useEffect(() => {
-    if (!orderId || !orderInProgress) return;
-    const startBackgroundTracking = async () => {
-      try {
-        const { status } = await Location.requestBackgroundPermissionsAsync();
-        if (status !== 'granted') return;
-        await saveActiveOrderId(orderId, employeeId);
-        await startBackgroundLocationUpdates();
-      } catch (e) {
-        console.error('Error starting background tracking:', e);
-      }
-    };
-    startBackgroundTracking();
-  }, [orderId, employeeId, orderInProgress]);
+    }
+  }, [loading, orderInProgress, orderId, employeeId, orderStatus, beforePhotos.length, navigation]);
 
   const handleVerifyCode = async () => {
     const code = codeInput.replace(/\D/g, '').slice(0, 6);
@@ -268,12 +217,9 @@ export default function StartServiceScreen({ navigation, route }) {
     }
   };
 
-  const pickAndUploadPhotos = async (type) => {
-    const isBefore = type === 'before';
-    const setUploading = isBefore ? setUploadingBefore : setUploadingAfter;
-    const current = isBefore ? beforePhotos : afterPhotos;
-    if (current.length >= 4) {
-      Alert.alert('Limit reached', 'You can upload up to 4 photos.');
+  const pickAndUploadAfterPhotos = async () => {
+    if (afterPhotos.length >= 4) {
+      Alert.alert('Limit reached', 'You can upload up to 4 after photos.');
       return;
     }
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -284,43 +230,28 @@ export default function StartServiceScreen({ navigation, route }) {
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images'],
       allowsMultipleSelection: true,
-      selectionLimit: 4 - current.length,
+      selectionLimit: 4 - afterPhotos.length,
       quality: 0.8,
     });
     if (result.canceled || !result.assets?.length) return;
 
-    setUploading(true);
+    setUploadingAfter(true);
     try {
-      const formData = new FormData();
-      formData.append('type', type);
-      result.assets.forEach((asset, i) => {
-        formData.append('photos', {
-          uri: asset.uri,
-          name: `photo-${i}.jpg`,
-          type: 'image/jpeg',
-        });
+      const data = await uploadOrderPhotos({
+        orderId,
+        employeeId,
+        type: 'after',
+        assets: result.assets,
       });
-      const url = employeeId
-        ? `${API_BASE_URL}/orders/${orderId}/photos?employeeId=${encodeURIComponent(employeeId)}`
-        : `${API_BASE_URL}/orders/${orderId}/photos`;
-      const res = await fetch(url, {
-        method: 'POST',
-        body: formData,
-      });
-      const data = await res.json();
-      if (!res.ok || !data.success) {
-        throw new Error(data.message || 'Upload failed');
-      }
       const updated = data.data?.servicePhotos;
       if (updated) {
-        setBeforePhotos(updated.beforePhotos || []);
         setAfterPhotos(updated.afterPhotos || []);
       }
     } catch (e) {
       console.error('Photo upload error:', e);
       Alert.alert('Upload failed', e.message || 'Could not upload photos.');
     } finally {
-      setUploading(false);
+      setUploadingAfter(false);
     }
   };
 
@@ -355,8 +286,7 @@ export default function StartServiceScreen({ navigation, route }) {
         Alert.alert('Submit failed', res.data?.message || 'Unable to submit right now.');
         return;
       }
-      await stopBackgroundLocationUpdates();
-      await clearActiveOrderId();
+      await stopEmployeeLocationSharing();
       navigation.replace('MaterialUsage', {
         orderId,
         employeeId,
@@ -372,7 +302,8 @@ export default function StartServiceScreen({ navigation, route }) {
 
   const needsOtp = orderStatus && !['In Progress', 'Completed', 'Cancelled'].includes(orderStatus);
   const loading = orderId && orderStatus === null;
-  const canSubmit = orderInProgress && beforePhotos.length >= 1 && afterPhotos.length >= 1;
+  const canSubmit =
+    orderInProgress && beforePhotos.length >= 1 && afterPhotos.length >= 1;
 
   const item = order?.items?.[0];
   const serviceName = item?.service?.name || item?.serviceName || 'Service';
@@ -390,14 +321,13 @@ export default function StartServiceScreen({ navigation, route }) {
   const completedLabel = formatTimeLabel(now);
   const durationLabel = formatDurationMins(startedAt, now);
 
-  const photosReady = beforePhotos.length >= 1 && afterPhotos.length >= 1;
-  const beforeUri = beforePhotos[0] ? UPLOADS_BASE + beforePhotos[0] : null;
-  const afterUri = afterPhotos[0] ? UPLOADS_BASE + afterPhotos[0] : null;
+  const photosReady = afterPhotos.length >= 1;
+  const afterUri = afterPhotos[0] ? resolveUploadUrl(afterPhotos[0]) : null;
 
   const showHelp = () => {
     Alert.alert(
       'Job in Progress',
-      'Upload before and after photos, then tap Complete Job. The customer will be notified and can leave a review.'
+      'Upload after photos, then tap Complete Job. The customer will be notified and can leave a review.'
     );
   };
 
@@ -486,8 +416,8 @@ export default function StartServiceScreen({ navigation, route }) {
                 </Text>
                 <Text style={styles.statusSubtext}>
                   {photosReady
-                    ? "Great work! You've added all required photos."
-                    : 'Upload before & after photos to finish the job.'}
+                    ? "Great work! You've added after photos."
+                    : 'Upload after photos to finish the job.'}
                 </Text>
               </View>
             </View>
@@ -540,63 +470,37 @@ export default function StartServiceScreen({ navigation, route }) {
               </View>
             </View>
 
-            {/* Before & After Photos */}
-            <Text style={styles.blockTitle}>Before & After Photos</Text>
-            <View style={styles.photoCompareRow}>
-              <TouchableOpacity
-                style={styles.photoSlot}
-                onPress={() => pickAndUploadPhotos('before')}
-                disabled={uploadingBefore}
-                activeOpacity={0.85}
-              >
-                {beforeUri ? (
-                  <Image source={{ uri: beforeUri }} style={styles.photoImage} resizeMode="cover" />
-                ) : (
-                  <View style={styles.photoPlaceholder}>
-                    {uploadingBefore ? (
-                      <ActivityIndicator color={BLUE} />
-                    ) : (
-                      <>
-                        <MaterialCommunityIcons name="camera-plus-outline" size={28} color="#94A3B8" />
-                        <Text style={styles.photoPlaceholderText}>Tap to upload</Text>
-                      </>
-                    )}
-                  </View>
-                )}
-                <View style={styles.photoLabel}>
-                  <Text style={styles.photoLabelText}>Before</Text>
+            {/* After Photos */}
+            <Text style={styles.blockTitle}>After Photos</Text>
+            <Text style={styles.photoSectionHint}>
+              {beforePhotos.length} before photo{beforePhotos.length === 1 ? '' : 's'} already uploaded
+            </Text>
+            <TouchableOpacity
+              style={styles.afterPhotoSlot}
+              onPress={pickAndUploadAfterPhotos}
+              disabled={uploadingAfter}
+              activeOpacity={0.85}
+            >
+              {afterUri ? (
+                <Image source={{ uri: afterUri }} style={styles.afterPhotoImage} resizeMode="cover" />
+              ) : (
+                <View style={styles.photoPlaceholder}>
+                  {uploadingAfter ? (
+                    <ActivityIndicator color={BLUE} />
+                  ) : (
+                    <>
+                      <MaterialCommunityIcons name="camera-plus-outline" size={28} color="#94A3B8" />
+                      <Text style={styles.photoPlaceholderText}>Tap to upload after photos</Text>
+                    </>
+                  )}
                 </View>
-              </TouchableOpacity>
-
-              <View style={styles.photoArrow}>
-                <MaterialCommunityIcons name="chevron-right" size={18} color={BLUE} />
+              )}
+              <View style={styles.photoLabel}>
+                <Text style={styles.photoLabelText}>
+                  After {afterPhotos.length > 0 ? `(${afterPhotos.length})` : ''}
+                </Text>
               </View>
-
-              <TouchableOpacity
-                style={styles.photoSlot}
-                onPress={() => pickAndUploadPhotos('after')}
-                disabled={uploadingAfter}
-                activeOpacity={0.85}
-              >
-                {afterUri ? (
-                  <Image source={{ uri: afterUri }} style={styles.photoImage} resizeMode="cover" />
-                ) : (
-                  <View style={styles.photoPlaceholder}>
-                    {uploadingAfter ? (
-                      <ActivityIndicator color={BLUE} />
-                    ) : (
-                      <>
-                        <MaterialCommunityIcons name="camera-plus-outline" size={28} color="#94A3B8" />
-                        <Text style={styles.photoPlaceholderText}>Tap to upload</Text>
-                      </>
-                    )}
-                  </View>
-                )}
-                <View style={styles.photoLabel}>
-                  <Text style={styles.photoLabelText}>After</Text>
-                </View>
-              </TouchableOpacity>
-            </View>
+            </TouchableOpacity>
 
             {/* Service Details */}
             <Text style={styles.blockTitle}>Service Details</Text>
@@ -651,7 +555,7 @@ export default function StartServiceScreen({ navigation, route }) {
             </View>
             {!canSubmit ? (
               <Text style={styles.footerRequirement}>
-                Add at least one before and after photo to complete the job.
+                Add at least one after photo to complete the job.
               </Text>
             ) : null}
           </View>
@@ -843,20 +747,21 @@ const createStyles = () =>
       fontWeight: '500',
       lineHeight: 17,
     },
-    photoCompareRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 8,
+    photoSectionHint: {
+      fontSize: 12,
+      color: '#64748B',
+      marginTop: -6,
+      marginBottom: 4,
     },
-    photoSlot: {
-      flex: 1,
-      aspectRatio: 1.15,
+    afterPhotoSlot: {
+      width: '100%',
+      aspectRatio: 1.6,
       borderRadius: 14,
       overflow: 'hidden',
       backgroundColor: '#E2E8F0',
       position: 'relative',
     },
-    photoImage: {
+    afterPhotoImage: {
       width: '100%',
       height: '100%',
     },
@@ -889,17 +794,6 @@ const createStyles = () =>
       color: '#FFFFFF',
       fontSize: 11,
       fontWeight: '600',
-    },
-    photoArrow: {
-      width: 28,
-      height: 28,
-      borderRadius: 14,
-      backgroundColor: '#FFFFFF',
-      borderWidth: 1,
-      borderColor: BLUE_BORDER,
-      alignItems: 'center',
-      justifyContent: 'center',
-      ...cardShadow,
     },
     detailRow: {
       flexDirection: 'row',

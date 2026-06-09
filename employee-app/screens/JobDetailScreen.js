@@ -14,6 +14,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import api from '../services/api';
+import { startEmployeeLocationSharing } from '../locationTask';
 import {
   getDateLabel,
   getScheduledDate,
@@ -72,14 +73,15 @@ const iconBadgeStyles = StyleSheet.create({
   },
 });
 
-export default function JobDetailScreen({ route, navigation }) {
+export default function JobDetailScreen({ route, navigation, employeeId: employeeIdProp }) {
   const insets = useSafeAreaInsets();
   const styles = useMemo(() => createStyles(), []);
   const [loading, setLoading] = useState(true);
   const [job, setJob] = useState(null);
+  const [sharingLocation, setSharingLocation] = useState(false);
 
   const orderId = route?.params?.orderId;
-  const employeeId = route?.params?.employeeId;
+  const employeeId = route?.params?.employeeId ?? employeeIdProp;
 
   useEffect(() => {
     const loadJob = async () => {
@@ -141,6 +143,24 @@ export default function JobDetailScreen({ route, navigation }) {
       Alert.alert('No location', 'Customer location not available.');
       return;
     }
+
+    if (orderId && employeeId) {
+      setSharingLocation(true);
+      try {
+        const sharing = await startEmployeeLocationSharing(orderId, employeeId);
+        if (!sharing.ok) {
+          Alert.alert(
+            'Location sharing failed',
+            sharing.error || 'Could not share your location with the customer.'
+          );
+        }
+      } finally {
+        setSharingLocation(false);
+      }
+    } else if (orderId && !employeeId) {
+      Alert.alert('Unable to share location', 'Employee session not found. Please log in again.');
+    }
+
     const destination = hasCoords ? `${lat},${lng}` : encodeURIComponent(address);
     const httpUrl =
       Platform.OS === 'ios'
@@ -160,8 +180,13 @@ export default function JobDetailScreen({ route, navigation }) {
     }
   };
 
-  const handleStartService = () => {
-    navigation?.navigate('StartService', { orderId, employeeId });
+  const handleContinue = () => {
+    const inProgress = job?.status === 'In Progress';
+    if (inProgress) {
+      navigation?.navigate('StartService', { orderId, employeeId });
+      return;
+    }
+    navigation?.navigate('BeforePhotos', { orderId, employeeId });
   };
 
   return (
@@ -271,9 +296,20 @@ export default function JobDetailScreen({ route, navigation }) {
             </View>
 
             {/* Navigate */}
-            <TouchableOpacity style={styles.mapsButton} onPress={handleOpenMaps} activeOpacity={0.85}>
-              <MaterialCommunityIcons name="google-maps" size={22} color={BLUE} />
-              <Text style={styles.mapsButtonText}>Navigate with Google Maps</Text>
+            <TouchableOpacity
+              style={[styles.mapsButton, sharingLocation && styles.mapsButtonDisabled]}
+              onPress={handleOpenMaps}
+              activeOpacity={0.85}
+              disabled={sharingLocation}
+            >
+              {sharingLocation ? (
+                <ActivityIndicator size="small" color={BLUE} />
+              ) : (
+                <MaterialCommunityIcons name="google-maps" size={22} color={BLUE} />
+              )}
+              <Text style={styles.mapsButtonText}>
+                {sharingLocation ? 'Sharing location…' : 'Navigate with Google Maps'}
+              </Text>
             </TouchableOpacity>
           </ScrollView>
 
@@ -281,15 +317,19 @@ export default function JobDetailScreen({ route, navigation }) {
           <View style={[styles.footer, { paddingBottom: 14 + insets.bottom }]}>
             <TouchableOpacity
               style={styles.startButton}
-              onPress={handleStartService}
+              onPress={handleContinue}
               activeOpacity={0.9}
             >
-              <View style={styles.playCircle}>
-                <MaterialCommunityIcons name="play" size={14} color={BLUE} style={styles.playIcon} />
-              </View>
-              <Text style={styles.startButtonText}>Start Service</Text>
+              <MaterialCommunityIcons name="arrow-right" size={20} color="#FFFFFF" />
+              <Text style={styles.startButtonText}>
+                {job?.status === 'In Progress' ? 'Continue service' : 'Continue'}
+              </Text>
             </TouchableOpacity>
-            <Text style={styles.footerHint}>Customer will be notified once you start the service</Text>
+            <Text style={styles.footerHint}>
+              {job?.status === 'In Progress'
+                ? 'Return to the active service screen'
+                : 'Next: upload before photos, then start the service'}
+            </Text>
           </View>
         </>
       ) : (
@@ -497,6 +537,9 @@ const createStyles = () =>
       borderColor: BLUE_BORDER,
       paddingVertical: 16,
       ...cardShadow,
+    },
+    mapsButtonDisabled: {
+      opacity: 0.7,
     },
     mapsButtonText: {
       fontSize: 14,

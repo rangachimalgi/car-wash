@@ -13,8 +13,18 @@ export default function UpcomingWashCard({ wash, onPress, onViewLocation, onPayN
     setImageError(false);
   }, [wash.id, wash.image]);
   const status = String(wash.status || '').trim();
-  const statusLabel = status === 'In Progress' ? 'Ongoing' : (status || 'Upcoming');
+  const hasLiveLocation =
+    typeof wash.employeeLocation?.latitude === 'number' &&
+    typeof wash.employeeLocation?.longitude === 'number';
+  const isOngoing = status === 'In Progress';
+  const isOnTheWay = hasLiveLocation && !isOngoing && status !== 'Completed';
+  const statusLabel = isOngoing
+    ? 'Ongoing'
+    : isOnTheWay
+      ? 'On the way'
+      : (status || 'Upcoming');
   const showBook = onBook && UPCOMING_BOOK_STATUSES.includes(status);
+  const showTrackLocation = (isOngoing || isOnTheWay) && onViewLocation;
 
   return (
     <TouchableOpacity 
@@ -52,13 +62,33 @@ export default function UpcomingWashCard({ wash, onPress, onViewLocation, onPayN
             <View style={styles.serviceTypeBadge}>
               <Text style={styles.serviceTypeText}>{wash.serviceType}</Text>
             </View>
-            <View style={styles.statusBadge}>
-              <MaterialCommunityIcons 
-                name="clock-outline" 
-                size={14} 
-                color={status === 'Pending' ? '#000000' : theme.accent} 
+            <View
+              style={[
+                styles.statusBadge,
+                isOnTheWay && styles.statusBadgeOnTheWay,
+                isOngoing && styles.statusBadgeOngoing,
+              ]}
+            >
+              <MaterialCommunityIcons
+                name={isOnTheWay ? 'map-marker-path' : isOngoing ? 'progress-clock' : 'clock-outline'}
+                size={14}
+                color={
+                  status === 'Pending'
+                    ? '#000000'
+                    : isOnTheWay
+                      ? '#2563EB'
+                      : theme.accent
+                }
               />
-              <Text style={[styles.statusText, status === 'Pending' && styles.statusTextPending]}>{statusLabel}</Text>
+              <Text
+                style={[
+                  styles.statusText,
+                  status === 'Pending' && styles.statusTextPending,
+                  isOnTheWay && styles.statusTextOnTheWay,
+                ]}
+              >
+                {statusLabel}
+              </Text>
             </View>
           </View>
 
@@ -113,7 +143,7 @@ export default function UpcomingWashCard({ wash, onPress, onViewLocation, onPayN
                   <Text style={styles.bookButtonText}>Book</Text>
                 </TouchableOpacity>
               )}
-              {status === 'In Progress' && (
+              {showTrackLocation && (
                 <TouchableOpacity
                   style={styles.viewLocationButton}
                   onPress={(e) => {
@@ -121,8 +151,10 @@ export default function UpcomingWashCard({ wash, onPress, onViewLocation, onPayN
                     onViewLocation?.(wash);
                   }}
                 >
-                  <MaterialCommunityIcons name="map-marker" size={18} color="#87CEEB" />
-                  <Text style={styles.viewLocationText}>View Location</Text>
+                  <MaterialCommunityIcons name="map-marker-radius" size={18} color="#2563EB" />
+                  <Text style={styles.viewLocationText}>
+                    {isOnTheWay ? 'Track employee' : 'View location'}
+                  </Text>
                 </TouchableOpacity>
               )}
             </View>
@@ -233,6 +265,15 @@ const createStyles = (theme, isLightMode) => StyleSheet.create({
   statusTextPending: {
     color: theme.textPrimary,
   },
+  statusBadgeOnTheWay: {
+    backgroundColor: 'rgba(37, 99, 235, 0.1)',
+  },
+  statusBadgeOngoing: {
+    backgroundColor: 'rgba(22, 163, 74, 0.1)',
+  },
+  statusTextOnTheWay: {
+    color: '#2563EB',
+  },
   serviceName: {
     fontSize: 16,
     fontWeight: 'bold',
@@ -301,7 +342,7 @@ const createStyles = (theme, isLightMode) => StyleSheet.create({
   viewLocationButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(135, 206, 235, 0.12)',
+    backgroundColor: 'rgba(37, 99, 235, 0.1)',
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 8,
@@ -310,7 +351,7 @@ const createStyles = (theme, isLightMode) => StyleSheet.create({
   viewLocationText: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#87CEEB',
+    color: '#2563EB',
   },
   actionsRow: {
     flexDirection: 'row',

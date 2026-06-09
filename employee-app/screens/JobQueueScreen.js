@@ -203,10 +203,10 @@ export default function JobQueueScreen({ employeeId, navigation }) {
                 <TouchableOpacity
                   style={jobListStyles.btnPrimary}
                   onPress={() =>
-                    navigation?.navigate('StartService', { orderId: booking.id, employeeId })
+                    navigation?.navigate('BeforePhotos', { orderId: booking.id, employeeId })
                   }
                 >
-                  <Text style={jobListStyles.btnPrimaryText}>Start Service</Text>
+                  <Text style={jobListStyles.btnPrimaryText}>Continue</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={jobListStyles.btnOutline}

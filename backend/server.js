@@ -15,7 +15,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 connectDB();
 
 if (isR2Configured()) {
-  console.log('📦 Uploads (media + service images): Cloudflare R2');
+  console.log('📦 Uploads (media, service images, order photos): Cloudflare R2');
 } else {
   const missing = getMissingR2EnvKeys();
   console.log(

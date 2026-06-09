@@ -41,6 +41,17 @@
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    }
+    },
+    "plugins": [
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Woosh shares your live location with the customer while you are on the way to their service.",
+          "locationWhenInUsePermission": "Woosh shares your live location with the customer while you are on the way to their service.",
+          "isAndroidBackgroundLocationEnabled": true,
+          "isAndroidForegroundServiceEnabled": true
+        }
+      ]
+    ]
   }
 }
