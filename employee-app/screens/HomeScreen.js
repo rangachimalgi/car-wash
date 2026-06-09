@@ -2,6 +2,7 @@ import React, { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
   Platform,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
@@ -154,13 +155,14 @@ export default function HomeScreen({ navigation, employeeId }) {
   });
   const [rating, setRating] = useState({ average: null, count: 0 });
   const [upcomingBookings, setUpcomingBookings] = useState([]);
+  const [refreshing, setRefreshing] = useState(false);
 
   const greeting = getTimeGreeting();
   const displayName = (employeeName || '').trim() || 'there';
 
-  const loadStats = useCallback(async () => {
+  const loadStats = useCallback(async ({ silent = false } = {}) => {
     if (!employeeId) return;
-    setStatsLoading(true);
+    if (!silent) setStatsLoading(true);
     try {
       const [incomingRes, queueRes, historyRes, earningsRes] = await Promise.all([
         api.get(`/jobs/incoming?employeeId=${employeeId}`),
@@ -180,9 +182,22 @@ export default function HomeScreen({ navigation, employeeId }) {
     } catch (error) {
       console.error('Error loading home stats:', error);
     } finally {
-      setStatsLoading(false);
+      if (!silent) setStatsLoading(false);
     }
   }, [employeeId]);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      const name = await AsyncStorage.getItem('employeeName');
+      setEmployeeName(name || '');
+      await loadStats({ silent: true });
+    } catch (error) {
+      console.error('Error refreshing home:', error);
+    } finally {
+      setRefreshing(false);
+    }
+  }, [loadStats]);
 
   useFocusEffect(
     useCallback(() => {
@@ -215,6 +230,14 @@ export default function HomeScreen({ navigation, employeeId }) {
         { paddingTop: 16 + insets.top, paddingBottom: 24 + insets.bottom + 88 },
       ]}
       showsVerticalScrollIndicator={false}
+      refreshControl={
+        <RefreshControl
+          refreshing={refreshing}
+          onRefresh={onRefresh}
+          tintColor="#2563EB"
+          colors={['#2563EB']}
+        />
+      }
     >
       <StatusBar style="dark" />
 
