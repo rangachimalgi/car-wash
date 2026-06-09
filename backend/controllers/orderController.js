@@ -624,85 +624,98 @@ export const updateOrderStatus = async (req, res) => {
       });
     }
 
-    const update = { status };
+    let order;
 
     if (status === 'Completed') {
-      update['assignments.$[accepted].status'] = 'completed';
-      update['assignments.$[accepted].completedAt'] = new Date();
-      update.assignmentStatus = 'completed';
-    }
+      if (employeeId) {
+        order = await Order.findOne({
+          _id: orderId,
+          assignments: { $elemMatch: { employeeId } },
+        });
+      } else if (userId) {
+        order = await Order.findOne({ _id: orderId, user: userId });
+      } else {
+        return res.status(401).json({
+          success: false,
+          message: 'Authentication required',
+        });
+      }
 
-    if (employeeId && status === 'Completed') {
-      const existing = await Order.findOne({
-        _id: orderId,
-        assignments: { $elemMatch: { employeeId } },
-      });
-      if (!existing) {
+      if (!order) {
         return res.status(404).json({
           success: false,
           message: 'Order not found or you do not have access to this order',
         });
       }
-      if (existing.status === 'Completed') {
+      if (order.status === 'Completed') {
         return res.status(400).json({
           success: false,
           message: 'Order is already completed',
         });
       }
-      const beforeCount = existing.servicePhotos?.beforePhotos?.length || 0;
-      const afterCount = existing.servicePhotos?.afterPhotos?.length || 0;
-      if (beforeCount < 1 || afterCount < 1) {
-        return res.status(400).json({
-          success: false,
-          message: 'Upload at least one before and one after photo before completing.',
-        });
-      }
-      if (!req.body.paymentReceived) {
-        return res.status(400).json({
-          success: false,
-          message: 'Confirm payment received before submitting.',
-        });
-      }
-    }
 
-    let query;
-    if (employeeId) {
-      // Employee access: check if order is assigned to this employee
-      query = {
-        _id: orderId,
-        assignments: { $elemMatch: { employeeId } },
-      };
-      if (status === 'Completed') {
-        query.status = { $ne: 'Completed' };
+      if (employeeId) {
+        const beforeCount = order.servicePhotos?.beforePhotos?.length || 0;
+        const afterCount = order.servicePhotos?.afterPhotos?.length || 0;
+        if (beforeCount < 1 || afterCount < 1) {
+          return res.status(400).json({
+            success: false,
+            message: 'Upload at least one before and one after photo before completing.',
+          });
+        }
+        if (!req.body.paymentReceived) {
+          return res.status(400).json({
+            success: false,
+            message: 'Confirm payment received before submitting.',
+          });
+        }
       }
-    } else if (userId) {
-      // Customer access: check if order belongs to this user
-      query = { _id: orderId, user: userId };
+
+      const completedAt = new Date();
+      order.status = 'Completed';
+      order.assignmentStatus = 'completed';
+      for (const assignment of order.assignments || []) {
+        const isAssignedEmployee =
+          employeeId && String(assignment.employeeId) === String(employeeId);
+        const shouldComplete = employeeId
+          ? isAssignedEmployee
+          : assignment.status === 'accepted';
+        if (shouldComplete) {
+          assignment.status = 'completed';
+          assignment.completedAt = completedAt;
+        }
+      }
+
+      await order.save();
+      order = await Order.findById(order._id)
+        .populate('items.service', 'name category')
+        .populate('items.addOns', 'name basePrice');
     } else {
-      return res.status(401).json({
-        success: false,
-        message: 'Authentication required',
-      });
-    }
-
-    const order = await Order.findOneAndUpdate(
-      query,
-      update,
-      {
-        new: true,
-        arrayFilters: status === 'Completed'
-          ? [{ 'accepted.status': 'accepted' }]
-          : undefined,
+      let query;
+      if (employeeId) {
+        query = {
+          _id: orderId,
+          assignments: { $elemMatch: { employeeId } },
+        };
+      } else if (userId) {
+        query = { _id: orderId, user: userId };
+      } else {
+        return res.status(401).json({
+          success: false,
+          message: 'Authentication required',
+        });
       }
-    )
-      .populate('items.service', 'name category')
-      .populate('items.addOns', 'name basePrice');
 
-    if (!order) {
-      return res.status(404).json({
-        success: false,
-        message: 'Order not found or you do not have access to this order',
-      });
+      order = await Order.findOneAndUpdate(query, { status }, { new: true })
+        .populate('items.service', 'name category')
+        .populate('items.addOns', 'name basePrice');
+
+      if (!order) {
+        return res.status(404).json({
+          success: false,
+          message: 'Order not found or you do not have access to this order',
+        });
+      }
     }
 
     // If order just moved to Completed, handle referral bonus for first completed order

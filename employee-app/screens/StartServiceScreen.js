@@ -18,6 +18,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import * as Location from 'expo-location';
 import { API_BASE_URL } from '../config/api';
+import api from '../services/api';
 import {
   clearActiveOrderId,
   saveActiveOrderId,
@@ -344,16 +345,14 @@ export default function StartServiceScreen({ navigation, route }) {
     setSubmitting(true);
     try {
       const url = employeeId
-        ? `${API_BASE_URL}/orders/${orderId}?employeeId=${employeeId}`
-        : `${API_BASE_URL}/orders/${orderId}`;
-      const res = await fetch(url, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: 'Completed', paymentReceived: true }),
+        ? `/orders/${orderId}?employeeId=${employeeId}`
+        : `/orders/${orderId}`;
+      const res = await api.patch(url, {
+        status: 'Completed',
+        paymentReceived: true,
       });
-      const data = await res.json();
-      if (!res.ok || !data.success) {
-        Alert.alert('Submit failed', data.message || 'Unable to submit right now.');
+      if (!res.data?.success) {
+        Alert.alert('Submit failed', res.data?.message || 'Unable to submit right now.');
         return;
       }
       await stopBackgroundLocationUpdates();

@@ -36,6 +36,7 @@ export const getQueueJobs = async (req, res) => {
     if (!employeeId) return;
 
     const orders = await Order.find({
+      status: { $nin: ['Completed', 'Cancelled'] },
       assignments: { $elemMatch: { employeeId, status: 'accepted' } },
     })
       .sort({ createdAt: -1 })

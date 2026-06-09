@@ -13,8 +13,8 @@ const Tab = createBottomTabNavigator();
 // Simple theme matching the employee app design
 const theme = {
   background: '#FFFFFF',
-  textPrimary: '#1A1A1A',
-  textSecondary: '#6B7280',
+  textPrimary: '#2563EB',
+  textSecondary: '#94A3B8',
   cardBorder: '#E2E8F0',
 };
 
