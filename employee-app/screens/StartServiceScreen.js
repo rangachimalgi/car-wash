@@ -124,6 +124,7 @@ export default function StartServiceScreen({ navigation, route }) {
   const [uploadingAfter, setUploadingAfter] = useState(false);
   const [startedAt, setStartedAt] = useState(null);
   const [now, setNow] = useState(Date.now());
+  const [checkedChecklist, setCheckedChecklist] = useState({});
 
   const orderId = route?.params?.orderId;
   const employeeId = route?.params?.employeeId;
@@ -302,10 +303,34 @@ export default function StartServiceScreen({ navigation, route }) {
 
   const needsOtp = orderStatus && !['In Progress', 'Completed', 'Cancelled'].includes(orderStatus);
   const loading = orderId && orderStatus === null;
-  const canSubmit =
-    orderInProgress && beforePhotos.length >= 1 && afterPhotos.length >= 1;
 
   const item = order?.items?.[0];
+  const coverageItems = useMemo(() => {
+    const raw = item?.service?.specifications?.coverage || [];
+    return raw.map((label) => String(label || '').trim()).filter(Boolean);
+  }, [item?.service?.specifications?.coverage]);
+
+  useEffect(() => {
+    if (!orderInProgress || coverageItems.length === 0) return;
+    setCheckedChecklist((prev) => {
+      const next = {};
+      coverageItems.forEach((_, index) => {
+        next[index] = prev[index] ?? false;
+      });
+      return next;
+    });
+  }, [orderInProgress, coverageItems]);
+
+  const checklistDoneCount = coverageItems.filter((_, index) => checkedChecklist[index]).length;
+  const checklistComplete =
+    coverageItems.length === 0 || checklistDoneCount === coverageItems.length;
+
+  const canSubmit =
+    orderInProgress &&
+    beforePhotos.length >= 1 &&
+    afterPhotos.length >= 1 &&
+    checklistComplete;
+
   const serviceName = item?.service?.name || item?.serviceName || 'Service';
   const addOnText = (item?.addOns || []).map((a) => a.name).filter(Boolean).join(', ');
   const address = order?.customer?.address || 'Address not provided';
@@ -322,7 +347,12 @@ export default function StartServiceScreen({ navigation, route }) {
   const durationLabel = formatDurationMins(startedAt, now);
 
   const photosReady = afterPhotos.length >= 1;
+  const allTasksReady = photosReady && checklistComplete;
   const afterUri = afterPhotos[0] ? resolveUploadUrl(afterPhotos[0]) : null;
+
+  const toggleChecklistItem = (index) => {
+    setCheckedChecklist((prev) => ({ ...prev, [index]: !prev[index] }));
+  };
 
   const showHelp = () => {
     Alert.alert(
@@ -402,22 +432,28 @@ export default function StartServiceScreen({ navigation, route }) {
             showsVerticalScrollIndicator={false}
           >
             {/* Status banner */}
-            <View style={[styles.statusBanner, photosReady && styles.statusBannerReady]}>
-              <View style={[styles.statusIconWrap, photosReady && styles.statusIconWrapReady]}>
+            <View style={[styles.statusBanner, allTasksReady && styles.statusBannerReady]}>
+              <View style={[styles.statusIconWrap, allTasksReady && styles.statusIconWrapReady]}>
                 <MaterialCommunityIcons
-                  name={photosReady ? 'check-circle' : 'progress-clock'}
+                  name={allTasksReady ? 'check-circle' : 'progress-clock'}
                   size={22}
-                  color={photosReady ? GREEN : BLUE}
+                  color={allTasksReady ? GREEN : BLUE}
                 />
               </View>
               <View style={styles.statusTextWrap}>
-                <Text style={[styles.statusTitle, photosReady && styles.statusTitleReady]}>
-                  {photosReady ? 'Ready to Complete' : 'Service Started'}
+                <Text style={[styles.statusTitle, allTasksReady && styles.statusTitleReady]}>
+                  {allTasksReady
+                    ? 'Ready to Complete'
+                    : checklistComplete
+                      ? 'Service Started'
+                      : 'Checklist In Progress'}
                 </Text>
                 <Text style={styles.statusSubtext}>
-                  {photosReady
-                    ? "Great work! You've added after photos."
-                    : 'Upload after photos to finish the job.'}
+                  {allTasksReady
+                    ? "Great work! Checklist and after photos are done."
+                    : !checklistComplete
+                      ? 'Complete each included service item as you work.'
+                      : 'Upload after photos to finish the job.'}
                 </Text>
               </View>
             </View>
@@ -502,6 +538,64 @@ export default function StartServiceScreen({ navigation, route }) {
               </View>
             </TouchableOpacity>
 
+            {coverageItems.length > 0 ? (
+              <>
+                <View style={styles.checklistHeader}>
+                  <View style={styles.checklistTitleRow}>
+                    <MaterialCommunityIcons
+                      name="clipboard-check-outline"
+                      size={18}
+                      color={checklistComplete ? GREEN : BLUE}
+                    />
+                    <Text style={styles.blockTitle}>Checklist</Text>
+                  </View>
+                  <Text
+                    style={[
+                      styles.checklistProgress,
+                      checklistComplete && styles.checklistProgressDone,
+                    ]}
+                  >
+                    {checklistDoneCount} / {coverageItems.length} completed
+                  </Text>
+                </View>
+                <View style={styles.card}>
+                  {coverageItems.map((label, index) => {
+                    const checked = !!checkedChecklist[index];
+                    return (
+                      <TouchableOpacity
+                        key={`${label}-${index}`}
+                        style={[
+                          styles.checklistRow,
+                          index < coverageItems.length - 1 && styles.checklistRowBorder,
+                        ]}
+                        onPress={() => toggleChecklistItem(index)}
+                        activeOpacity={0.75}
+                      >
+                        <View
+                          style={[
+                            styles.checklistBox,
+                            checked && styles.checklistBoxChecked,
+                          ]}
+                        >
+                          {checked ? (
+                            <MaterialCommunityIcons name="check" size={14} color="#FFFFFF" />
+                          ) : null}
+                        </View>
+                        <Text
+                          style={[
+                            styles.checklistLabel,
+                            checked && styles.checklistLabelChecked,
+                          ]}
+                        >
+                          {label}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              </>
+            ) : null}
+
             {/* Service Details */}
             <Text style={styles.blockTitle}>Service Details</Text>
             <View style={styles.card}>
@@ -555,7 +649,9 @@ export default function StartServiceScreen({ navigation, route }) {
             </View>
             {!canSubmit ? (
               <Text style={styles.footerRequirement}>
-                Add at least one after photo to complete the job.
+                {!checklistComplete
+                  ? 'Complete all checklist items before finishing the job.'
+                  : 'Add at least one after photo to complete the job.'}
               </Text>
             ) : null}
           </View>
@@ -752,6 +848,60 @@ const createStyles = () =>
       color: '#64748B',
       marginTop: -6,
       marginBottom: 4,
+    },
+    checklistHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      marginBottom: -6,
+    },
+    checklistTitleRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+    },
+    checklistProgress: {
+      fontSize: 12,
+      fontWeight: '600',
+      color: '#64748B',
+    },
+    checklistProgressDone: {
+      color: GREEN,
+    },
+    checklistRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
+      paddingVertical: 12,
+    },
+    checklistRowBorder: {
+      borderBottomWidth: 1,
+      borderBottomColor: '#E8EDF3',
+    },
+    checklistBox: {
+      width: 22,
+      height: 22,
+      borderRadius: 6,
+      borderWidth: 2,
+      borderColor: '#CBD5E1',
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: '#FFFFFF',
+    },
+    checklistBoxChecked: {
+      backgroundColor: GREEN,
+      borderColor: GREEN,
+    },
+    checklistLabel: {
+      flex: 1,
+      fontSize: 14,
+      color: '#334155',
+      lineHeight: 20,
+      fontWeight: '500',
+    },
+    checklistLabelChecked: {
+      color: '#64748B',
+      textDecorationLine: 'line-through',
     },
     afterPhotoSlot: {
       width: '100%',

@@ -1264,7 +1264,7 @@ export const getOrderById = async (req, res) => {
         _id: orderId,
         assignments: { $elemMatch: { employeeId } },
       })
-        .populate('items.service', 'name category')
+        .populate('items.service', 'name category specifications')
         .populate('items.addOns', 'name basePrice');
     } else if (userId) {
       // Customer access: check if order belongs to this user
