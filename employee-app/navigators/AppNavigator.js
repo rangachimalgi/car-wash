@@ -11,6 +11,7 @@ import MaterialUsageScreen from '../screens/MaterialUsageScreen';
 import RequestRefillScreen from '../screens/RequestRefillScreen';
 import MyRequestsScreen from '../screens/MyRequestsScreen';
 import UpsellPitchScreen from '../screens/UpsellPitchScreen';
+import ReportProblemScreen from '../screens/ReportProblemScreen';
 import MainTabs from './MainTabs';
 
 const Stack = createStackNavigator();
@@ -49,6 +50,9 @@ export default function AppNavigator({ onLogout, employeeId }) {
         {(props) => <MyRequestsScreen {...props} employeeId={employeeId} />}
       </Stack.Screen>
       <Stack.Screen name="UpsellPitch" component={UpsellPitchScreen} />
+      <Stack.Screen name="ReportProblem">
+        {(props) => <ReportProblemScreen {...props} employeeId={employeeId} />}
+      </Stack.Screen>
     </Stack.Navigator>
   );
 }

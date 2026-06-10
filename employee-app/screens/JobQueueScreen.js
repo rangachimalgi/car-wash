@@ -22,6 +22,8 @@ import {
 
 const BLUE = '#2563EB';
 const BLUE_LIGHT = '#EFF6FF';
+const RED = '#DC2626';
+const RED_LIGHT = '#FEF2F2';
 
 const SECTION_THEMES = {
   assigned: {
@@ -192,6 +194,14 @@ export default function JobQueueScreen({ employeeId, navigation }) {
           <MaterialCommunityIcons name="arrow-left" size={18} color={BLUE} />
         </TouchableOpacity>
         <Text style={styles.title}>Job Queue</Text>
+        <TouchableOpacity
+          style={styles.reportButton}
+          onPress={() => navigation.navigate('ReportProblem', { employeeId })}
+          activeOpacity={0.85}
+        >
+          <MaterialCommunityIcons name="alert-circle-outline" size={16} color={RED} />
+          <Text style={styles.reportButtonText}>Report</Text>
+        </TouchableOpacity>
       </View>
 
       <JobSection
@@ -448,10 +458,27 @@ const createStyles = () =>
       justifyContent: 'center',
     },
     title: {
+      flex: 1,
       fontSize: 22,
       fontWeight: '700',
       color: '#0F172A',
       letterSpacing: -0.3,
+    },
+    reportButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 5,
+      backgroundColor: RED_LIGHT,
+      borderRadius: 10,
+      borderWidth: 1,
+      borderColor: '#FECACA',
+      paddingHorizontal: 10,
+      paddingVertical: 7,
+    },
+    reportButtonText: {
+      fontSize: 12,
+      fontWeight: '700',
+      color: RED,
     },
     itemDivider: {
       height: 1,
