@@ -1,9 +1,18 @@
 import React, { useEffect, useState } from 'react';
-import { Image, StyleSheet, Text, TouchableOpacity, View, ActivityIndicator, ScrollView } from 'react-native';
+import {
+  ActivityIndicator,
+  Image,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { openHelpDeskWhatsApp } from '../utils/helpDeskWhatsApp';
 
 export default function ProfileScreen({ onLogout }) {
   const insets = useSafeAreaInsets();
@@ -42,6 +51,11 @@ export default function ProfileScreen({ onLogout }) {
     if (onLogout) {
       onLogout();
     }
+  };
+
+  const handleHelpDesk = () => {
+    const idLine = profile.employeeId ? ` Employee ID: ${profile.employeeId}.` : '';
+    openHelpDeskWhatsApp(`Hi Woosh team, I need help.${idLine}`);
   };
 
   if (loading) {
@@ -84,11 +98,21 @@ export default function ProfileScreen({ onLogout }) {
             icon="badge-account-horizontal-outline"
             label="Employee ID"
             value={profile.employeeId || 'N/A'}
+            showChevron={false}
           />
           <Divider />
-          <ListRow icon="account-outline" label="Name" value={profile.name || 'N/A'} />
+          <ListRow icon="account-outline" label="Name" value={profile.name || 'N/A'} showChevron={false} />
           <Divider />
-          <ListRow icon="phone-outline" label="Phone" value={profile.phone || 'N/A'} />
+          <ListRow icon="phone-outline" label="Phone" value={profile.phone || 'N/A'} showChevron={false} />
+        </View>
+
+        <View style={styles.supportList}>
+          <ListRow
+            icon="headset"
+            label="Help Desk"
+            value="Chat with us on WhatsApp"
+            onPress={handleHelpDesk}
+          />
         </View>
       </ScrollView>
 
@@ -186,6 +210,17 @@ const styles = StyleSheet.create({
   },
   list: {
     marginTop: 12,
+    borderRadius: 14,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  supportList: {
+    marginTop: 14,
+    borderRadius: 14,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
   },
   divider: {
     height: 1,
