@@ -2,7 +2,6 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
-  Image,
   Platform,
   ScrollView,
   StyleSheet,
@@ -15,12 +14,18 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import api from '../services/api';
+import ServicePhotoGrid from '../components/ServicePhotoGrid';
 import { uploadOrderPhotos } from '../services/orderPhotosApi';
-import { resolveUploadUrl } from '../utils/resolveUploadUrl';
-const MAX_BEFORE_PHOTOS = 3;
+import {
+  countFilledSlots,
+  emptyPhotoSlots,
+  hasRequiredPhotos,
+  normalizePhotoSlots,
+  PHOTO_SLOTS,
+} from '../utils/servicePhotoSlots';
+
 const BLUE = '#2563EB';
 const BLUE_LIGHT = '#EFF6FF';
-const BLUE_BORDER = '#BFDBFE';
 
 const cardShadow = Platform.select({
   ios: {
@@ -39,8 +44,8 @@ export default function BeforePhotosScreen({ navigation, route, employeeId: empl
   const employeeId = route?.params?.employeeId ?? employeeIdProp;
 
   const [loading, setLoading] = useState(true);
-  const [beforePhotos, setBeforePhotos] = useState([]);
-  const [uploading, setUploading] = useState(false);
+  const [beforePhotos, setBeforePhotos] = useState(emptyPhotoSlots);
+  const [uploadingSlot, setUploadingSlot] = useState(null);
   const [orderStatus, setOrderStatus] = useState(null);
 
   const loadOrder = useCallback(async () => {
@@ -53,7 +58,7 @@ export default function BeforePhotosScreen({ navigation, route, employeeId: empl
       const res = await api.get(url);
       const data = res.data?.data;
       if (data) {
-        setBeforePhotos(data.servicePhotos?.beforePhotos || []);
+        setBeforePhotos(normalizePhotoSlots(data.servicePhotos?.beforePhotos));
         setOrderStatus(data.status);
       }
     } catch (error) {
@@ -67,11 +72,7 @@ export default function BeforePhotosScreen({ navigation, route, employeeId: empl
     loadOrder();
   }, [loadOrder]);
 
-  const pickAndUpload = async () => {
-    if (beforePhotos.length >= MAX_BEFORE_PHOTOS) {
-      Alert.alert('Limit reached', `You can upload up to ${MAX_BEFORE_PHOTOS} before photos.`);
-      return;
-    }
+  const pickAndUpload = async (slotKey) => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
       Alert.alert('Permission needed', 'Please allow access to photos to upload.');
@@ -79,29 +80,29 @@ export default function BeforePhotosScreen({ navigation, route, employeeId: empl
     }
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images'],
-      allowsMultipleSelection: true,
-      selectionLimit: MAX_BEFORE_PHOTOS - beforePhotos.length,
+      allowsMultipleSelection: false,
       quality: 0.8,
     });
-    if (result.canceled || !result.assets?.length) return;
+    if (result.canceled || !result.assets?.[0]) return;
 
-    setUploading(true);
+    setUploadingSlot(slotKey);
     try {
       const data = await uploadOrderPhotos({
         orderId,
         employeeId,
         type: 'before',
+        slot: slotKey,
         assets: result.assets,
       });
       const updated = data.data?.servicePhotos;
       if (updated) {
-        setBeforePhotos(updated.beforePhotos || []);
+        setBeforePhotos(normalizePhotoSlots(updated.beforePhotos));
       }
     } catch (e) {
       console.error('Before photo upload error:', e);
-      Alert.alert('Upload failed', e.message || 'Could not upload photos.');
+      Alert.alert('Upload failed', e.message || 'Could not upload photo.');
     } finally {
-      setUploading(false);
+      setUploadingSlot(null);
     }
   };
 
@@ -110,15 +111,15 @@ export default function BeforePhotosScreen({ navigation, route, employeeId: empl
       navigation.navigate('StartService', { orderId, employeeId });
       return;
     }
-    if (beforePhotos.length < 1) {
-      Alert.alert('Photos required', 'Upload at least one before photo to continue.');
+    if (!hasRequiredPhotos(beforePhotos)) {
+      Alert.alert('Photo required', 'Upload the front before photo to continue.');
       return;
     }
     navigation.navigate('StartService', { orderId, employeeId });
   };
 
-  const canContinue = orderStatus === 'In Progress' || beforePhotos.length >= 1;
-  const slots = Array.from({ length: MAX_BEFORE_PHOTOS }, (_, i) => beforePhotos[i] || null);
+  const filledCount = countFilledSlots(beforePhotos);
+  const canContinue = orderStatus === 'In Progress' || hasRequiredPhotos(beforePhotos);
 
   return (
     <View style={[styles.container, { paddingTop: 12 + insets.top }]}>
@@ -144,74 +145,19 @@ export default function BeforePhotosScreen({ navigation, route, employeeId: empl
             contentContainerStyle={[styles.scrollContent, { paddingBottom: 130 + insets.bottom }]}
             showsVerticalScrollIndicator={false}
           >
-            <View style={styles.introCard}>
-              <MaterialCommunityIcons name="camera-outline" size={22} color={BLUE} />
-              <View style={styles.introText}>
-                <Text style={styles.introTitle}>Capture the vehicle before service</Text>
-                <Text style={styles.introHint}>
-                  Upload up to {MAX_BEFORE_PHOTOS} clear photos, then start the service with the
-                  customer's code.
-                </Text>
-              </View>
-            </View>
-
+            <Text style={styles.hint}>
+              Add up to {PHOTO_SLOTS.length} photos. Front is required.
+            </Text>
             <Text style={styles.counter}>
-              {beforePhotos.length} / {MAX_BEFORE_PHOTOS} uploaded
+              {filledCount} / {PHOTO_SLOTS.length} uploaded
             </Text>
 
-            <View style={styles.photoGrid}>
-              {slots.map((uri, index) => (
-                <TouchableOpacity
-                  key={`slot-${index}`}
-                  style={styles.photoSlot}
-                  onPress={pickAndUpload}
-                  disabled={uploading || Boolean(uri)}
-                  activeOpacity={uri ? 1 : 0.85}
-                >
-                  {uri ? (
-                    <Image
-                      source={{ uri: resolveUploadUrl(uri) }}
-                      style={styles.photoImage}
-                      resizeMode="cover"
-                    />
-                  ) : (
-                    <View style={styles.photoPlaceholder}>
-                      {uploading && index === beforePhotos.length ? (
-                        <ActivityIndicator color={BLUE} />
-                      ) : (
-                        <>
-                          <MaterialCommunityIcons
-                            name="camera-plus-outline"
-                            size={28}
-                            color="#94A3B8"
-                          />
-                          <Text style={styles.photoPlaceholderText}>
-                            {index === 0 ? 'Required' : 'Add photo'}
-                          </Text>
-                        </>
-                      )}
-                    </View>
-                  )}
-                  <View style={styles.photoLabel}>
-                    <Text style={styles.photoLabelText}>Photo {index + 1}</Text>
-                  </View>
-                </TouchableOpacity>
-              ))}
-            </View>
-
-            {beforePhotos.length < MAX_BEFORE_PHOTOS ? (
-              <TouchableOpacity
-                style={[styles.addButton, uploading && styles.addButtonDisabled]}
-                onPress={pickAndUpload}
-                disabled={uploading}
-                activeOpacity={0.85}
-              >
-                <MaterialCommunityIcons name="image-plus" size={20} color={BLUE} />
-                <Text style={styles.addButtonText}>
-                  {uploading ? 'Uploading...' : 'Add photos'}
-                </Text>
-              </TouchableOpacity>
-            ) : null}
+            <ServicePhotoGrid
+              photos={beforePhotos}
+              uploadingSlot={uploadingSlot}
+              onSlotPress={pickAndUpload}
+              disabled={Boolean(uploadingSlot)}
+            />
           </ScrollView>
 
           <View style={[styles.footer, { paddingBottom: 14 + insets.bottom }]}>
@@ -284,104 +230,18 @@ const createStyles = () =>
     },
     scrollContent: {
       paddingHorizontal: 16,
-      gap: 14,
+      gap: 10,
     },
-    introCard: {
-      flexDirection: 'row',
-      gap: 12,
-      backgroundColor: '#FFFFFF',
-      borderRadius: 18,
-      borderWidth: 1,
-      borderColor: '#E8EDF3',
-      padding: 16,
-      ...cardShadow,
-    },
-    introText: {
-      flex: 1,
-      gap: 4,
-    },
-    introTitle: {
-      fontSize: 15,
-      fontWeight: '700',
-      color: '#0F172A',
-    },
-    introHint: {
+    hint: {
       fontSize: 13,
       color: '#64748B',
       lineHeight: 18,
     },
     counter: {
-      fontSize: 13,
+      fontSize: 12,
       fontWeight: '600',
-      color: '#64748B',
-    },
-    photoGrid: {
-      flexDirection: 'row',
-      flexWrap: 'wrap',
-      gap: 10,
-    },
-    photoSlot: {
-      width: '31%',
-      aspectRatio: 0.85,
-      borderRadius: 14,
-      overflow: 'hidden',
-      backgroundColor: '#E2E8F0',
-      position: 'relative',
-    },
-    photoImage: {
-      width: '100%',
-      height: '100%',
-    },
-    photoPlaceholder: {
-      flex: 1,
-      alignItems: 'center',
-      justifyContent: 'center',
-      gap: 6,
-      backgroundColor: '#F8FAFC',
-      borderWidth: 1.5,
-      borderColor: '#E2E8F0',
-      borderStyle: 'dashed',
-      borderRadius: 14,
-      padding: 8,
-    },
-    photoPlaceholderText: {
-      fontSize: 10,
       color: '#94A3B8',
-      fontWeight: '600',
-      textAlign: 'center',
-    },
-    photoLabel: {
-      position: 'absolute',
-      top: 6,
-      left: 6,
-      backgroundColor: 'rgba(15, 23, 42, 0.65)',
-      borderRadius: 6,
-      paddingHorizontal: 6,
-      paddingVertical: 2,
-    },
-    photoLabelText: {
-      color: '#FFFFFF',
-      fontSize: 9,
-      fontWeight: '600',
-    },
-    addButton: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'center',
-      gap: 8,
-      backgroundColor: BLUE_LIGHT,
-      borderRadius: 14,
-      borderWidth: 1.5,
-      borderColor: BLUE_BORDER,
-      paddingVertical: 14,
-    },
-    addButtonDisabled: {
-      opacity: 0.6,
-    },
-    addButtonText: {
-      fontSize: 14,
-      fontWeight: '600',
-      color: BLUE,
+      marginBottom: 4,
     },
     footer: {
       position: 'absolute',
@@ -402,15 +262,7 @@ const createStyles = () =>
       backgroundColor: BLUE,
       borderRadius: 16,
       paddingVertical: 17,
-      ...Platform.select({
-        ios: {
-          shadowColor: BLUE,
-          shadowOffset: { width: 0, height: 4 },
-          shadowOpacity: 0.3,
-          shadowRadius: 8,
-        },
-        android: { elevation: 4 },
-      }),
+      ...cardShadow,
     },
     startButtonDisabled: {
       opacity: 0.5,

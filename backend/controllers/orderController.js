@@ -22,6 +22,36 @@ import path from 'path';
 
 const TAX_RATE = 0.18;
 
+const PHOTO_SLOT_KEYS = ['front', 'right', 'left', 'back', 'damages1', 'damages2'];
+
+function emptyPhotoSlots() {
+  return Object.fromEntries(PHOTO_SLOT_KEYS.map((key) => [key, '']));
+}
+
+function normalizePhotoSlots(value) {
+  if (!value) return emptyPhotoSlots();
+  if (Array.isArray(value)) {
+    const out = emptyPhotoSlots();
+    value.forEach((url, index) => {
+      const key = PHOTO_SLOT_KEYS[index];
+      if (key && url) out[key] = String(url);
+    });
+    return out;
+  }
+  if (typeof value === 'object') {
+    const out = emptyPhotoSlots();
+    for (const key of PHOTO_SLOT_KEYS) {
+      if (value[key]) out[key] = String(value[key]);
+    }
+    return out;
+  }
+  return emptyPhotoSlots();
+}
+
+function hasRequiredServicePhotos(value) {
+  return Boolean(normalizePhotoSlots(value).front);
+}
+
 function safeImageExt(originalname, mimetype) {
   let ext = path.extname(originalname || '');
   if (!ext && mimetype) {
@@ -672,12 +702,13 @@ export const updateOrderStatus = async (req, res) => {
       }
 
       if (employeeId) {
-        const beforeCount = order.servicePhotos?.beforePhotos?.length || 0;
-        const afterCount = order.servicePhotos?.afterPhotos?.length || 0;
-        if (beforeCount < 1 || afterCount < 1) {
+        if (
+          !hasRequiredServicePhotos(order.servicePhotos?.beforePhotos) ||
+          !hasRequiredServicePhotos(order.servicePhotos?.afterPhotos)
+        ) {
           return res.status(400).json({
             success: false,
-            message: 'Upload at least one before and one after photo before completing.',
+            message: 'Upload front before and front after photos before completing.',
           });
         }
         if (!req.body.paymentReceived) {
@@ -884,11 +915,19 @@ export const uploadOrderPhotos = async (req, res) => {
     const employeeId = req.query.employeeId;
     const userId = req.user?._id;
     const type = (req.body?.type || '').toLowerCase();
+    const slot = (req.body?.slot || '').trim().toLowerCase();
 
     if (type !== 'before' && type !== 'after') {
       return res.status(400).json({
         success: false,
-        message: 'Query param type must be "before" or "after"',
+        message: 'Body field type must be "before" or "after"',
+      });
+    }
+
+    if (!PHOTO_SLOT_KEYS.includes(slot)) {
+      return res.status(400).json({
+        success: false,
+        message: `Invalid slot. Use one of: ${PHOTO_SLOT_KEYS.join(', ')}`,
       });
     }
 
@@ -920,34 +959,34 @@ export const uploadOrderPhotos = async (req, res) => {
       });
     }
 
-    const urls = [];
-    for (const file of files) {
-      if (isR2Configured()) {
-        const ext = safeImageExt(file.originalname, file.mimetype);
-        const filename = `order-${String(orderId).slice(-6)}-${Date.now()}-${randomSuffix()}${ext}`;
-        const key = `order-photos/${filename}`;
-        if (!file.buffer) {
-          return res.status(500).json({
-            success: false,
-            message: 'Upload buffer missing (R2 mode)',
-          });
-        }
-        const url = await uploadObjectToR2({
-          key,
-          body: file.buffer,
-          contentType: file.mimetype || 'image/jpeg',
+    const file = files[0];
+    let url;
+    if (isR2Configured()) {
+      const ext = safeImageExt(file.originalname, file.mimetype);
+      const filename = `order-${String(orderId).slice(-6)}-${type}-${slot}-${Date.now()}-${randomSuffix()}${ext}`;
+      const key = `order-photos/${filename}`;
+      if (!file.buffer) {
+        return res.status(500).json({
+          success: false,
+          message: 'Upload buffer missing (R2 mode)',
         });
-        urls.push(url);
-      } else {
-        urls.push(`/uploads/order-photos/${file.filename}`);
       }
+      url = await uploadObjectToR2({
+        key,
+        body: file.buffer,
+        contentType: file.mimetype || 'image/jpeg',
+      });
+    } else {
+      url = `/uploads/order-photos/${file.filename}`;
     }
 
-    const field = type === 'before' ? 'servicePhotos.beforePhotos' : 'servicePhotos.afterPhotos';
-    const existing = (order.servicePhotos && (type === 'before' ? order.servicePhotos.beforePhotos : order.servicePhotos.afterPhotos)) || [];
-    const combined = [...existing, ...urls].slice(-4);
+    const field = type === 'before' ? 'beforePhotos' : 'afterPhotos';
+    const existing = normalizePhotoSlots(order.servicePhotos?.[field]);
+    existing[slot] = url;
 
-    await Order.findByIdAndUpdate(orderId, { [field]: combined });
+    await Order.findByIdAndUpdate(orderId, {
+      [`servicePhotos.${field}`]: existing,
+    });
 
     const updated = await Order.findById(orderId)
       .populate('items.service', 'name category')
@@ -956,7 +995,8 @@ export const uploadOrderPhotos = async (req, res) => {
     res.status(200).json({
       success: true,
       data: updated,
-      uploaded: urls.length,
+      uploaded: 1,
+      slot,
     });
   } catch (error) {
     console.error('Error uploading order photos:', error);

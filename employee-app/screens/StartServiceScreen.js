@@ -2,7 +2,6 @@ import React, { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
-  Image,
   Linking,
   Platform,
   ScrollView,
@@ -18,10 +17,17 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { API_BASE_URL } from '../config/api';
 import api from '../services/api';
+import ServicePhotoGrid from '../components/ServicePhotoGrid';
 import { uploadOrderPhotos } from '../services/orderPhotosApi';
 import { stopEmployeeLocationSharing } from '../locationTask';
 import { getScheduledTimeSlot } from '../utils/jobBookingHelpers';
-import { resolveUploadUrl } from '../utils/resolveUploadUrl';
+import {
+  countFilledSlots,
+  emptyPhotoSlots,
+  hasRequiredPhotos,
+  normalizePhotoSlots,
+  PHOTO_SLOTS,
+} from '../utils/servicePhotoSlots';
 const BLUE = '#2563EB';
 const BLUE_LIGHT = '#EFF6FF';
 const BLUE_BORDER = '#BFDBFE';
@@ -119,9 +125,9 @@ export default function StartServiceScreen({ navigation, route }) {
   const [codeInput, setCodeInput] = useState('');
   const [loadingVerify, setLoadingVerify] = useState(false);
   const [codeError, setCodeError] = useState('');
-  const [beforePhotos, setBeforePhotos] = useState([]);
-  const [afterPhotos, setAfterPhotos] = useState([]);
-  const [uploadingAfter, setUploadingAfter] = useState(false);
+  const [beforePhotos, setBeforePhotos] = useState(emptyPhotoSlots);
+  const [afterPhotos, setAfterPhotos] = useState(emptyPhotoSlots);
+  const [uploadingAfterSlot, setUploadingAfterSlot] = useState(null);
   const [startedAt, setStartedAt] = useState(null);
   const [now, setNow] = useState(Date.now());
   const [checkedChecklist, setCheckedChecklist] = useState({});
@@ -133,8 +139,8 @@ export default function StartServiceScreen({ navigation, route }) {
   const applyOrderData = (data) => {
     setOrder(data);
     setOrderStatus(data.status);
-    setBeforePhotos(data.servicePhotos?.beforePhotos || []);
-    setAfterPhotos(data.servicePhotos?.afterPhotos || []);
+    setBeforePhotos(normalizePhotoSlots(data.servicePhotos?.beforePhotos));
+    setAfterPhotos(normalizePhotoSlots(data.servicePhotos?.afterPhotos));
     const lat = data.customer?.latitude;
     const lng = data.customer?.longitude;
     if (typeof lat === 'number' && typeof lng === 'number') {
@@ -177,11 +183,11 @@ export default function StartServiceScreen({ navigation, route }) {
   useEffect(() => {
     if (loading || orderInProgress || !orderId) return;
     if (orderStatus && !['In Progress', 'Completed', 'Cancelled'].includes(orderStatus)) {
-      if (beforePhotos.length < 1) {
+      if (!hasRequiredPhotos(beforePhotos)) {
         navigation.replace('BeforePhotos', { orderId, employeeId });
       }
     }
-  }, [loading, orderInProgress, orderId, employeeId, orderStatus, beforePhotos.length, navigation]);
+  }, [loading, orderInProgress, orderId, employeeId, orderStatus, beforePhotos, navigation]);
 
   const handleVerifyCode = async () => {
     const code = codeInput.replace(/\D/g, '').slice(0, 6);
@@ -218,11 +224,7 @@ export default function StartServiceScreen({ navigation, route }) {
     }
   };
 
-  const pickAndUploadAfterPhotos = async () => {
-    if (afterPhotos.length >= 4) {
-      Alert.alert('Limit reached', 'You can upload up to 4 after photos.');
-      return;
-    }
+  const pickAndUploadAfterPhoto = async (slotKey) => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
       Alert.alert('Permission needed', 'Please allow access to photos to upload.');
@@ -230,29 +232,29 @@ export default function StartServiceScreen({ navigation, route }) {
     }
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images'],
-      allowsMultipleSelection: true,
-      selectionLimit: 4 - afterPhotos.length,
+      allowsMultipleSelection: false,
       quality: 0.8,
     });
-    if (result.canceled || !result.assets?.length) return;
+    if (result.canceled || !result.assets?.[0]) return;
 
-    setUploadingAfter(true);
+    setUploadingAfterSlot(slotKey);
     try {
       const data = await uploadOrderPhotos({
         orderId,
         employeeId,
         type: 'after',
+        slot: slotKey,
         assets: result.assets,
       });
       const updated = data.data?.servicePhotos;
       if (updated) {
-        setAfterPhotos(updated.afterPhotos || []);
+        setAfterPhotos(normalizePhotoSlots(updated.afterPhotos));
       }
     } catch (e) {
       console.error('Photo upload error:', e);
-      Alert.alert('Upload failed', e.message || 'Could not upload photos.');
+      Alert.alert('Upload failed', e.message || 'Could not upload photo.');
     } finally {
-      setUploadingAfter(false);
+      setUploadingAfterSlot(null);
     }
   };
 
@@ -327,8 +329,8 @@ export default function StartServiceScreen({ navigation, route }) {
 
   const canSubmit =
     orderInProgress &&
-    beforePhotos.length >= 1 &&
-    afterPhotos.length >= 1 &&
+    hasRequiredPhotos(beforePhotos) &&
+    hasRequiredPhotos(afterPhotos) &&
     checklistComplete;
 
   const serviceName = item?.service?.name || item?.serviceName || 'Service';
@@ -346,9 +348,9 @@ export default function StartServiceScreen({ navigation, route }) {
   const completedLabel = formatTimeLabel(now);
   const durationLabel = formatDurationMins(startedAt, now);
 
-  const photosReady = afterPhotos.length >= 1;
+  const afterFilledCount = countFilledSlots(afterPhotos);
+  const photosReady = hasRequiredPhotos(afterPhotos);
   const allTasksReady = photosReady && checklistComplete;
-  const afterUri = afterPhotos[0] ? resolveUploadUrl(afterPhotos[0]) : null;
 
   const toggleChecklistItem = (index) => {
     setCheckedChecklist((prev) => ({ ...prev, [index]: !prev[index] }));
@@ -507,36 +509,22 @@ export default function StartServiceScreen({ navigation, route }) {
             </View>
 
             {/* After Photos */}
-            <Text style={styles.blockTitle}>After Photos</Text>
+            <View style={styles.photoSectionHeader}>
+              <Text style={styles.blockTitle}>After Photos</Text>
+              <Text style={styles.photoCounter}>
+                {afterFilledCount} / {PHOTO_SLOTS.length}
+              </Text>
+            </View>
             <Text style={styles.photoSectionHint}>
-              {beforePhotos.length} before photo{beforePhotos.length === 1 ? '' : 's'} already uploaded
+              {countFilledSlots(beforePhotos)} before photo
+              {countFilledSlots(beforePhotos) === 1 ? '' : 's'} uploaded · Front required
             </Text>
-            <TouchableOpacity
-              style={styles.afterPhotoSlot}
-              onPress={pickAndUploadAfterPhotos}
-              disabled={uploadingAfter}
-              activeOpacity={0.85}
-            >
-              {afterUri ? (
-                <Image source={{ uri: afterUri }} style={styles.afterPhotoImage} resizeMode="cover" />
-              ) : (
-                <View style={styles.photoPlaceholder}>
-                  {uploadingAfter ? (
-                    <ActivityIndicator color={BLUE} />
-                  ) : (
-                    <>
-                      <MaterialCommunityIcons name="camera-plus-outline" size={28} color="#94A3B8" />
-                      <Text style={styles.photoPlaceholderText}>Tap to upload after photos</Text>
-                    </>
-                  )}
-                </View>
-              )}
-              <View style={styles.photoLabel}>
-                <Text style={styles.photoLabelText}>
-                  After {afterPhotos.length > 0 ? `(${afterPhotos.length})` : ''}
-                </Text>
-              </View>
-            </TouchableOpacity>
+            <ServicePhotoGrid
+              photos={afterPhotos}
+              uploadingSlot={uploadingAfterSlot}
+              onSlotPress={pickAndUploadAfterPhoto}
+              disabled={Boolean(uploadingAfterSlot)}
+            />
 
             {coverageItems.length > 0 ? (
               <>
@@ -651,7 +639,7 @@ export default function StartServiceScreen({ navigation, route }) {
               <Text style={styles.footerRequirement}>
                 {!checklistComplete
                   ? 'Complete all checklist items before finishing the job.'
-                  : 'Add at least one after photo to complete the job.'}
+                  : 'Upload the front after photo to complete the job.'}
               </Text>
             ) : null}
           </View>
@@ -903,47 +891,16 @@ const createStyles = () =>
       color: '#64748B',
       textDecorationLine: 'line-through',
     },
-    afterPhotoSlot: {
-      width: '100%',
-      aspectRatio: 1.6,
-      borderRadius: 14,
-      overflow: 'hidden',
-      backgroundColor: '#E2E8F0',
-      position: 'relative',
-    },
-    afterPhotoImage: {
-      width: '100%',
-      height: '100%',
-    },
-    photoPlaceholder: {
-      flex: 1,
+    photoSectionHeader: {
+      flexDirection: 'row',
       alignItems: 'center',
-      justifyContent: 'center',
-      gap: 8,
-      backgroundColor: '#F8FAFC',
-      borderWidth: 1.5,
-      borderColor: '#E2E8F0',
-      borderStyle: 'dashed',
-      borderRadius: 14,
+      justifyContent: 'space-between',
+      marginBottom: -6,
     },
-    photoPlaceholderText: {
-      fontSize: 11,
-      color: '#94A3B8',
-      fontWeight: '500',
-    },
-    photoLabel: {
-      position: 'absolute',
-      top: 8,
-      left: 8,
-      backgroundColor: 'rgba(15, 23, 42, 0.65)',
-      borderRadius: 6,
-      paddingHorizontal: 8,
-      paddingVertical: 3,
-    },
-    photoLabelText: {
-      color: '#FFFFFF',
-      fontSize: 11,
+    photoCounter: {
+      fontSize: 12,
       fontWeight: '600',
+      color: '#64748B',
     },
     detailRow: {
       flexDirection: 'row',

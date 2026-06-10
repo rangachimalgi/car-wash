@@ -3061,10 +3061,15 @@
 }
 
 .order-photo-link {
-  display: block;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.15rem;
   border-radius: 6px;
   overflow: hidden;
   border: 1px solid #e2e8f0;
+  padding-bottom: 0.2rem;
+  text-decoration: none;
 }
 
 .order-photo-thumb {
@@ -3072,6 +3077,14 @@
   height: 48px;
   object-fit: cover;
   display: block;
+}
+
+.order-photo-slot-label {
+  font-size: 0.6rem;
+  color: #64748b;
+  padding: 0 0.2rem;
+  text-align: center;
+  line-height: 1.1;
 }
 
 .order-card-actions {

@@ -6032,35 +6032,67 @@ function App() {
                         </div>
                       )}
 
-                      {((selectedOrder.servicePhotos?.beforePhotos?.length) || (selectedOrder.servicePhotos?.afterPhotos?.length)) > 0 && (
-                        <div className="order-photos-section">
-                          <span className="detail-label">Service photos</span>
-                          {selectedOrder.servicePhotos?.beforePhotos?.length > 0 && (
-                            <div className="order-photos-row">
-                              <span className="order-photos-label">Before:</span>
-                              <div className="order-photos-thumbs">
-                                {selectedOrder.servicePhotos.beforePhotos.map((url, i) => (
-                                  <a key={`before-${i}`} href={resolveUploadOrAbsoluteUrl(url)} target="_blank" rel="noopener noreferrer" className="order-photo-link">
-                                    <img src={resolveUploadOrAbsoluteUrl(url)} alt={`Before ${i + 1}`} className="order-photo-thumb" />
+                      {(() => {
+                        const photoSlotLabels = [
+                          ['front', 'Front'],
+                          ['right', 'Right side'],
+                          ['left', 'Left side'],
+                          ['back', 'Back side'],
+                          ['damages1', 'Damages 1'],
+                          ['damages2', 'Damages 2'],
+                        ]
+                        const normalizeSlots = (value) => {
+                          if (!value) return {}
+                          if (Array.isArray(value)) {
+                            return Object.fromEntries(
+                              photoSlotLabels
+                                .map(([key], i) => [key, value[i] || ''])
+                                .filter(([, url]) => url)
+                            )
+                          }
+                          return typeof value === 'object' ? value : {}
+                        }
+                        const beforeSlots = normalizeSlots(selectedOrder.servicePhotos?.beforePhotos)
+                        const afterSlots = normalizeSlots(selectedOrder.servicePhotos?.afterPhotos)
+                        const renderSlotRow = (prefix, slots) => (
+                          <div className="order-photos-row">
+                            <span className="order-photos-label">{prefix}:</span>
+                            <div className="order-photos-thumbs">
+                              {photoSlotLabels.map(([key, label]) => {
+                                const url = slots[key]
+                                if (!url) return null
+                                return (
+                                  <a
+                                    key={`${prefix}-${key}`}
+                                    href={resolveUploadOrAbsoluteUrl(url)}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="order-photo-link"
+                                    title={label}
+                                  >
+                                    <img
+                                      src={resolveUploadOrAbsoluteUrl(url)}
+                                      alt={`${prefix} ${label}`}
+                                      className="order-photo-thumb"
+                                    />
+                                    <span className="order-photo-slot-label">{label}</span>
                                   </a>
-                                ))}
-                              </div>
+                                )
+                              })}
                             </div>
-                          )}
-                          {selectedOrder.servicePhotos?.afterPhotos?.length > 0 && (
-                            <div className="order-photos-row">
-                              <span className="order-photos-label">After:</span>
-                              <div className="order-photos-thumbs">
-                                {selectedOrder.servicePhotos.afterPhotos.map((url, i) => (
-                                  <a key={`after-${i}`} href={resolveUploadOrAbsoluteUrl(url)} target="_blank" rel="noopener noreferrer" className="order-photo-link">
-                                    <img src={resolveUploadOrAbsoluteUrl(url)} alt={`After ${i + 1}`} className="order-photo-thumb" />
-                                  </a>
-                                ))}
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      )}
+                          </div>
+                        )
+                        const hasBefore = Object.keys(beforeSlots).length > 0
+                        const hasAfter = Object.keys(afterSlots).length > 0
+                        if (!hasBefore && !hasAfter) return null
+                        return (
+                          <div className="order-photos-section">
+                            <span className="detail-label">Service photos</span>
+                            {hasBefore ? renderSlotRow('Before', beforeSlots) : null}
+                            {hasAfter ? renderSlotRow('After', afterSlots) : null}
+                          </div>
+                        )
+                      })()}
 
                       <div className="order-card-actions">
                         <button
