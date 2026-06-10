@@ -8,8 +8,10 @@ export default function JobBookingRow({
   onPress,
   badgeText,
   showPrice = false,
+  theme,
 }) {
   const badge = badgeText ?? booking.statusLabel ?? booking.dateLabel;
+  const accent = theme?.accent || '#2563EB';
 
   return (
     <TouchableOpacity
@@ -18,8 +20,8 @@ export default function JobBookingRow({
       activeOpacity={onPress ? 0.88 : 1}
       disabled={!onPress}
     >
-      <View style={styles.iconWrap}>
-        <MaterialCommunityIcons name={booking.icon} size={22} color="#FFFFFF" />
+      <View style={[styles.iconWrap, { backgroundColor: theme?.pillBg || '#EFF6FF' }]}>
+        <MaterialCommunityIcons name={booking.icon} size={16} color={accent} />
       </View>
 
       <View style={styles.body}>
@@ -32,21 +34,21 @@ export default function JobBookingRow({
           </Text>
         ) : null}
         <View style={styles.metaRow}>
-          <MaterialCommunityIcons name="clock-outline" size={14} color="#9CA3AF" />
+          <MaterialCommunityIcons name="clock-outline" size={12} color="#94A3B8" />
           <Text style={styles.meta} numberOfLines={1}>
             {booking.time}
           </Text>
         </View>
         {booking.dateFormatted ? (
           <View style={styles.metaRow}>
-            <MaterialCommunityIcons name="calendar-outline" size={14} color="#9CA3AF" />
+            <MaterialCommunityIcons name="calendar-outline" size={12} color="#94A3B8" />
             <Text style={styles.meta} numberOfLines={1}>
               {booking.dateFormatted}
             </Text>
           </View>
         ) : null}
         <View style={styles.metaRow}>
-          <MaterialCommunityIcons name="map-marker-outline" size={14} color="#9CA3AF" />
+          <MaterialCommunityIcons name="map-marker-outline" size={12} color="#94A3B8" />
           <Text style={styles.meta} numberOfLines={2}>
             {booking.location}
           </Text>
@@ -60,8 +62,18 @@ export default function JobBookingRow({
       </View>
 
       {badge ? (
-        <View style={styles.dateBadge}>
-          <Text style={styles.dateBadgeText}>{badge}</Text>
+        <View
+          style={[
+            styles.dateBadge,
+            {
+              backgroundColor: theme?.badgeBg || '#EFF6FF',
+              borderColor: theme?.badgeBorder || '#BFDBFE',
+            },
+          ]}
+        >
+          <Text style={[styles.dateBadgeText, { color: theme?.badgeText || '#1D4ED8' }]}>
+            {badge}
+          </Text>
         </View>
       ) : null}
     </TouchableOpacity>
@@ -71,78 +83,46 @@ export default function JobBookingRow({
 export const jobListStyles = StyleSheet.create({
   listGroup: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 18,
+    borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: '#E2E8F0',
     overflow: 'hidden',
   },
   listEmpty: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 18,
+    borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
-    padding: 24,
+    borderColor: '#E2E8F0',
+    padding: 16,
     alignItems: 'center',
   },
   listEmptyText: {
-    fontSize: 13,
-    color: '#9CA3AF',
+    fontSize: 12,
+    color: '#94A3B8',
     textAlign: 'center',
   },
   cardFooter: {
     borderTopWidth: 1,
-    borderTopColor: '#F3F4F6',
-    padding: 12,
-    gap: 8,
+    borderTopColor: '#F1F5F9',
+    paddingHorizontal: 10,
+    paddingVertical: 8,
   },
   actionRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 8,
+    gap: 6,
   },
-  btnPrimary: {
+  actionBtn: {
     flexGrow: 1,
     minWidth: '30%',
-    backgroundColor: '#1A1A1A',
-    borderRadius: 10,
-    paddingVertical: 10,
-    paddingHorizontal: 12,
+    borderRadius: 8,
+    paddingVertical: 7,
+    paddingHorizontal: 8,
     alignItems: 'center',
   },
-  btnPrimaryText: {
-    color: '#FFFFFF',
-    fontWeight: '700',
-    fontSize: 12,
-  },
-  btnOutline: {
-    flexGrow: 1,
-    minWidth: '30%',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: '#D1D5DB',
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    alignItems: 'center',
-  },
-  btnOutlineText: {
-    color: '#1A1A1A',
-    fontWeight: '700',
-    fontSize: 12,
-  },
-  btnMuted: {
-    flexGrow: 1,
-    minWidth: '30%',
-    backgroundColor: '#F3F4F6',
-    borderRadius: 10,
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    alignItems: 'center',
-  },
-  btnMutedText: {
-    color: '#6B7280',
-    fontWeight: '700',
-    fontSize: 12,
+  actionBtnText: {
+    fontWeight: '600',
+    fontSize: 11,
   },
 });
 
@@ -150,18 +130,17 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    padding: 14,
-    gap: 12,
+    padding: 12,
+    gap: 10,
   },
   rowBorder: {
     borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
+    borderBottomColor: '#F1F5F9',
   },
   iconWrap: {
-    width: 44,
-    height: 44,
-    borderRadius: 12,
-    backgroundColor: '#1A1A1A',
+    width: 34,
+    height: 34,
+    borderRadius: 9,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -171,10 +150,10 @@ const styles = StyleSheet.create({
     paddingRight: 4,
   },
   service: {
-    fontSize: 15,
-    fontWeight: '800',
-    color: '#1A1A1A',
-    marginBottom: 2,
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#0F172A',
+    marginBottom: 1,
   },
   orderNo: {
     fontSize: 11,
@@ -190,9 +169,9 @@ const styles = StyleSheet.create({
   },
   meta: {
     flex: 1,
-    fontSize: 12,
-    color: '#6B7280',
-    lineHeight: 16,
+    fontSize: 11,
+    color: '#64748B',
+    lineHeight: 15,
   },
   subMeta: {
     fontSize: 11,
@@ -200,23 +179,20 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   price: {
-    marginTop: 6,
-    fontSize: 14,
-    fontWeight: '800',
-    color: '#1A1A1A',
+    marginTop: 4,
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#0F172A',
   },
   dateBadge: {
     borderWidth: 1,
-    borderColor: '#D1D5DB',
-    backgroundColor: '#F9FAFB',
-    paddingHorizontal: 10,
-    paddingVertical: 6,
+    paddingHorizontal: 7,
+    paddingVertical: 3,
     borderRadius: 999,
     alignSelf: 'flex-start',
   },
   dateBadgeText: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: '#1A1A1A',
+    fontSize: 10,
+    fontWeight: '600',
   },
 });

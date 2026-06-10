@@ -290,7 +290,7 @@ export default function MaterialUsageScreen({ navigation, route, employeeId: emp
         <TouchableOpacity style={styles.headerBtn} onPress={() => navigation.goBack()}>
           <MaterialCommunityIcons name="arrow-left" size={24} color="#1A1A1A" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Material Details</Text>
+        <Text style={styles.headerTitle}>Product Details</Text>
         <View style={styles.headerBtn} />
       </View>
 
@@ -318,7 +318,7 @@ export default function MaterialUsageScreen({ navigation, route, employeeId: emp
           ) : null}
         </TouchableOpacity>
 
-        <Text style={[styles.sectionLabel, { marginTop: 18 }]}>Material</Text>
+        <Text style={[styles.sectionLabel, { marginTop: 18 }]}>Current Stock</Text>
         <TouchableOpacity
           style={[styles.selector, materialLocked && styles.selectorLocked]}
           onPress={() => !materialLocked && setMaterialPickerOpen(true)}
@@ -403,7 +403,7 @@ export default function MaterialUsageScreen({ navigation, route, employeeId: emp
 
         {fromJobComplete ? (
           <TouchableOpacity style={styles.doneBtn} onPress={finishFlow}>
-            <Text style={styles.doneBtnText}>Done — back to home</Text>
+            <Text style={styles.doneBtnText}>Done</Text>
           </TouchableOpacity>
         ) : null}
 

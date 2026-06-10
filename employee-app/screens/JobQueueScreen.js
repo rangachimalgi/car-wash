@@ -11,6 +11,7 @@ import {
 import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import api from '../services/api';
 import { useJobNotifications } from '../context/JobNotificationsContext';
 import JobBookingRow, { jobListStyles } from '../components/JobBookingRow';
@@ -18,6 +19,63 @@ import {
   mapOrderToBooking,
   sortBookingsByDate,
 } from '../utils/jobBookingHelpers';
+
+const BLUE = '#2563EB';
+const BLUE_LIGHT = '#EFF6FF';
+
+const SECTION_THEMES = {
+  assigned: {
+    accent: '#2563EB',
+    titleColor: '#1E40AF',
+    pillBg: '#EFF6FF',
+    pillText: '#3B82F6',
+    border: '#E2E8F0',
+    footerBorder: '#F1F5F9',
+    badgeBg: '#F8FAFC',
+    badgeBorder: '#E2E8F0',
+    badgeText: '#475569',
+    primaryBtn: '#2563EB',
+    outlineBorder: '#E2E8F0',
+    outlineBg: '#FFFFFF',
+    outlineText: '#475569',
+    mutedBg: '#F8FAFC',
+    mutedText: '#94A3B8',
+  },
+  inProgress: {
+    accent: '#D97706',
+    titleColor: '#B45309',
+    pillBg: '#FFFBEB',
+    pillText: '#D97706',
+    border: '#E2E8F0',
+    footerBorder: '#F1F5F9',
+    badgeBg: '#F8FAFC',
+    badgeBorder: '#E2E8F0',
+    badgeText: '#475569',
+    primaryBtn: '#D97706',
+    outlineBorder: '#E2E8F0',
+    outlineBg: '#FFFFFF',
+    outlineText: '#475569',
+    mutedBg: '#F8FAFC',
+    mutedText: '#94A3B8',
+  },
+  completed: {
+    accent: '#16A34A',
+    titleColor: '#15803D',
+    pillBg: '#F0FDF4',
+    pillText: '#16A34A',
+    border: '#E2E8F0',
+    footerBorder: '#F1F5F9',
+    badgeBg: '#F8FAFC',
+    badgeBorder: '#E2E8F0',
+    badgeText: '#475569',
+    primaryBtn: '#16A34A',
+    outlineBorder: '#E2E8F0',
+    outlineBg: '#FFFFFF',
+    outlineText: '#475569',
+    mutedBg: '#F8FAFC',
+    mutedText: '#94A3B8',
+  },
+};
 
 export default function JobQueueScreen({ employeeId, navigation }) {
   const insets = useSafeAreaInsets();
@@ -119,16 +177,26 @@ export default function JobQueueScreen({ employeeId, navigation }) {
         <RefreshControl
           refreshing={refreshing}
           onRefresh={onRefresh}
-          tintColor="#1A1A1A"
-          colors={['#1A1A1A']}
+          tintColor={BLUE}
+          colors={[BLUE]}
         />
       }
     >
       <StatusBar style="dark" />
-      <Text style={styles.title}>Job Queue</Text>
+      <View style={styles.headerRow}>
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => navigation.goBack()}
+          activeOpacity={0.8}
+        >
+          <MaterialCommunityIcons name="arrow-left" size={18} color={BLUE} />
+        </TouchableOpacity>
+        <Text style={styles.title}>Job Queue</Text>
+      </View>
 
       <JobSection
-        title="New Jobs"
+        title="Assigned"
+        theme={SECTION_THEMES.assigned}
         count={incomingBookings.length}
         loading={initialLoading}
         emptyText="No new jobs right now."
@@ -138,47 +206,49 @@ export default function JobQueueScreen({ employeeId, navigation }) {
           <View key={booking.id}>
             <JobBookingRow
               booking={booking}
+              theme={SECTION_THEMES.assigned}
               isLast
               showPrice
               onPress={() => openDetail(booking.id)}
             />
-            <View style={jobListStyles.cardFooter}>
-              <View style={jobListStyles.actionRow}>
-                <TouchableOpacity
-                  style={jobListStyles.btnMuted}
-                  onPress={() => handleDecline(booking.id)}
-                >
-                  <Text style={jobListStyles.btnMutedText}>Decline</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={jobListStyles.btnOutline}
-                  onPress={() => openDetail(booking.id)}
-                >
-                  <Text style={jobListStyles.btnOutlineText}>View Job</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={jobListStyles.btnOutline}
-                  onPress={() =>
-                    navigation?.navigate('UpsellPitch', { orderId: booking.id, employeeId })
-                  }
-                >
-                  <Text style={jobListStyles.btnOutlineText}>Add-ons</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={jobListStyles.btnPrimary}
-                  onPress={() => handleAccept(booking.id)}
-                >
-                  <Text style={jobListStyles.btnPrimaryText}>Accept</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-            {index < incomingBookings.length - 1 && <View style={styles.itemDivider} />}
+            <ActionFooter theme={SECTION_THEMES.assigned}>
+              <ActionButton
+                theme={SECTION_THEMES.assigned}
+                variant="muted"
+                label="Decline"
+                onPress={() => handleDecline(booking.id)}
+              />
+              <ActionButton
+                theme={SECTION_THEMES.assigned}
+                variant="outline"
+                label="View Job"
+                onPress={() => openDetail(booking.id)}
+              />
+              <ActionButton
+                theme={SECTION_THEMES.assigned}
+                variant="outline"
+                label="Add-ons"
+                onPress={() =>
+                  navigation?.navigate('UpsellPitch', { orderId: booking.id, employeeId })
+                }
+              />
+              <ActionButton
+                theme={SECTION_THEMES.assigned}
+                variant="primary"
+                label="Accept"
+                onPress={() => handleAccept(booking.id)}
+              />
+            </ActionFooter>
+            {index < incomingBookings.length - 1 && (
+              <View style={[styles.itemDivider, { backgroundColor: SECTION_THEMES.assigned.footerBorder }]} />
+            )}
           </View>
         ))}
       </JobSection>
 
       <JobSection
-        title="In Queue"
+        title="In Progress"
+        theme={SECTION_THEMES.inProgress}
         count={queueBookings.length}
         loading={initialLoading}
         emptyText="No jobs in queue."
@@ -188,43 +258,45 @@ export default function JobQueueScreen({ employeeId, navigation }) {
           <View key={booking.id}>
             <JobBookingRow
               booking={booking}
+              theme={SECTION_THEMES.inProgress}
               isLast
               showPrice
               onPress={() => openDetail(booking.id)}
             />
-            <View style={jobListStyles.cardFooter}>
-              <View style={jobListStyles.actionRow}>
-                <TouchableOpacity
-                  style={jobListStyles.btnOutline}
-                  onPress={() => openDetail(booking.id)}
-                >
-                  <Text style={jobListStyles.btnOutlineText}>View Job</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={jobListStyles.btnPrimary}
-                  onPress={() =>
-                    navigation?.navigate('BeforePhotos', { orderId: booking.id, employeeId })
-                  }
-                >
-                  <Text style={jobListStyles.btnPrimaryText}>Continue</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={jobListStyles.btnOutline}
-                  onPress={() =>
-                    navigation?.navigate('UpsellPitch', { orderId: booking.id, employeeId })
-                  }
-                >
-                  <Text style={jobListStyles.btnOutlineText}>Add-ons</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-            {index < queueBookings.length - 1 && <View style={styles.itemDivider} />}
+            <ActionFooter theme={SECTION_THEMES.inProgress}>
+              <ActionButton
+                theme={SECTION_THEMES.inProgress}
+                variant="outline"
+                label="View Job"
+                onPress={() => openDetail(booking.id)}
+              />
+              <ActionButton
+                theme={SECTION_THEMES.inProgress}
+                variant="primary"
+                label="Continue"
+                onPress={() =>
+                  navigation?.navigate('BeforePhotos', { orderId: booking.id, employeeId })
+                }
+              />
+              <ActionButton
+                theme={SECTION_THEMES.inProgress}
+                variant="outline"
+                label="Add-ons"
+                onPress={() =>
+                  navigation?.navigate('UpsellPitch', { orderId: booking.id, employeeId })
+                }
+              />
+            </ActionFooter>
+            {index < queueBookings.length - 1 && (
+              <View style={[styles.itemDivider, { backgroundColor: SECTION_THEMES.inProgress.footerBorder }]} />
+            )}
           </View>
         ))}
       </JobSection>
 
       <JobSection
-        title="History"
+        title="Completed"
+        theme={SECTION_THEMES.completed}
         count={historyBookings.length}
         loading={initialLoading}
         emptyText="No history yet."
@@ -234,6 +306,7 @@ export default function JobQueueScreen({ employeeId, navigation }) {
           <JobBookingRow
             key={booking.id}
             booking={booking}
+            theme={SECTION_THEMES.completed}
             isLast={index === historyBookings.length - 1}
             showPrice
             onPress={() => openDetail(booking.id)}
@@ -244,26 +317,72 @@ export default function JobQueueScreen({ employeeId, navigation }) {
   );
 }
 
-function JobSection({ title, count, loading, emptyText, isEmpty, children }) {
+function ActionFooter({ theme, children }) {
+  return (
+    <View style={[jobListStyles.cardFooter, { borderTopColor: theme.footerBorder }]}>
+      <View style={jobListStyles.actionRow}>{children}</View>
+    </View>
+  );
+}
+
+function ActionButton({ theme, variant, label, onPress }) {
+  const isPrimary = variant === 'primary';
+  const isMuted = variant === 'muted';
+
+  return (
+    <TouchableOpacity
+      style={[
+        jobListStyles.actionBtn,
+        isPrimary && { backgroundColor: theme.primaryBtn },
+        isMuted && { backgroundColor: theme.mutedBg },
+        variant === 'outline' && {
+          backgroundColor: theme.outlineBg,
+          borderWidth: 1,
+          borderColor: theme.outlineBorder,
+        },
+      ]}
+      onPress={onPress}
+      activeOpacity={0.85}
+    >
+      <Text
+        style={[
+          jobListStyles.actionBtnText,
+          isPrimary && { color: '#FFFFFF' },
+          isMuted && { color: theme.mutedText },
+          variant === 'outline' && { color: theme.outlineText },
+        ]}
+      >
+        {label}
+      </Text>
+    </TouchableOpacity>
+  );
+}
+
+function JobSection({ title, theme, count, loading, emptyText, isEmpty, children }) {
   return (
     <View style={sectionStyles.section}>
       <View style={sectionStyles.header}>
-        <Text style={sectionStyles.title}>{title}</Text>
-        <View style={sectionStyles.countPill}>
-          <Text style={sectionStyles.countText}>{count}</Text>
+        <View style={sectionStyles.titleRow}>
+          <View style={[sectionStyles.accentDot, { backgroundColor: theme.accent }]} />
+          <Text style={[sectionStyles.title, { color: theme.titleColor }]}>{title}</Text>
+        </View>
+        <View style={[sectionStyles.countPill, { backgroundColor: theme.pillBg }]}>
+          <Text style={[sectionStyles.countText, { color: theme.pillText }]}>{count}</Text>
         </View>
       </View>
 
       {loading && isEmpty ? (
-        <View style={jobListStyles.listEmpty}>
-          <ActivityIndicator size="small" color="#1A1A1A" />
+        <View style={[jobListStyles.listEmpty, { borderColor: theme.border }]}>
+          <ActivityIndicator size="small" color={theme.accent} />
         </View>
       ) : isEmpty ? (
-        <View style={jobListStyles.listEmpty}>
+        <View style={[jobListStyles.listEmpty, { borderColor: theme.border }]}>
           <Text style={jobListStyles.listEmptyText}>{emptyText}</Text>
         </View>
       ) : (
-        <View style={jobListStyles.listGroup}>{children}</View>
+        <View style={[jobListStyles.listGroup, { borderColor: theme.border }]}>
+          {children}
+        </View>
       )}
     </View>
   );
@@ -271,29 +390,37 @@ function JobSection({ title, count, loading, emptyText, isEmpty, children }) {
 
 const sectionStyles = StyleSheet.create({
   section: {
-    marginBottom: 24,
+    marginBottom: 20,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 12,
+    marginBottom: 8,
+  },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  accentDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
   },
   title: {
-    fontSize: 17,
-    fontWeight: '800',
-    color: '#1A1A1A',
+    fontSize: 15,
+    fontWeight: '700',
+    letterSpacing: -0.1,
   },
   countPill: {
-    backgroundColor: '#F3F4F6',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
     borderRadius: 999,
   },
   countText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#6B7280',
+    fontSize: 11,
+    fontWeight: '600',
   },
 });
 
@@ -301,21 +428,33 @@ const createStyles = () =>
   StyleSheet.create({
     container: {
       flex: 1,
-      backgroundColor: '#F6F7FB',
+      backgroundColor: '#F8FAFC',
     },
     scrollContent: {
-      paddingHorizontal: 20,
+      paddingHorizontal: 16,
+    },
+    headerRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
+      marginBottom: 18,
+    },
+    backButton: {
+      width: 34,
+      height: 34,
+      borderRadius: 10,
+      backgroundColor: BLUE_LIGHT,
+      alignItems: 'center',
+      justifyContent: 'center',
     },
     title: {
-      fontSize: 28,
-      fontWeight: '800',
-      color: '#1A1A1A',
-      letterSpacing: -0.5,
-      marginBottom: 20,
+      fontSize: 22,
+      fontWeight: '700',
+      color: '#0F172A',
+      letterSpacing: -0.3,
     },
     itemDivider: {
       height: 1,
-      backgroundColor: '#F3F4F6',
-      marginHorizontal: 14,
+      marginHorizontal: 12,
     },
   });
