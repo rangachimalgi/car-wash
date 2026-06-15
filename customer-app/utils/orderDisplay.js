@@ -65,7 +65,7 @@ export function mapOrderToHistory(order) {
   const dateSource = item?.scheduledDate || order.createdAt || order.updatedAt;
 
   return {
-    id: order._id,
+    id: String(order._id),
     status,
     sortAt: new Date(dateSource).getTime() || 0,
     serviceType: getServiceTypeLabel(category, item),
@@ -73,8 +73,8 @@ export function mapOrderToHistory(order) {
     dateTimeLine: `₹${Number(order.totalAmount || 0).toFixed(0)} • ${formatOrderDateTime(dateSource)}`,
     price: `₹${order.totalAmount?.toFixed(2)}`,
     category,
-    rating: order.rating,
-    review: order.review,
+    rating: typeof order.rating === 'number' && order.rating >= 1 ? order.rating : null,
+    review: order.review || '',
     time: item?.scheduledTimeSlot || '',
   };
 }

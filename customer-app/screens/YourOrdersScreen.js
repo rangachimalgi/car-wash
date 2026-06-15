@@ -102,10 +102,18 @@ export default function YourOrdersScreen({ navigation, route }) {
 
   const handleRatingSubmit = async (payload) => {
     if (!ratingOrder?.id) return;
+    const ratedOrderId = ratingOrder.id;
     try {
-      const res = await submitOrderRating(ratingOrder.id, payload);
+      const res = await submitOrderRating(ratedOrderId, payload);
       if (res.success) {
-        await fetchOrders();
+        if (res.data) {
+          const mapped = mapOrderToHistory(res.data);
+          setOrders((prev) =>
+            prev.map((o) => (String(o.id) === String(ratedOrderId) ? mapped : o))
+          );
+        } else {
+          await fetchOrders();
+        }
       } else {
         throw new Error(res.message || 'Failed to submit rating');
       }

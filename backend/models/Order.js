@@ -170,6 +170,8 @@ const orderSchema = new mongoose.Schema({
   rating: { type: Number, min: 1, max: 5 },
   review: { type: String, default: '' },
   ratedAt: { type: Date },
+  /** Employee who completed the job when customer rated (for per-employee stats) */
+  ratedEmployeeId: { type: String, default: '', index: true },
   /** Dedup flags for customer push notifications */
   notificationFlags: {
     onTheWaySentAt: { type: Date },

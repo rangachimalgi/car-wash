@@ -23,6 +23,7 @@ import {
   mapOrderToBooking,
   sortBookingsByDate,
 } from '../utils/jobBookingHelpers';
+import { computeEmployeeRating } from '../utils/ratingsHelpers';
 
 const STAT_THEMES = {
   today: {
@@ -98,25 +99,6 @@ function buildUpcomingBookings(incoming, queue, limit = 3) {
   return sortBookingsByDate([...byId.values()].map((o) => mapOrderToBooking(o))).slice(0, limit);
 }
 
-function computeRating(history, employeeId) {
-  const rated = history.filter((order) => {
-    const assignment = getAssignment(order, employeeId);
-    const r = order?.rating;
-    const hasRating = typeof r === 'number' && r >= 1 && r <= 5;
-    return assignment?.status === 'completed' && hasRating;
-  });
-
-  if (rated.length === 0) {
-    return { average: null, count: 0 };
-  }
-
-  const sum = rated.reduce((s, order) => s + order.rating, 0);
-  return {
-    average: Math.round((sum / rated.length) * 10) / 10,
-    count: rated.length,
-  };
-}
-
 function computeStats({ incoming, queue, history, employeeId, totalEarnings }) {
   const pendingJobs = incoming.length;
   const completedJobs = history.filter(
@@ -179,7 +161,8 @@ export default function HomeScreen({ navigation, employeeId }) {
       const totalEarnings = Number(earningsRes.data?.data?.totalIncentives) || 0;
 
       setStats(computeStats({ incoming, queue, history, employeeId, totalEarnings }));
-      setRating(computeRating(history, employeeId));
+      const ratingStats = computeEmployeeRating(history, employeeId);
+      setRating({ average: ratingStats.average, count: ratingStats.count });
       setUpcomingBookings(buildUpcomingBookings(incoming, queue));
     } catch (error) {
       console.error('Error loading home stats:', error);
@@ -299,7 +282,12 @@ export default function HomeScreen({ navigation, employeeId }) {
         />
       </View>
 
-      <RatingCard average={rating.average} reviewCount={rating.count} loading={statsLoading} />
+      <RatingCard
+        average={rating.average}
+        reviewCount={rating.count}
+        loading={statsLoading}
+        onPress={() => navigation.navigate('RatingsReviews', { employeeId })}
+      />
 
       <UpcomingBookingsSection
         bookings={upcomingBookings}
@@ -401,7 +389,7 @@ function StarRow({ rating }) {
   );
 }
 
-function RatingCard({ average, reviewCount, loading }) {
+function RatingCard({ average, reviewCount, loading, onPress }) {
   const hasRating = average != null && reviewCount > 0;
   const scoreText = loading ? '—' : hasRating ? average.toFixed(1) : '—';
   const reviewsText = loading
@@ -411,7 +399,7 @@ function RatingCard({ average, reviewCount, loading }) {
       : `(${reviewCount} reviews)`;
 
   return (
-    <View style={styles.ratingCard}>
+    <TouchableOpacity style={styles.ratingCard} onPress={onPress} activeOpacity={0.85}>
       <View style={styles.ratingIconWrap}>
         <MaterialCommunityIcons name="star" size={22} color="#F59E0B" />
       </View>
@@ -425,7 +413,8 @@ function RatingCard({ average, reviewCount, loading }) {
           {hasRating ? reviewsText : 'Complete jobs to collect ratings'}
         </Text>
       </View>
-    </View>
+      <MaterialCommunityIcons name="chevron-right" size={22} color="#94A3B8" />
+    </TouchableOpacity>
   );
 }
 

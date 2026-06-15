@@ -1146,9 +1146,16 @@ export const rateOrder = async (req, res) => {
     }
 
     const reviewText = typeof review === 'string' ? review.trim().slice(0, 500) : '';
+    const completedAssignment = order.assignments?.find(
+      (a) => String(a.employeeId) === String(order.assignedEmployeeId || '') && a.status === 'completed'
+    ) || order.assignments?.find((a) => a.status === 'completed');
+
     order.rating = numRating;
     order.review = reviewText;
     order.ratedAt = new Date();
+    order.ratedEmployeeId = String(
+      order.assignedEmployeeId || completedAssignment?.employeeId || ''
+    ).trim();
     await order.save();
 
     // Recalculate Service aggregate rating for the primary service in this order

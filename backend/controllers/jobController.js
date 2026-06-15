@@ -8,8 +8,43 @@ const requireEmployeeId = (req, res) => {
     res.status(400).json({ success: false, message: 'employeeId is required' });
     return null;
   }
-  return employeeId;
+  return String(employeeId).trim();
 };
+
+function orderRatedForEmployee(order, employeeId) {
+  const eid = String(employeeId).trim();
+  if (!eid) return false;
+  const rating = order?.rating;
+  if (typeof rating !== 'number' || rating < 1 || rating > 5) return false;
+  if (order.status !== 'Completed') return false;
+
+  if (order.ratedEmployeeId && String(order.ratedEmployeeId) === eid) return true;
+  if (String(order.assignedEmployeeId || '') === eid) {
+    return order.assignments?.some(
+      (a) => String(a.employeeId) === eid && a.status === 'completed'
+    );
+  }
+  return order.assignments?.some(
+    (a) => String(a.employeeId) === eid && a.status === 'completed'
+  );
+}
+
+function buildRatingStats(orders) {
+  const distribution = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
+  let sum = 0;
+  for (const order of orders) {
+    const r = Math.round(Number(order.rating));
+    if (r >= 1 && r <= 5) {
+      distribution[r] += 1;
+      sum += order.rating;
+    }
+  }
+  const count = orders.length;
+  const average = count > 0 ? Math.round((sum / count) * 10) / 10 : null;
+  const positive = distribution[5] + distribution[4];
+  const positivePercent = count > 0 ? Math.round((positive / count) * 100) : 0;
+  return { average, count, distribution, positivePercent };
+}
 
 export const getIncomingJobs = async (req, res) => {
   try {
@@ -57,7 +92,7 @@ export const getJobHistory = async (req, res) => {
 
     const orders = await Order.find({
       assignments: {
-        $elemMatch: { employeeId, status: { $in: ['declined', 'completed'] } },
+        $elemMatch: { employeeId: String(employeeId), status: { $in: ['declined', 'completed'] } },
       },
     })
       .sort({ updatedAt: -1 })
@@ -68,6 +103,51 @@ export const getJobHistory = async (req, res) => {
   } catch (error) {
     console.error('Error fetching job history:', error);
     res.status(500).json({ success: false, message: 'Error fetching job history' });
+  }
+};
+
+export const getEmployeeRatings = async (req, res) => {
+  try {
+    const employeeId = requireEmployeeId(req, res);
+    if (!employeeId) return;
+
+    const orders = await Order.find({
+      status: 'Completed',
+      rating: { $gte: 1, $lte: 5 },
+      $or: [
+        { ratedEmployeeId: employeeId },
+        { assignedEmployeeId: employeeId },
+        { assignments: { $elemMatch: { employeeId, status: 'completed' } } },
+      ],
+    })
+      .sort({ ratedAt: -1, updatedAt: -1 })
+      .populate('items.service', 'name category')
+      .select('-__v');
+
+    const ratedForEmployee = orders.filter((order) => orderRatedForEmployee(order, employeeId));
+    const now = new Date();
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    const thisMonth = ratedForEmployee.filter((order) => {
+      const at = order.ratedAt || order.updatedAt;
+      return at && new Date(at) >= monthStart;
+    });
+
+    const allTime = buildRatingStats(ratedForEmployee);
+    const monthStats = buildRatingStats(thisMonth);
+    const latest = ratedForEmployee[0] || null;
+
+    res.status(200).json({
+      success: true,
+      data: {
+        latest,
+        allTime,
+        thisMonth: monthStats,
+        reviews: ratedForEmployee,
+      },
+    });
+  } catch (error) {
+    console.error('Error fetching employee ratings:', error);
+    res.status(500).json({ success: false, message: 'Error fetching employee ratings' });
   }
 };
 

@@ -64,7 +64,9 @@ export function getScheduledTimeSlot(order) {
 }
 
 export function getAssignment(order, employeeId) {
-  return order?.assignments?.find((a) => a.employeeId === employeeId);
+  const eid = String(employeeId ?? '').trim();
+  if (!eid) return undefined;
+  return order?.assignments?.find((a) => String(a.employeeId) === eid);
 }
 
 export function getServiceIcon(category, serviceName) {
