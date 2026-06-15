@@ -58,6 +58,22 @@ const inventoryRefillRequestSchema = new mongoose.Schema(
       trim: true,
       default: '',
     },
+    receivedQuantity: {
+      type: Number,
+      min: 0,
+    },
+    receivedCondition: {
+      type: String,
+      enum: ['Good', 'Damaged'],
+    },
+    receiveNotes: {
+      type: String,
+      trim: true,
+      default: '',
+    },
+    receivedAt: {
+      type: Date,
+    },
   },
   { timestamps: true }
 );

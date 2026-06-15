@@ -1361,7 +1361,7 @@ function App() {
     if (isReject) {
       adminNote = window.prompt('Optional note for the employee (reason for rejection):') || ''
       if (!window.confirm('Reject this refill request?')) return
-    } else if (!window.confirm('Approve and add stock for this refill request?')) {
+    } else if (!window.confirm('Approve this refill? Stock updates when the employee confirms receipt in the app.')) {
       return
     }
 
@@ -1377,7 +1377,11 @@ function App() {
       if (response.ok && data.success) {
         setInventoryMessage({ type: 'success', text: data.message })
         fetchRefillRequests()
-        fetchInventory()
+        if (action === 'approve') {
+          fetchPendingRefillCount()
+        } else {
+          fetchInventory()
+        }
       } else {
         setInventoryMessage({ type: 'error', text: data.message || 'Failed to update refill request' })
       }
@@ -6881,7 +6885,7 @@ function App() {
                 </div>
               </div>
               <p className="info-text" style={{ marginBottom: '16px' }}>
-                Employees submit refills from the app. Approve to add stock automatically; reject to decline.
+                Employees submit refills from the app. Approve to authorize delivery — stock updates when the employee confirms receipt. Reject to decline.
               </p>
               {loadingRefillRequests ? (
                 <div className="loading-text">Loading refill requests...</div>

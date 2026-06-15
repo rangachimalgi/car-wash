@@ -66,3 +66,12 @@ export const getRefillRequests = async (params = {}) => {
   }
 };
 
+export const confirmRefillReceive = async (requestId, payload) => {
+  try {
+    const response = await api.post(`/inventory/refill-requests/${requestId}/confirm-receive`, payload);
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || { message: 'Failed to confirm receipt' };
+  }
+};
+

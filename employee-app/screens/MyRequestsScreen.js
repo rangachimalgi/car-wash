@@ -68,7 +68,7 @@ function formatQtyLine(request) {
 function filterRequestsForTab(requests, tabId) {
   if (tabId === 'all') return requests;
   if (tabId === 'pending') return requests.filter((r) => r.status === 'pending');
-  if (tabId === 'approved') return requests.filter((r) => r.status === 'approved' || r.status === 'fulfilled');
+  if (tabId === 'approved') return requests.filter((r) => r.status === 'approved');
   if (tabId === 'rejected') return requests.filter((r) => r.status === 'rejected');
   return requests;
 }
@@ -80,6 +80,7 @@ function RequestRow({ request, onPress }) {
   const meta = getStatusMeta(request.status);
   const rejectionNote =
     request.status === 'rejected' && request.adminNote ? request.adminNote : null;
+  const awaitingReceive = request.status === 'approved';
 
   return (
     <TouchableOpacity style={rowStyles.card} onPress={onPress} activeOpacity={0.85}>
@@ -98,6 +99,9 @@ function RequestRow({ request, onPress }) {
         </View>
         <Text style={rowStyles.qty}>{formatQtyLine(request)}</Text>
         <Text style={rowStyles.date}>Requested on {formatRequestDate(request.createdAt)}</Text>
+        {awaitingReceive ? (
+          <Text style={rowStyles.receiveHint}>Tap to confirm receipt</Text>
+        ) : null}
         {rejectionNote ? (
           <Text style={rowStyles.reason} numberOfLines={2}>
             Reason: {rejectionNote}
@@ -163,7 +167,9 @@ function RequestList({
           <Text style={styles.emptyText}>
             {tabId === 'all'
               ? 'Refill requests you submit will appear here with their status.'
-              : `No ${tabId} requests right now.`}
+              : tabId === 'approved'
+                ? 'No approved items waiting for receipt.'
+                : `No ${tabId} requests right now.`}
           </Text>
         </View>
       ) : null}
@@ -267,6 +273,20 @@ export default function MyRequestsScreen({ navigation, route, employeeId: employ
   const closeDetail = () => setSelectedRequest(null);
   const detailMeta = selectedRequest ? getStatusMeta(selectedRequest.status) : null;
 
+  const handleSelectRequest = useCallback(
+    (req) => {
+      if (req.status === 'approved') {
+        navigation.navigate('ReceiveItems', {
+          requestId: req._id,
+          employeeId,
+        });
+        return;
+      }
+      setSelectedRequest(req);
+    },
+    [navigation, employeeId]
+  );
+
   const renderPagerPage = useCallback(
     ({ item: tab }) => (
       <RequestList
@@ -279,10 +299,10 @@ export default function MyRequestsScreen({ navigation, route, employeeId: employ
         bottomInset={insets.bottom}
         onRefresh={onRefresh}
         onRetry={fetchRequests}
-        onSelectRequest={setSelectedRequest}
+        onSelectRequest={handleSelectRequest}
       />
     ),
-    [requests, loading, refreshing, error, pageWidth, insets.bottom, onRefresh, fetchRequests]
+    [requests, loading, refreshing, error, pageWidth, insets.bottom, onRefresh, fetchRequests, handleSelectRequest]
   );
 
   return (
@@ -390,6 +410,34 @@ export default function MyRequestsScreen({ navigation, route, employeeId: employ
                     {formatRequestDate(selectedRequest.createdAt)}
                   </Text>
                 </View>
+                {selectedRequest.receivedAt ? (
+                  <View style={styles.detailBlock}>
+                    <Text style={styles.detailLabel}>Received</Text>
+                    <Text style={styles.detailValue}>
+                      {formatRequestDate(selectedRequest.receivedAt)}
+                    </Text>
+                  </View>
+                ) : null}
+                {selectedRequest.receivedQuantity != null ? (
+                  <View style={styles.detailBlock}>
+                    <Text style={styles.detailLabel}>Received qty</Text>
+                    <Text style={styles.detailValue}>
+                      {formatQtyLine({ ...selectedRequest, quantity: selectedRequest.receivedQuantity })}
+                    </Text>
+                  </View>
+                ) : null}
+                {selectedRequest.receivedCondition ? (
+                  <View style={styles.detailBlock}>
+                    <Text style={styles.detailLabel}>Condition</Text>
+                    <Text style={styles.detailValue}>{selectedRequest.receivedCondition}</Text>
+                  </View>
+                ) : null}
+                {selectedRequest.receiveNotes ? (
+                  <View style={styles.detailBlock}>
+                    <Text style={styles.detailLabel}>Receive notes</Text>
+                    <Text style={styles.detailValue}>{selectedRequest.receiveNotes}</Text>
+                  </View>
+                ) : null}
                 {selectedRequest.reviewedAt ? (
                   <View style={styles.detailBlock}>
                     <Text style={styles.detailLabel}>
@@ -477,6 +525,12 @@ const rowStyles = StyleSheet.create({
     fontSize: 13,
     color: '#B91C1C',
     fontWeight: '500',
+  },
+  receiveHint: {
+    marginTop: 6,
+    fontSize: 13,
+    color: '#2563EB',
+    fontWeight: '600',
   },
   chevron: {
     marginLeft: -4,

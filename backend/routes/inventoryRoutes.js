@@ -10,6 +10,7 @@ import {
   createRefillRequest,
   getRefillRequests,
   reviewRefillRequest,
+  confirmRefillReceive,
   deleteInventoryItem,
 } from '../controllers/inventoryController.js';
 
@@ -22,6 +23,7 @@ router.get('/', getInventory);
 
 router.get('/refill-requests', getRefillRequests);
 router.patch('/refill-requests/:requestId', reviewRefillRequest);
+router.post('/refill-requests/:requestId/confirm-receive', confirmRefillReceive);
 
 router.get('/:id/usage', getInventoryUsageHistory);
 router.post('/:id/usage', recordInventoryUsage);

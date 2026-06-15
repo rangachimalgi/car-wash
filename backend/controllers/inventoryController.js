@@ -640,7 +640,7 @@ export const getRefillRequests = async (req, res) => {
     const validStatuses = ['pending', 'approved', 'fulfilled', 'rejected'];
     if (status && status !== 'all') {
       if (status === 'approved') {
-        query.status = { $in: ['approved', 'fulfilled'] };
+        query.status = 'approved';
       } else if (!validStatuses.includes(status)) {
         return res.status(400).json({
           success: false,
@@ -714,38 +714,16 @@ export const reviewRefillRequest = async (req, res) => {
       });
     }
 
-    const item = await Inventory.findById(request.inventoryId);
-    if (!item) {
-      return res.status(404).json({
-        success: false,
-        message: 'Inventory item no longer exists',
-      });
-    }
-
-    const newStock = item.currentStock + request.quantity;
-    if (item.maxCapacity != null && item.maxCapacity > 0 && newStock > item.maxCapacity) {
-      return res.status(400).json({
-        success: false,
-        message: `Approving would exceed max capacity of ${item.maxCapacity} ${item.unit}. Current stock: ${item.currentStock}.`,
-      });
-    }
-
-    item.currentStock = newStock;
-    item.lastRestocked = new Date();
-    await item.save();
-
-    request.status = 'fulfilled';
+    // Approve only — employee must confirm receipt before stock is updated
+    request.status = 'approved';
     request.reviewedAt = new Date();
     if (adminNote) request.adminNote = String(adminNote).trim();
     await request.save();
 
     res.status(200).json({
       success: true,
-      message: `Refill approved. Added ${request.quantity} ${request.unit} to ${item.name}.`,
-      data: {
-        request,
-        inventory: item,
-      },
+      message: `Refill approved. Employee will confirm receipt of ${request.quantity} ${request.unit}.`,
+      data: request,
     });
   } catch (error) {
     console.error('Error reviewing refill request:', error);
@@ -758,6 +736,93 @@ export const reviewRefillRequest = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error reviewing refill request',
+      error: error.message,
+    });
+  }
+};
+
+// @desc    Employee confirms receipt of approved refill — updates inventory stock
+// @route   POST /api/inventory/refill-requests/:requestId/confirm-receive
+export const confirmRefillReceive = async (req, res) => {
+  try {
+    const { requestId } = req.params;
+    const { employeeId, quantity, condition, notes } = req.body;
+
+    if (!employeeId) {
+      return res.status(400).json({ success: false, message: 'employeeId is required' });
+    }
+
+    const validConditions = ['Good', 'Damaged'];
+    const resolvedCondition = validConditions.includes(condition) ? condition : 'Good';
+
+    const request = await InventoryRefillRequest.findById(requestId);
+    if (!request) {
+      return res.status(404).json({ success: false, message: 'Refill request not found' });
+    }
+
+    if (String(request.employeeId) !== String(employeeId).trim()) {
+      return res.status(403).json({ success: false, message: 'Not authorized for this request' });
+    }
+
+    if (request.status !== 'approved') {
+      return res.status(400).json({
+        success: false,
+        message:
+          request.status === 'fulfilled'
+            ? 'This request was already received'
+            : `Cannot receive a ${request.status} request`,
+      });
+    }
+
+    const qty = quantity !== undefined ? Number(quantity) : request.quantity;
+    if (!Number.isFinite(qty) || qty <= 0) {
+      return res.status(400).json({ success: false, message: 'Quantity must be greater than 0' });
+    }
+
+    if (qty > request.quantity) {
+      return res.status(400).json({
+        success: false,
+        message: `Cannot receive more than approved amount (${request.quantity} ${request.unit})`,
+      });
+    }
+
+    const item = await Inventory.findById(request.inventoryId);
+    if (!item) {
+      return res.status(404).json({ success: false, message: 'Inventory item no longer exists' });
+    }
+
+    const newStock = item.currentStock + qty;
+    if (item.maxCapacity != null && item.maxCapacity > 0 && newStock > item.maxCapacity) {
+      return res.status(400).json({
+        success: false,
+        message: `Receiving would exceed max capacity of ${item.maxCapacity} ${item.unit}. Current stock: ${item.currentStock}.`,
+      });
+    }
+
+    item.currentStock = newStock;
+    item.lastRestocked = new Date();
+    await item.save();
+
+    request.status = 'fulfilled';
+    request.receivedQuantity = qty;
+    request.receivedCondition = resolvedCondition;
+    request.receiveNotes = notes ? String(notes).trim() : '';
+    request.receivedAt = new Date();
+    await request.save();
+
+    res.status(200).json({
+      success: true,
+      message: `Received ${qty} ${request.unit} of ${item.name}. Stock updated.`,
+      data: { request, inventory: item },
+    });
+  } catch (error) {
+    console.error('Error confirming refill receive:', error);
+    if (error.name === 'CastError') {
+      return res.status(400).json({ success: false, message: 'Invalid refill request ID' });
+    }
+    res.status(500).json({
+      success: false,
+      message: 'Error confirming receipt',
       error: error.message,
     });
   }
