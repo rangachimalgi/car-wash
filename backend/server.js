@@ -7,6 +7,7 @@ import { fileURLToPath } from 'url';
 import cors from 'cors';
 import connectDB from './config/db.js';
 import { startKeepAlive } from './keepAlive.js';
+import { startRatingReminderScheduler } from './services/ratingReminderScheduler.js';
 import { getMissingR2EnvKeys, isR2Configured } from './services/r2Upload.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -100,4 +101,5 @@ app.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 Server running on port ${PORT}`);
   console.log(`📡 Accessible at http://localhost:${PORT} or http://YOUR_IP:${PORT}`);
   startKeepAlive();
+  startRatingReminderScheduler();
 });

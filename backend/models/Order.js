@@ -170,6 +170,14 @@ const orderSchema = new mongoose.Schema({
   rating: { type: Number, min: 1, max: 5 },
   review: { type: String, default: '' },
   ratedAt: { type: Date },
+  /** Dedup flags for customer push notifications */
+  notificationFlags: {
+    onTheWaySentAt: { type: Date },
+    serviceStartedSentAt: { type: Date },
+    completedSentAt: { type: Date },
+    bookingConfirmedSentAt: { type: Date },
+    ratingReminderSentAt: { type: Date },
+  },
 }, {
   timestamps: true,
 });

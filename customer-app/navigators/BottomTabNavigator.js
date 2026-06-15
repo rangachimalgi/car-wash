@@ -6,13 +6,15 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import HomeScreen from '../screens/HomeScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import BookingsScreen from '../screens/BookingsScreen';
-// import NotificationsScreen from '../screens/NotificationsScreen';
+import NotificationsScreen from '../screens/NotificationsScreen';
 import { useTheme } from '../theme/ThemeContext';
+import { useCustomerNotifications } from '../context/CustomerNotificationsContext';
 
 const Tab = createBottomTabNavigator();
 function SimpleTabBar({ state, descriptors, navigation }) {
   const insets = useSafeAreaInsets();
   const { theme } = useTheme();
+  const { unreadCount } = useCustomerNotifications();
   const styles = useMemo(() => createStyles(theme), [theme]);
 
   return (
@@ -36,7 +38,7 @@ function SimpleTabBar({ state, descriptors, navigation }) {
         const iconName = {
           Home: focused ? 'home' : 'home-outline',
           Bookings: focused ? 'calendar-clock' : 'calendar-clock-outline',
-          // Notifications: focused ? 'bell' : 'bell-outline',
+          Notifications: focused ? 'bell' : 'bell-outline',
           Profile: focused ? 'account' : 'account-outline',
         }[route.name] || 'circle-outline';
 
@@ -47,11 +49,16 @@ function SimpleTabBar({ state, descriptors, navigation }) {
             style={styles.tabButton}
             activeOpacity={0.8}
           >
-            <MaterialCommunityIcons
-              name={iconName}
-              size={24}
-              color={focused ? theme.textPrimary : theme.textSecondary}
-            />
+            <View>
+              <MaterialCommunityIcons
+                name={iconName}
+                size={24}
+                color={focused ? theme.textPrimary : theme.textSecondary}
+              />
+              {route.name === 'Notifications' && unreadCount > 0 ? (
+                <View style={styles.tabBadge} />
+              ) : null}
+            </View>
             <Text style={[styles.tabLabel, focused && styles.tabLabelActive]} numberOfLines={1}>
               {label}
             </Text>
@@ -109,19 +116,17 @@ export default function BottomTabNavigator() {
           ),
         }}
       />
-      {/* Temporarily hidden — restore Notifications tab when ready
       <Tab.Screen 
         name="Notifications" 
         component={NotificationsScreen}
         options={{
           title: 'Notifications',
-          tabBarLabel: 'Notifications',
+          tabBarLabel: 'Alerts',
           tabBarIcon: ({ color, focused }) => (
             <MaterialCommunityIcons name={focused ? 'bell' : 'bell-outline'} color={color} size={24} />
           ),
         }}
       />
-      */}
       <Tab.Screen 
         name="Profile" 
         component={ProfileScreen}
@@ -159,5 +164,14 @@ const createStyles = theme => StyleSheet.create({
   tabLabelActive: {
     color: theme.textPrimary,
     fontWeight: '800',
+  },
+  tabBadge: {
+    position: 'absolute',
+    top: -2,
+    right: -4,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#EF4444',
   },
 });

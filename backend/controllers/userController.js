@@ -1,13 +1,27 @@
 import User from '../models/User.js';
 import Referral from '../models/Referral.js';
+import { sendTestPush } from '../services/pushNotificationService.js';
 
 // @desc    Update current user's Expo push token (for start-service OTP notifications)
 // @route   PUT /api/users/me/push-token
 // @access  Protected
 export const updatePushToken = async (req, res) => {
   try {
-    const expoPushToken = (req.body?.expoPushToken ?? '').toString().trim();
+    const expoPushToken = (req.body?.expoPushToken ?? req.body?.pushToken ?? '').toString().trim();
+    const valid =
+      expoPushToken.startsWith('ExponentPushToken[') || expoPushToken.startsWith('ExpoPushToken[');
+
+    if (!valid) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid or missing Expo push token',
+      });
+    }
+
     await User.findByIdAndUpdate(req.user._id, { expoPushToken });
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('[push-token] Saved for user', req.user._id, expoPushToken.slice(0, 24) + '…');
+    }
     res.status(200).json({ success: true, message: 'Push token updated' });
   } catch (error) {
     console.error('Error updating push token:', error);
@@ -16,6 +30,30 @@ export const updatePushToken = async (req, res) => {
       message: 'Error updating push token',
       error: error.message,
     });
+  }
+};
+
+// @desc    Send test push to current user (kill app first to verify background delivery)
+// @route   POST /api/users/me/test-push
+// @access  Protected
+export const sendTestPushNotification = async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id).select('expoPushToken');
+    const token = (user?.expoPushToken || '').trim();
+    if (!token) {
+      return res.status(400).json({ success: false, message: 'No push token saved — log in and allow notifications' });
+    }
+    const result = await sendTestPush(token, {
+      title: req.body?.title || 'Woosh test',
+      body: req.body?.body || 'If you see this with the app closed, push works!',
+    });
+    if (!result.ok) {
+      return res.status(502).json({ success: false, message: result.reason, details: result.details });
+    }
+    res.status(200).json({ success: true, message: 'Test push sent', ticketId: result.ticketId });
+  } catch (error) {
+    console.error('Error sending test push:', error);
+    res.status(500).json({ success: false, message: 'Error sending test push', error: error.message });
   }
 };
 

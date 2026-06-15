@@ -13,7 +13,16 @@
       "backgroundColor": "#000000"
     },
     "plugins": [
-      "expo-video"
+      "expo-video",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/AppIcon.png",
+          "color": "#007AFF",
+          "defaultChannel": "woosh_urgent",
+          "sounds": []
+        }
+      ]
     ],
     "ios": {
       "supportsTablet": true,
@@ -31,6 +40,7 @@
       }
     },
     "android": {
+      "googleServicesFile": "./google-services.json",
       "usesCleartextTraffic": true,
       "adaptiveIcon": {
         "foregroundImage": "./assets/AppIcon.png",

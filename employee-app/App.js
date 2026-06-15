@@ -7,7 +7,11 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import AppNavigator from './navigators/AppNavigator';
 import AuthNavigator from './navigators/AuthNavigator';
 import { JobNotificationsProvider } from './context/JobNotificationsContext';
+import { navigationRef } from './navigation/navigationRef';
+import { configureNotificationPresentation } from './services/notificationSetup';
 import './locationTask';
+
+configureNotificationPresentation();
 
 export default function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -43,7 +47,7 @@ export default function App() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
         <PaperProvider>
-          <NavigationContainer>
+          <NavigationContainer ref={navigationRef}>
             {isLoggedIn ? (
               <JobNotificationsProvider employeeId={employeeId}>
                 <AppNavigator

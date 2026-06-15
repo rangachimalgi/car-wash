@@ -1,7 +1,7 @@
 import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import api from '../config/api';
+import api from './api';
 import {
   configureNotificationPresentation,
   ensureNotificationPermissionsAsync,
@@ -12,12 +12,8 @@ function isValidExpoToken(token) {
   return t.startsWith('ExponentPushToken[') || t.startsWith('ExpoPushToken[');
 }
 
-/**
- * Register for push notifications and return Expo push token.
- * Returns null on web or if permission denied.
- */
 export async function registerForPushNotificationsAsync() {
-  if (Platform.OS === 'web') return null;
+  if (Platform.OS === 'web') return { token: null, error: 'web' };
 
   configureNotificationPresentation();
   const granted = await ensureNotificationPermissionsAsync();
@@ -40,7 +36,7 @@ export async function registerForPushNotificationsAsync() {
     if (/FirebaseApp|FCM|fcm-credentials/i.test(msg)) {
       console.warn(
         '[Push] Android FCM not set up. Download google-services.json from Firebase ' +
-          '(package: com.anonymous.customerapp) → customer-app/google-services.json, ' +
+          '(package: com.anonymous.employeeapp) → employee-app/google-services.json, ' +
           'then run: npx expo prebuild --clean && npx expo run:android'
       );
       return { token: null, error: 'fcm_not_configured' };
@@ -51,11 +47,10 @@ export async function registerForPushNotificationsAsync() {
 }
 
 /**
- * Register for push, get token, and send to backend.
- * Call after login once authToken is in AsyncStorage.
+ * Register Expo push token with backend. Call after login once auth token is in AsyncStorage.
  * @returns {{ ok: boolean, token?: string, reason?: string }}
  */
-const LAST_SAVED_PUSH_TOKEN_KEY = '@woosh/customer/lastSavedPushToken';
+const LAST_SAVED_PUSH_TOKEN_KEY = '@woosh/employee/lastSavedPushToken';
 let registerInFlight = null;
 
 export async function registerPushTokenWithBackend() {
@@ -86,7 +81,7 @@ export async function registerPushTokenWithBackend() {
         return { ok: true, token, skipped: true };
       }
 
-      const res = await api.put('/users/me/push-token', { expoPushToken: token });
+      const res = await api.put('/employees/me/push-token', { pushToken: token });
       if (res.data?.success) {
         await AsyncStorage.setItem(LAST_SAVED_PUSH_TOKEN_KEY, token);
         if (__DEV__) console.log('[Push] Token saved to backend');

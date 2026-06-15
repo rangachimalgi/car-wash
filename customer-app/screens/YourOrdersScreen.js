@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -23,8 +23,9 @@ import { normalizeOrderStatus } from '../utils/orderStatus';
 import { mapOrderToHistory, getReorderRoute } from '../utils/orderDisplay';
 import { wooshGreen } from '../theme/wooshGreen';
 
-export default function YourOrdersScreen({ navigation }) {
+export default function YourOrdersScreen({ navigation, route }) {
   const insets = useSafeAreaInsets();
+  const rateOrderIdParam = route?.params?.rateOrderId;
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -56,6 +57,15 @@ export default function YourOrdersScreen({ navigation }) {
       fetchOrders().finally(() => setLoading(false));
     }, [])
   );
+
+  useEffect(() => {
+    if (!rateOrderIdParam || orders.length === 0) return;
+    const match = orders.find((o) => String(o.id) === String(rateOrderIdParam));
+    if (match && !(typeof match.rating === 'number' && match.rating >= 1)) {
+      setRatingOrder({ id: match.id, serviceName: match.serviceName });
+      navigation.setParams({ rateOrderId: undefined });
+    }
+  }, [rateOrderIdParam, orders, navigation]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);

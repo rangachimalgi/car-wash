@@ -1,6 +1,7 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import Employee from '../models/Employee.js';
+import { sendTestPush } from '../services/pushNotificationService.js';
 
 const EMPLOYEE_ID_PREFIX = 'WOOSHER';
 
@@ -217,13 +218,27 @@ export const getEmployeeDocuments = async (req, res) => {
 // @access  Protected (employee)
 export const updatePushToken = async (req, res) => {
   try {
-    const { pushToken } = req.body;
+    const pushToken = (req.body?.pushToken ?? req.body?.expoPushToken ?? '').toString().trim();
+    const valid =
+      pushToken.startsWith('ExponentPushToken[') || pushToken.startsWith('ExpoPushToken[');
+
+    if (!valid) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid or missing Expo push token',
+      });
+    }
+
     const employee = req.employee;
 
     await Employee.findOneAndUpdate(
       { employeeId: employee.employeeId },
-      { $set: { pushToken: (pushToken && String(pushToken).trim()) || '' } }
+      { $set: { pushToken } }
     );
+
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('[push-token] Saved for employee', employee.employeeId, pushToken.slice(0, 24) + '…');
+    }
 
     res.status(200).json({
       success: true,
@@ -236,6 +251,30 @@ export const updatePushToken = async (req, res) => {
       message: 'Error updating push token',
       error: error.message,
     });
+  }
+};
+
+// @desc    Send test push to current employee (kill app first to verify background delivery)
+// @route   POST /api/employees/me/test-push
+// @access  Protected (employee)
+export const sendTestPushNotification = async (req, res) => {
+  try {
+    const employee = await Employee.findOne({ employeeId: req.employee.employeeId }).select('pushToken');
+    const token = (employee?.pushToken || '').trim();
+    if (!token) {
+      return res.status(400).json({ success: false, message: 'No push token saved — log in and allow notifications' });
+    }
+    const result = await sendTestPush(token, {
+      title: req.body?.title || 'Woosh test',
+      body: req.body?.body || 'If you see this with the app closed, push works!',
+    });
+    if (!result.ok) {
+      return res.status(502).json({ success: false, message: result.reason, details: result.details });
+    }
+    res.status(200).json({ success: true, message: 'Test push sent', ticketId: result.ticketId });
+  } catch (error) {
+    console.error('Error sending employee test push:', error);
+    res.status(500).json({ success: false, message: 'Error sending test push', error: error.message });
   }
 };
 

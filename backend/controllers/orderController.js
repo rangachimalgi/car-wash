@@ -14,6 +14,14 @@ import {
 } from '../services/membershipService.js';
 import { generateOrderNumber, ensureOrderHasNumber, ensureOrdersHaveNumbers } from '../services/orderNumberService.js';
 import {
+  notifyEmployeesNewJob,
+  notifyCustomerOnTheWay,
+  notifyCustomerServiceStarting,
+  notifyCustomerServiceStarted,
+  notifyCustomerServiceCompleted,
+  notifyCustomerBookingConfirmed,
+} from '../services/pushNotificationService.js';
+import {
   isR2Configured,
   uploadObjectToR2,
   randomSuffix,
@@ -63,31 +71,6 @@ function safeImageExt(originalname, mimetype) {
   return ext || '.jpg';
 }
 
-/** Send Expo push notification to assigned employees (fire-and-forget). */
-async function notifyEmployeesNewJob(employeeIds, orderSummary = '') {
-  if (!Array.isArray(employeeIds) || employeeIds.length === 0) return;
-  try {
-    const employees = await Employee.find({
-      employeeId: { $in: employeeIds },
-      pushToken: { $exists: true, $ne: '' },
-    }).select('pushToken');
-    const tokens = employees.map((e) => e.pushToken).filter(Boolean);
-    if (tokens.length === 0) return;
-    const messages = tokens.map((to) => ({
-      to,
-      title: 'New job assigned',
-      body: orderSummary || 'You have a new job to review.',
-      sound: 'default',
-    }));
-    await fetch('https://exp.host/--/api/v2/push/send', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-      body: JSON.stringify(messages),
-    });
-  } catch (err) {
-    console.error('Failed to send employee push notifications:', err);
-  }
-}
 let lastAssignedIndex = -1;
 
 const getPackagePrice = (service, packageType, packageTimes) => {
@@ -534,7 +517,14 @@ export const createOrder = async (req, res) => {
         : order.items?.find((i) => i.scheduledSlots?.length)?.scheduledSlots?.[0]?.scheduledTimeSlot
           ? `New job – ${order.items.find((i) => i.scheduledSlots?.length).scheduledSlots[0].scheduledTimeSlot}`
           : 'You have a new job to review.';
-      notifyEmployeesNewJob(assignmentIds, summary).catch(() => {});
+      notifyEmployeesNewJob({ employeeIds: assignmentIds, orderId: order._id, summary }).catch(() => {});
+      notifyCustomerBookingConfirmed(order).then(async (sent) => {
+        if (sent) {
+          await Order.findByIdAndUpdate(order._id, {
+            'notificationFlags.bookingConfirmedSentAt': new Date(),
+          });
+        }
+      }).catch(() => {});
     }
 
     res.status(201).json({
@@ -738,6 +728,18 @@ export const updateOrderStatus = async (req, res) => {
       order = await Order.findById(order._id)
         .populate('items.service', 'name category')
         .populate('items.addOns', 'name basePrice');
+
+      if (!order.notificationFlags?.completedSentAt) {
+        notifyCustomerServiceCompleted(order)
+          .then(async (sent) => {
+            if (sent) {
+              await Order.findByIdAndUpdate(order._id, {
+                'notificationFlags.completedSentAt': new Date(),
+              });
+            }
+          })
+          .catch(() => {});
+      }
     } else {
       let query;
       if (employeeId) {
@@ -1044,12 +1046,25 @@ export const updateEmployeeLocation = async (req, res) => {
           message: 'Order not found or not assigned to you',
         });
       }
+      const isFirstLocation = !order.employeeLocation?.updatedAt;
       order.employeeLocation = {
         latitude,
         longitude,
         updatedAt: new Date(),
       };
       await order.save();
+
+      if (isFirstLocation && !order.notificationFlags?.onTheWaySentAt) {
+        notifyCustomerOnTheWay(order)
+          .then(async (sent) => {
+            if (sent) {
+              await Order.findByIdAndUpdate(order._id, {
+                'notificationFlags.onTheWaySentAt': new Date(),
+              });
+            }
+          })
+          .catch(() => {});
+      }
     } else if (userId) {
       order = await Order.findOneAndUpdate(
         { _id: orderId, user: userId },
@@ -1202,30 +1217,9 @@ export const requestStartOtp = async (req, res) => {
     order.startOtpExpiresAt = expiresAt;
     await order.save();
 
-    const pushToken = (order.user?.expoPushToken || '').toString().trim();
-    if (!pushToken || !pushToken.startsWith('ExponentPushToken[')) {
-      console.warn('[requestStartOtp] No valid push token for order user - customer may not have enabled notifications');
-    } else {
-      try {
-        const payload = [{
-          to: pushToken,
-          title: 'Service starting',
-          body: `Your Woosh service is starting. OTP for employee: ${otp}`,
-          sound: 'default',
-        }];
-        const pushRes = await fetch('https://exp.host/--/api/v2/push/send', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-          body: JSON.stringify(payload),
-        });
-        const pushData = await pushRes.json().catch(() => ({}));
-        if (pushRes.status !== 200 || (pushData?.data?.[0]?.status === 'error')) {
-          console.error('[requestStartOtp] Expo push error:', pushRes.status, pushData);
-        }
-      } catch (err) {
-        console.error('Failed to send start OTP push to customer:', err);
-      }
-    }
+    notifyCustomerServiceStarting(order, otp).catch((err) => {
+      console.error('Failed to send start OTP push to customer:', err);
+    });
 
     res.status(200).json({ success: true, message: 'OTP sent to customer' });
   } catch (error) {
@@ -1275,6 +1269,18 @@ export const verifyStartOtp = async (req, res) => {
     order.startOtp = '';
     order.startOtpExpiresAt = undefined;
     await order.save();
+
+    if (!order.notificationFlags?.serviceStartedSentAt) {
+      notifyCustomerServiceStarted(order)
+        .then(async (sent) => {
+          if (sent) {
+            await Order.findByIdAndUpdate(order._id, {
+              'notificationFlags.serviceStartedSentAt': new Date(),
+            });
+          }
+        })
+        .catch(() => {});
+    }
 
     res.status(200).json({ success: true, message: 'OTP verified', data: order });
   } catch (error) {

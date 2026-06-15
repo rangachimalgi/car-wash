@@ -150,7 +150,10 @@ export default function LoginScreen({ navigation }) {
         if (response.user?.id) {
           await AsyncStorage.setItem('userId', String(response.user.id));
         }
-        registerPushTokenWithBackend().catch(() => {});
+        const pushResult = await registerPushTokenWithBackend();
+        if (!pushResult.ok && __DEV__) {
+          console.warn('[Push] After login:', pushResult.reason);
+        }
       }
       navigation.navigate('MainTabs');
     } catch (error) {
@@ -210,7 +213,10 @@ export default function LoginScreen({ navigation }) {
         if (response.user?.id) {
           await AsyncStorage.setItem('userId', String(response.user.id));
         }
-        registerPushTokenWithBackend().catch(() => {});
+        const pushResult = await registerPushTokenWithBackend();
+        if (!pushResult.ok && __DEV__) {
+          console.warn('[Push] After login:', pushResult.reason);
+        }
       }
       navigation.navigate('MainTabs');
     } catch (error) {

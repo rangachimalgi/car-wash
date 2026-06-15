@@ -15,6 +15,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import api from '../services/api';
+import { useJobNotifications } from '../context/JobNotificationsContext';
 import {
   getAssignment,
   getScheduledDate,
@@ -145,6 +146,7 @@ function computeStats({ incoming, queue, history, employeeId, totalEarnings }) {
 
 export default function HomeScreen({ navigation, employeeId }) {
   const insets = useSafeAreaInsets();
+  const { incomingCount } = useJobNotifications();
   const [employeeName, setEmployeeName] = useState('');
   const [statsLoading, setStatsLoading] = useState(false);
   const [stats, setStats] = useState({
@@ -252,9 +254,13 @@ export default function HomeScreen({ navigation, employeeId }) {
             <Text style={styles.subtitle}>Here's your today overview</Text>
           </View>
         </View>
-        <TouchableOpacity style={styles.notifButton} activeOpacity={0.8}>
+        <TouchableOpacity
+          style={styles.notifButton}
+          activeOpacity={0.8}
+          onPress={() => navigation.navigate('Jobs')}
+        >
           <MaterialCommunityIcons name="bell-outline" size={22} color="#0F172A" />
-          {stats.pendingJobs > 0 ? <View style={styles.notifDot} /> : null}
+          {incomingCount > 0 ? <View style={styles.notifDot} /> : null}
         </TouchableOpacity>
       </View>
 

@@ -15,6 +15,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import api from '../services/api';
+import { registerPushTokenWithBackend } from '../services/pushNotifications';
 
 export default function LoginScreen({ onLogin }) {
   const insets = useSafeAreaInsets();
@@ -53,6 +54,11 @@ export default function LoginScreen({ onLogin }) {
       if (onLogin) {
         onLogin({ employeeId: data.data.employeeId });
       }
+      registerPushTokenWithBackend().then((result) => {
+        if (!result.ok && __DEV__) {
+          console.warn('[Push] After login:', result.reason);
+        }
+      });
     } catch (error) {
       console.error('Employee login error:', error);
       if (error.response) {

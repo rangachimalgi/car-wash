@@ -6,6 +6,7 @@ import {
   deleteVehicle, 
   setSelectedVehicle,
   updatePushToken,
+  sendTestPushNotification,
   getWallet,
   creditWallet,
   getReferralInfo,
@@ -15,6 +16,7 @@ import { protect } from '../middleware/authMiddleware.js';
 const router = express.Router();
 
 router.put('/me/push-token', protect, updatePushToken);
+router.post('/me/test-push', protect, sendTestPushNotification);
 router.put('/vehicle', updateUserVehicle);
 router.get('/:phone/vehicles', getVehicles);
 router.post('/:phone/vehicles', addVehicle);

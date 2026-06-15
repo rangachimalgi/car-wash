@@ -7,6 +7,7 @@ import {
   removeEmployee,
   updateEmployee,
   updatePushToken,
+  sendTestPushNotification,
   getMyDocuments,
   uploadMyDocuments,
   getEmployeeDocuments,
@@ -19,13 +20,14 @@ const router = express.Router();
 router.post('/login', loginEmployee);
 router.get('/', getEmployees);
 router.post('/', createEmployee);
+router.put('/me/push-token', protectEmployee, updatePushToken);
+router.post('/me/test-push', protectEmployee, sendTestPushNotification);
+router.get('/me/documents', protectEmployee, getMyDocuments);
+router.post('/me/documents', protectEmployee, uploadDocuments, uploadMyDocuments);
 router.put('/:employeeId', updateEmployee);
 router.put('/:employeeId/password', changeEmployeePassword);
 router.delete('/:employeeId', removeEmployee);
-router.put('/me/push-token', protectEmployee, updatePushToken);
 
-router.get('/me/documents', protectEmployee, getMyDocuments);
-router.post('/me/documents', protectEmployee, uploadDocuments, uploadMyDocuments);
 router.get('/:employeeId/documents', getEmployeeDocuments);
 
 export default router;

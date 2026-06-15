@@ -4,27 +4,13 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import * as SplashScreen from 'expo-splash-screen';
-import * as Notifications from 'expo-notifications';
-import { Platform } from 'react-native';
 import HeaderNavigator from './navigators/HeaderNavigator';
 import { ThemeProvider, useTheme } from './theme/ThemeContext';
+import { CustomerNotificationsProvider } from './context/CustomerNotificationsContext';
+import { navigationRef } from './navigation/navigationRef';
+import { configureNotificationPresentation } from './services/notificationSetup';
 
-// Show notifications when app is in foreground (e.g. OTP from employee)
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: true,
-    shouldSetBadge: false,
-  }),
-});
-
-if (Platform.OS === 'android') {
-  Notifications.setNotificationChannelAsync('default', {
-    name: 'Woosh',
-    importance: Notifications.AndroidImportance.MAX,
-    vibrationPattern: [0, 250, 250, 250],
-  }).catch(() => {});
-}
+configureNotificationPresentation();
 
 SplashScreen.hideAsync().catch(() => {});
 
@@ -34,8 +20,10 @@ function AppContent() {
   return (
     <>
       <StatusBar style={isLightMode ? 'dark' : 'light'} />
-      <NavigationContainer>
-        <HeaderNavigator />
+      <NavigationContainer ref={navigationRef}>
+        <CustomerNotificationsProvider>
+          <HeaderNavigator />
+        </CustomerNotificationsProvider>
       </NavigationContainer>
     </>
   );
