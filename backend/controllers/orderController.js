@@ -1282,7 +1282,11 @@ export const verifyStartOtp = async (req, res) => {
         .catch(() => {});
     }
 
-    res.status(200).json({ success: true, message: 'OTP verified', data: order });
+    const populatedOrder = await Order.findById(order._id)
+      .populate('items.service', 'name category specifications')
+      .populate('items.addOns', 'name basePrice');
+
+    res.status(200).json({ success: true, message: 'OTP verified', data: populatedOrder });
   } catch (error) {
     console.error('Error verifying start OTP:', error);
     res.status(500).json({

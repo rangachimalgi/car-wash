@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useFocusEffect } from '@react-navigation/native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { API_BASE_URL } from '../config/api';
@@ -135,6 +136,7 @@ export default function StartServiceScreen({ navigation, route }) {
   const orderId = route?.params?.orderId;
   const employeeId = route?.params?.employeeId;
   const orderInProgress = orderStatus === 'In Progress';
+  const loading = orderId && orderStatus === null;
 
   const applyOrderData = (data) => {
     setOrder(data);
@@ -155,24 +157,27 @@ export default function StartServiceScreen({ navigation, route }) {
     }
   };
 
-  useEffect(() => {
-    const loadOrder = async () => {
-      if (!orderId) return;
-      try {
-        const url = employeeId
-          ? `${API_BASE_URL}/orders/${orderId}?employeeId=${employeeId}`
-          : `${API_BASE_URL}/orders/${orderId}`;
-        const res = await fetch(url);
-        const data = await res.json();
-        if (res.ok && data?.data) {
-          applyOrderData(data.data);
-        }
-      } catch (error) {
-        console.error('Error loading order:', error);
+  const loadOrder = useCallback(async () => {
+    if (!orderId) return;
+    try {
+      const url = employeeId
+        ? `${API_BASE_URL}/orders/${orderId}?employeeId=${employeeId}`
+        : `${API_BASE_URL}/orders/${orderId}`;
+      const res = await fetch(url);
+      const data = await res.json();
+      if (res.ok && data?.data) {
+        applyOrderData(data.data);
       }
-    };
-    loadOrder();
+    } catch (error) {
+      console.error('Error loading order:', error);
+    }
   }, [orderId, employeeId]);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadOrder();
+    }, [loadOrder])
+  );
 
   useEffect(() => {
     if (!orderInProgress) return undefined;
@@ -208,10 +213,10 @@ export default function StartServiceScreen({ navigation, route }) {
       const data = await res.json();
       if (res.ok && data.success) {
         setStartedAt(new Date());
-        if (data.data) {
+        if (data.data?.items?.[0]?.service?.specifications) {
           applyOrderData(data.data);
         } else {
-          setOrderStatus('In Progress');
+          await loadOrder();
         }
         setCodeInput('');
       } else {
@@ -304,13 +309,18 @@ export default function StartServiceScreen({ navigation, route }) {
   };
 
   const needsOtp = orderStatus && !['In Progress', 'Completed', 'Cancelled'].includes(orderStatus);
-  const loading = orderId && orderStatus === null;
 
   const item = order?.items?.[0];
   const coverageItems = useMemo(() => {
-    const raw = item?.service?.specifications?.coverage || [];
-    return raw.map((label) => String(label || '').trim()).filter(Boolean);
-  }, [item?.service?.specifications?.coverage]);
+    const service = item?.service;
+    const raw =
+      (typeof service === 'object' && service?.specifications?.coverage) ||
+      item?.serviceSpecifications?.coverage ||
+      [];
+    return (Array.isArray(raw) ? raw : [])
+      .map((label) => String(label || '').trim())
+      .filter(Boolean);
+  }, [item?.service, item?.serviceSpecifications?.coverage]);
 
   useEffect(() => {
     if (!orderInProgress || coverageItems.length === 0) return;
