@@ -305,6 +305,17 @@ export default function InventoryScreen({ navigation, employeeId }) {
           </View>
         ) : null}
 
+        <TouchableOpacity style={styles.myRequestsBanner} onPress={openMyRequests} activeOpacity={0.85}>
+          <View style={styles.myRequestsLeft}>
+            <MaterialCommunityIcons name="clipboard-text-outline" size={22} color="#2563EB" />
+            <View>
+              <Text style={styles.myRequestsTitle}>My Requests</Text>
+              <Text style={styles.myRequestsHint}>Track pending, approved & rejected refills</Text>
+            </View>
+          </View>
+          <MaterialCommunityIcons name="chevron-right" size={22} color="#9CA3AF" />
+        </TouchableOpacity>
+
         <View style={styles.statsGrid}>
           <View style={styles.statsRow}>
             <SummaryCard
@@ -662,6 +673,33 @@ const createStyles = () =>
     scrollContent: {
       paddingHorizontal: 16,
       paddingTop: 16,
+    },
+    myRequestsBanner: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      backgroundColor: '#EFF6FF',
+      borderWidth: 1,
+      borderColor: '#BFDBFE',
+      borderRadius: 12,
+      padding: 14,
+      marginBottom: 16,
+    },
+    myRequestsLeft: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
+      flex: 1,
+    },
+    myRequestsTitle: {
+      fontSize: 15,
+      fontWeight: '700',
+      color: '#1E40AF',
+    },
+    myRequestsHint: {
+      fontSize: 12,
+      color: '#3B82F6',
+      marginTop: 2,
     },
     statsGrid: {
       gap: 12,
