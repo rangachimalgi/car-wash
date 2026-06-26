@@ -2,7 +2,9 @@ import { useState, useEffect } from 'react'
 import { API_BASE_URL, resolveUploadOrAbsoluteUrl } from '../config/api'
 import {
   MAX_MEDIA_VIDEO_SIZE_BYTES,
+  MAX_MEDIA_VIDEO_SIZE_MB,
   MAX_MEDIA_IMAGE_SIZE_BYTES,
+  MAX_MEDIA_IMAGE_SIZE_MB,
   DEFAULT_PACKAGE_CARD,
 } from '../utils/constants'
 import { sortWashServicesForDisplay } from '../utils/sortWashServices'

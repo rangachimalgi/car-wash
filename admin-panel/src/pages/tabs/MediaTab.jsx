@@ -1,5 +1,11 @@
 import React from 'react'
 import { useAdminPanelContext } from '../../context/AdminPanelContext'
+import {
+  MAX_MEDIA_IMAGE_SIZE_BYTES,
+  MAX_MEDIA_IMAGE_SIZE_MB,
+  MAX_MEDIA_VIDEO_SIZE_BYTES,
+  MAX_MEDIA_VIDEO_SIZE_MB,
+} from '../../utils/constants'
 
 export default function MediaTab() {
   const { deleteMediaItem, fetchMedia, homeSliderMediaForm, loadingMedia, loginBannerMediaForm, mediaFileInputKey, mediaList, mediaMessage, mediaPosterInputKey, message, orders, resolveUploadOrAbsoluteUrl, seeDiffMediaForm, setHomeSliderMediaForm, setLoginBannerMediaForm, setMediaMessage, setSeeDiffMediaForm, setTestimonialMediaForm, setTransformationMediaForm, setWhyChooseMediaForm, testimonialMediaForm, transformationMediaForm, uploadMediaFile, uploadingMedia, whyChooseMediaForm } = useAdminPanelContext()
