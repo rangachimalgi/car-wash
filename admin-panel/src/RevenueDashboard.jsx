@@ -594,7 +594,7 @@ export default function RevenueDashboard({
       <header className="db-header">
         <div>
           <h1 className="db-title">Dashboard</h1>
-          <p className="db-subtitle">Welcome back, Admin! Here&apos;s what&apos;s happening with Woosh today.</p>
+          {/* <p className="db-subtitle">Welcome back, Admin! Here&apos;s what&apos;s happening with Woosh today.</p> */}
         </div>
         <div className="db-header-actions">
           <label className="db-date-range">
