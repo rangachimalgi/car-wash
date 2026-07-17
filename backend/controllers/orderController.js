@@ -71,7 +71,96 @@ function safeImageExt(originalname, mimetype) {
   return ext || '.jpg';
 }
 
-let lastAssignedIndex = -1;
+/** Build a stable key for a scheduled slot so we can compare occupancy. */
+function slotKey(date, timeSlot) {
+  const d = new Date(date);
+  if (Number.isNaN(d.getTime())) return null;
+  const day = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  const ts = String(timeSlot || '').trim().toLowerCase();
+  return `${day}__${ts}`;
+}
+
+/** Collect every scheduled slot key covered by an order's items. */
+function slotKeysForItems(items) {
+  const keys = [];
+  for (const item of items || []) {
+    if (item.packageType === 'Membership') continue;
+    if (item.packageType === 'OneTime') {
+      const key = slotKey(item.scheduledDate, item.scheduledTimeSlot);
+      if (key) keys.push(key);
+    } else if (Array.isArray(item.scheduledSlots)) {
+      for (const slot of item.scheduledSlots) {
+        const key = slotKey(slot.scheduledDate, slot.scheduledTimeSlot);
+        if (key) keys.push(key);
+      }
+    }
+  }
+  return keys;
+}
+
+/**
+ * Pick the best employee for a new order using slot-aware, load-balanced rotation.
+ * - An employee is "occupied" for a slot if he already holds a pending/accepted job at
+ *   that same date+time. He can hold many future jobs at different slots.
+ * - Among employees free for ALL of the order's slots, pick the least-loaded, tie-broken
+ *   by who was assigned longest ago (restart-proof rotation).
+ * - If nobody is free (all slots clash), fall back to the least-loaded employee overall so
+ *   no order is dropped.
+ * Returns an employeeId string, or null if there are no active employees.
+ */
+async function pickEmployeeForOrder(requiredSlotKeys) {
+  const employees = await Employee.find({ isActive: true })
+    .sort({ employeeId: 1 })
+    .select('employeeId');
+  if (employees.length === 0) return null;
+
+  const activeOrders = await Order.find({
+    status: { $nin: ['Completed', 'Cancelled'] },
+    assignments: { $elemMatch: { status: { $in: ['pending', 'accepted'] } } },
+  }).select('assignments items');
+
+  // Per-employee occupancy: set of slot keys, active load, and most-recent assignedAt.
+  const stats = new Map();
+  const ensure = (id) => {
+    if (!stats.has(id)) {
+      stats.set(id, { occupied: new Set(), load: 0, lastAssignedAt: 0 });
+    }
+    return stats.get(id);
+  };
+
+  for (const order of activeOrders) {
+    const orderSlotKeys = slotKeysForItems(order.items);
+    for (const a of order.assignments || []) {
+      if (a.status !== 'pending' && a.status !== 'accepted') continue;
+      const s = ensure(String(a.employeeId));
+      s.load += 1;
+      const assignedAt = a.assignedAt ? new Date(a.assignedAt).getTime() : 0;
+      if (assignedAt > s.lastAssignedAt) s.lastAssignedAt = assignedAt;
+      orderSlotKeys.forEach((k) => s.occupied.add(k));
+    }
+  }
+
+  const required = requiredSlotKeys || [];
+  const isFree = (id) => {
+    const s = stats.get(id);
+    if (!s) return true;
+    return required.every((k) => !s.occupied.has(k));
+  };
+
+  // Sort by lowest load, then oldest last-assigned (0 = never assigned wins), then employeeId.
+  const rank = (a, b) => {
+    const sa = stats.get(a.employeeId) || { load: 0, lastAssignedAt: 0 };
+    const sb = stats.get(b.employeeId) || { load: 0, lastAssignedAt: 0 };
+    if (sa.load !== sb.load) return sa.load - sb.load;
+    if (sa.lastAssignedAt !== sb.lastAssignedAt) return sa.lastAssignedAt - sb.lastAssignedAt;
+    return String(a.employeeId).localeCompare(String(b.employeeId));
+  };
+
+  const free = employees.filter((e) => isFree(e.employeeId));
+  const pool = free.length > 0 ? free : employees;
+  pool.sort(rank);
+  return pool[0].employeeId;
+}
 
 const getPackagePrice = (service, packageType, packageTimes) => {
   if (!packageType || packageType === 'OneTime') {
@@ -417,12 +506,10 @@ export const createOrder = async (req, res) => {
 
     let assignmentIds = membershipOnly ? [] : normalizedEmployeeIds;
     if (!membershipOnly && assignmentIds.length === 0) {
-      const employees = await Employee.find({ isActive: true })
-        .sort({ employeeId: 1 })
-        .select('employeeId');
-      if (employees.length > 0) {
-        lastAssignedIndex = (lastAssignedIndex + 1) % employees.length;
-        assignmentIds = [employees[lastAssignedIndex].employeeId];
+      const requiredSlotKeys = slotKeysForItems(hydratedItems);
+      const chosenEmployeeId = await pickEmployeeForOrder(requiredSlotKeys);
+      if (chosenEmployeeId) {
+        assignmentIds = [chosenEmployeeId];
       }
     }
 
